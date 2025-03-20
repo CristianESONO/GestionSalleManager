@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.*?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.image.ImageView?>
+
+<AnchorPane style="-fx-background-color: linear-gradient(to bottom, #13b0da, #0d8bbf);" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/8" fx:controller="com.controllers.AddProduitController">
+   <children>
+       <!-- Titre Ajouter Produit -->
+       <Text layoutX="30" layoutY="30" style="-fx-font-size: 24px; -fx-fill: white;" text="Ajouter Produit" />
+   
+       <GridPane hgap="20" layoutX="30" layoutY="80" style="-fx-background-color: transparent;" vgap="20">
+          <children>
+              <!-- Colonne 1 -->
+              <TextField fx:id="nomField" prefWidth="250" promptText="Nom du produit" GridPane.columnIndex="0" GridPane.rowIndex="0" />
+              <TextField fx:id="prixField" prefWidth="250" promptText="Prix" GridPane.columnIndex="0" GridPane.rowIndex="1" />
+              <TextField fx:id="stockField" prefWidth="250" promptText="Stock" GridPane.columnIndex="0" GridPane.rowIndex="2" />
+              
+              <!-- Colonne 2 -->
+             <Label text="Chemin de l'image" GridPane.columnIndex="2" GridPane.rowIndex="1" style="-fx-text-fill: white;" />
+                <TextField fx:id="txtImagePath" prefWidth="250" GridPane.columnIndex="3" GridPane.rowIndex="1" promptText="Chemin de l'image" editable="false" />
+                <Button fx:id="btnAddImage" text="Ajouter l'image" style="-fx-background-color: rgb(7, 123, 173); -fx-text-fill: white; -fx-font-size: 14px; -fx-border-radius: 5; -fx-background-radius: 5;" GridPane.columnIndex="3" GridPane.rowIndex="2" onAction="#chooseImage"/>
+              <ImageView fx:id="imageView" fitWidth="150" fitHeight="150" GridPane.columnIndex="1" GridPane.rowIndex="1" GridPane.rowSpan="2" />
+            
+
+              
+              <!-- Boutons -->
+              <Button fx:id="addButton" text="Ajouter" onAction="#addProduit" 
+    style="-fx-background-color: #4CAF50; -fx-text-fill: white; -fx-font-size: 14px; -fx-border-radius: 5; -fx-background-radius: 5;" 
+    GridPane.columnIndex="0" GridPane.columnSpan="2" GridPane.rowIndex="3" />
+
+              <Button fx:id="cancelButton" onAction="#cancel" style="-fx-background-color: #F44336; -fx-text-fill: white; -fx-font-size: 14px; -fx-border-radius: 5; -fx-background-radius: 5;" text="Annuler" GridPane.columnIndex="1" GridPane.columnSpan="2" GridPane.rowIndex="3" />
+          </children>
+       </GridPane>
+   </children>
+</AnchorPane>

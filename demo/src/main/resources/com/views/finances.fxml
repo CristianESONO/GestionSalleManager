@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.*?>
+<?import javafx.geometry.Insets?>
+
+<AnchorPane style="-fx-background-color: linear-gradient(to bottom, #13b0da, #0d8bbf);" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.controllers.FinanceController">
+    <children>
+        <!-- Titre -->
+        <Text fill="WHITE" layoutX="20" layoutY="30" style="-fx-font-size: 24px;" text="Gestion Financière" />
+
+        <!-- TabPane pour organiser les onglets -->
+        <TabPane layoutX="20" layoutY="50" prefWidth="750" prefHeight="500">
+            <!-- Onglet pour les entrées (réservations et paiements) -->
+            <Tab text="Entrées">
+                <VBox spacing="10">
+                    <padding>
+                        <Insets top="10" right="10" bottom="10" left="10"/>
+                    </padding>
+                    <Label text="Entrées (Réservations et Paiements)" style="-fx-text-fill: white; -fx-font-size: 18px;" />
+                    <!-- Barre de recherche pour Entrées -->
+                    <HBox spacing="10" alignment="CENTER">
+                        <TextField fx:id="searchEntreeField" promptText="Rechercher " style="-fx-background-color: white; -fx-border-radius: 5; -fx-font-size: 14px;" prefWidth="200"/>
+                        <Button text="Rechercher" fx:id="searchEntreeButton" style="-fx-background-color: rgb(7, 123, 173);  -fx-text-fill: white; -fx-font-size: 14px; -fx-border-radius: 5; -fx-background-radius: 5;"/>
+                    </HBox>
+
+                    <TableView fx:id="entreesTable" prefWidth="700" prefHeight="200" style="-fx-background-color: rgba(255, 255, 255, 0.1);">
+                        <columns>
+                            <TableColumn text="Numéro Ticket" fx:id="numeroTicketColumn" prefWidth="150" />
+                            <TableColumn text="Client" fx:id="clientColumn" prefWidth="150" />
+                            <TableColumn text="Montant Total" fx:id="montantTotalColumn" prefWidth="100" />
+                            <TableColumn text="Mode de Paiement" fx:id="modePaiementColumn" prefWidth="100" />
+                            <TableColumn text="Date et Heure" fx:id="dateHeureColumn" prefWidth="150" />
+                        </columns>
+                    </TableView>
+                    <Pagination fx:id="entreesPagination" />
+                </VBox>
+            </Tab>
+
+            <!-- Onglet pour les sorties (produits et prix) -->
+            <Tab text="Sorties">
+                <VBox spacing="10">
+                    <padding>
+                        <Insets top="10" right="10" bottom="10" left="10"/>
+                    </padding>
+                    <Label text="Sorties (Produits et Prix)" style="-fx-text-fill: white; -fx-font-size: 18px;" />
+                    <!-- Barre de recherche pour Sorties -->
+                    <HBox spacing="10" alignment="CENTER">
+                        <TextField fx:id="searchSortieField" promptText="Rechercher " style="-fx-background-color: white; -fx-border-radius: 5; -fx-font-size: 14px;" prefWidth="200"/>
+                        <Button text="Rechercher" fx:id="searchSortieButton" style="-fx-background-color: rgb(7, 123, 173);  -fx-text-fill: white; -fx-font-size: 14px; -fx-border-radius: 5; -fx-background-radius: 5;"/>
+                    </HBox>
+
+                    <TableView fx:id="sortiesTable" prefWidth="700" prefHeight="200" style="-fx-background-color: rgba(255, 255, 255, 0.1);">
+                        <columns>
+                            <TableColumn text="Nom du Produit" fx:id="nomProduitColumn" prefWidth="150" />
+                            <TableColumn text="Prix" fx:id="prixProduitColumn" prefWidth="100" />
+                            <TableColumn text="Stock" fx:id="stockProduitColumn" prefWidth="100" />
+                            <TableColumn text="Date d'Ajout" fx:id="dateAjoutColumn" prefWidth="150" />
+                        </columns>
+                    </TableView>
+                    <Pagination fx:id="sortiesPagination" />
+                </VBox>
+            </Tab>
+        </TabPane>
+    </children>
+</AnchorPane>

@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import java.lang.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.*?>
+<?import javafx.fxml.FXML?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.CheckBox?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.text.Text?>
+<?import javafx.geometry.Insets?>
+
+<AnchorPane style="-fx-background-color: linear-gradient(to bottom, #13b0da, #0d8bbf);" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/8" fx:controller="com.controllers.AddPosteController">
+    <children>
+        <!-- Titre de la Vue -->
+        <Text layoutX="30" layoutY="30" style="-fx-font-size: 24px; -fx-fill: white;" text="Ajouter un Poste" />
+        
+        <GridPane hgap="20" layoutX="30" layoutY="80" style="-fx-background-color: transparent;" vgap="20">
+            <children>
+                <!-- Colonne 1 -->
+                <Text style="-fx-font-size: 16px; -fx-fill: black;" text="Nom du Poste : " GridPane.columnIndex="0" GridPane.rowIndex="0" />
+                <TextField fx:id="posteNameField" editable="false" prefWidth="250" GridPane.columnIndex="1" GridPane.rowIndex="0" />
+
+                <Text style="-fx-font-size: 16px; -fx-fill: black;" text="État du Poste : " GridPane.columnIndex="0" GridPane.rowIndex="1" />
+                <TextField fx:id="posteStatusField" prefWidth="250" promptText="État du Poste" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+
+                <Text style="-fx-font-size: 16px; -fx-fill: black;" text="Disponible : " GridPane.columnIndex="0" GridPane.rowIndex="2" />
+                <CheckBox fx:id="posteAvailableCheckBox" GridPane.columnIndex="1" GridPane.rowIndex="2" />
+
+                <!-- Boutons -->
+              <Button fx:id="btnAjouterPoste" onAction="#addPoste" style="-fx-background-color: #4CAF50; -fx-text-fill: white; -fx-font-size: 14px; -fx-border-radius: 5; -fx-background-radius: 5;" text="Ajouter" GridPane.columnIndex="0" GridPane.columnSpan="2" GridPane.rowIndex="3" />
+                <Button fx:id="btnAnnuler" onAction="#cancel" style="-fx-background-color: #F44336; -fx-text-fill: white; -fx-font-size: 14px; -fx-border-radius: 5; -fx-background-radius: 5;" text="Annuler" GridPane.columnIndex="1" GridPane.columnSpan="2" GridPane.rowIndex="3" />
+            </children>
+            <columnConstraints>
+                <ColumnConstraints />
+                <ColumnConstraints />
+            <ColumnConstraints />
+            </columnConstraints>
+            <rowConstraints>
+                <RowConstraints />
+                <RowConstraints />
+                <RowConstraints />
+                <RowConstraints />
+                <RowConstraints />
+            </rowConstraints>
+        </GridPane>
+    </children>
+</AnchorPane>

@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.fxml.FXML?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ListView?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.ColumnConstraints?>
+<?import javafx.scene.layout.RowConstraints?>
+<?import javafx.scene.text.Text?>
+<?import javafx.geometry.Insets?>
+
+<AnchorPane xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.controllers.AddGameController" style="-fx-background-color: linear-gradient(to bottom, #13b0da, #0d8bbf);">
+    <children>
+        <!-- Titre Ajouter Jeu -->
+        <Text layoutX="30" layoutY="30" style="-fx-font-size: 24px; -fx-fill: white;" text="Ajouter un Jeu" />
+
+        <!-- Grille pour organiser les champs -->
+        <GridPane hgap="20" layoutX="30" layoutY="80" vgap="20" style="-fx-background-color: transparent;">
+            <children>
+                <!-- Première colonne -->
+                <Label text="Nom du Jeu" GridPane.columnIndex="0" GridPane.rowIndex="0" style="-fx-text-fill: white;" />
+                <TextField fx:id="txtNom" prefWidth="250" GridPane.columnIndex="1" GridPane.rowIndex="0" promptText="Nom du jeu" />
+
+                <Label text="Description" GridPane.columnIndex="0" GridPane.rowIndex="1" style="-fx-text-fill: white;" />
+                <TextField fx:id="txtDescription" prefWidth="250" GridPane.columnIndex="1" GridPane.rowIndex="1" promptText="Description du jeu" />
+
+                <Label text="Type" GridPane.columnIndex="0" GridPane.rowIndex="2" style="-fx-text-fill: white;" />
+                <TextField fx:id="txtType" prefWidth="250" GridPane.columnIndex="1" GridPane.rowIndex="2" promptText="Type de jeu" />
+
+                <!-- Deuxième colonne -->
+                <Label text="Statut" GridPane.columnIndex="2" GridPane.rowIndex="0" style="-fx-text-fill: white;" />
+                <TextField fx:id="txtStatus" prefWidth="250" GridPane.columnIndex="3" GridPane.rowIndex="0" promptText="Statut du jeu" />
+
+                <Label text="Chemin de l'image" GridPane.columnIndex="2" GridPane.rowIndex="1" style="-fx-text-fill: white;" />
+                <TextField fx:id="txtImagePath" prefWidth="250" GridPane.columnIndex="3" GridPane.rowIndex="1" promptText="Chemin de l'image" editable="false" />
+
+                <Button fx:id="btnAddImage" text="Ajouter l'image" style="-fx-background-color: rgb(7, 123, 173); -fx-text-fill: white; -fx-font-size: 14px; -fx-border-radius: 5; -fx-background-radius: 5;" GridPane.columnIndex="3" GridPane.rowIndex="2" onAction="#handleAddImage"/>
+
+                <!-- Sélection des postes -->
+                <Label text="Postes disponibles" GridPane.columnIndex="0" GridPane.rowIndex="3" style="-fx-text-fill: white;" />
+                <ListView fx:id="listPostes" prefWidth="250" prefHeight="100" GridPane.columnIndex="1" GridPane.rowIndex="3" GridPane.columnSpan="3" />
+            </children>
+            <columnConstraints>
+                <ColumnConstraints halignment="CENTER" prefWidth="150" />
+                <ColumnConstraints halignment="CENTER" prefWidth="250" />
+                <ColumnConstraints halignment="CENTER" prefWidth="150" />
+                <ColumnConstraints halignment="CENTER" prefWidth="250" />
+            </columnConstraints>
+            <rowConstraints>
+                <RowConstraints vgrow="ALWAYS" minHeight="50"/>
+                <RowConstraints vgrow="ALWAYS" minHeight="50"/>
+                <RowConstraints vgrow="ALWAYS" minHeight="50"/>
+                <RowConstraints vgrow="ALWAYS" minHeight="50"/>
+                <RowConstraints vgrow="ALWAYS" minHeight="50"/>
+                <RowConstraints vgrow="ALWAYS" minHeight="50"/>
+            </rowConstraints>
+        </GridPane>
+
+        <!-- Bouton Ajouter -->
+        <Button fx:id="addButton" text="Ajouter" style="-fx-background-color: #4CAF50; -fx-text-fill: white; -fx-font-size: 14px; -fx-border-radius: 5; -fx-background-radius: 5;" layoutX="30" layoutY="400" onAction="#addGame" />
+        
+        <!-- Bouton Annuler -->
+        <Button fx:id="cancelButton" text="Annuler" style="-fx-background-color: #F44336; -fx-text-fill: white; -fx-font-size: 14px; -fx-border-radius: 5; -fx-background-radius: 5;" layoutX="200" layoutY="400" onAction="#cancel" />
+    </children>
+</AnchorPane>

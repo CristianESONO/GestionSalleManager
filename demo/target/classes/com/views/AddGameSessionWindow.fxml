@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.*?>
+<?import javafx.geometry.Insets?>
+
+<AnchorPane style="-fx-background-color: linear-gradient(to bottom, #13b0da, #0d8bbf);" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.controllers.AddGameSessionController">
+    <children>
+        <!-- Titre Ajouter Session -->
+        <Text layoutX="30" layoutY="30" style="-fx-font-size: 24px; -fx-fill: white;" text="Ajouter Session de Jeux" />
+
+        <!-- Grille pour organiser les champs -->
+        <GridPane hgap="20" layoutX="30" layoutY="80" vgap="20" style="-fx-background-color: transparent;">
+            <children>
+                <!-- Colonne 1 -->
+                <Label text="Client" GridPane.columnIndex="0" GridPane.rowIndex="0" style="-fx-text-fill: white;" />
+                <ComboBox fx:id="clientComboBox" prefWidth="250" GridPane.columnIndex="1" GridPane.rowIndex="0" promptText="Choisir un client" />
+
+                <Label text="Jeu" GridPane.columnIndex="0" GridPane.rowIndex="1" style="-fx-text-fill: white;" />
+                <ComboBox fx:id="gameComboBox" prefWidth="250" GridPane.columnIndex="1" GridPane.rowIndex="1" promptText="Choisir un jeu" />
+
+                <Label text="Durée payée (min)" GridPane.columnIndex="0" GridPane.rowIndex="2" style="-fx-text-fill: white;" />
+                <TextField fx:id="paidDurationField" prefWidth="250" GridPane.columnIndex="1" GridPane.rowIndex="2" promptText="Durée payée (min)" />
+
+                <Label text="Statut" GridPane.columnIndex="0" GridPane.rowIndex="3" style="-fx-text-fill: white;" />
+                <ComboBox fx:id="statusComboBox" prefWidth="250" GridPane.columnIndex="1" GridPane.rowIndex="3" promptText="Choisir un statut">
+                    <!-- Les options seront ajoutées dans le contrôleur -->
+                </ComboBox>
+
+                <!-- Boutons -->
+                <Button fx:id="addButton" text="Ajouter" style="-fx-background-color: #4CAF50; -fx-text-fill: white; -fx-font-size: 14px; -fx-border-radius: 5; -fx-background-radius: 5;" GridPane.columnIndex="0" GridPane.columnSpan="2" GridPane.rowIndex="5" onAction="#addGameSession"/>
+                <Button fx:id="cancelButton" onAction="#cancel" text="Annuler" style="-fx-background-color: #F44336; -fx-text-fill: white; -fx-font-size: 14px; -fx-border-radius: 5; -fx-background-radius: 5;" GridPane.columnIndex="1" GridPane.columnSpan="2" GridPane.rowIndex="5" />
+            </children>
+            <columnConstraints>
+                <ColumnConstraints />
+                <ColumnConstraints />
+            </columnConstraints>
+            <rowConstraints>
+                <RowConstraints />
+                <RowConstraints />
+                <RowConstraints />
+                <RowConstraints />
+                <RowConstraints />
+                <RowConstraints />
+            </rowConstraints>
+        </GridPane>
+    </children>
+</AnchorPane>

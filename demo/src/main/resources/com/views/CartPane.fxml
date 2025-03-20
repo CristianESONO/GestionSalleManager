@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ListView?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Text?>
+
+<VBox xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.controllers.CartController" 
+      style="-fx-background-color: #FFFFFF; -fx-padding: 10; -fx-spacing: 10;">
+    
+    <!-- Titre du panier -->
+    <Text text="Votre Panier" style="-fx-font-size: 18px; -fx-font-weight: bold;" />
+    
+    <!-- Liste des éléments du panier -->
+    <ListView fx:id="cartItemsList" style="-fx-pref-height: 200px;" />
+    
+    <!-- Prix total -->
+    <Text fx:id="prixTotalText" style="-fx-font-size: 16px; -fx-font-weight: bold;" />
+    
+    <!-- Bouton Payer -->
+    <Button text="Payer" onAction="#handlePayer" 
+            style="-fx-background-color: #4CAF50; -fx-text-fill: white; -fx-font-size: 14px; -fx-border-radius: 5; -fx-background-radius: 5;" />
+    
+    <!-- Bouton pour fermer le panier -->
+    <Button text="Fermer" onAction="#closeCart" 
+            style="-fx-background-color: #F44336; -fx-text-fill: white; -fx-font-size: 14px; -fx-border-radius: 5; -fx-background-radius: 5;" />
+</VBox>

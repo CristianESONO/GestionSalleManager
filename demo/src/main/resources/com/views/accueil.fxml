@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import java.lang.*?>
+<?import javafx.scene.image.*?>
+<?import javafx.scene.text.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.effect.*?>
+
+<AnchorPane prefHeight="600.0" prefWidth="900.0" fx:controller="com.controllers.AccueilController" style="-fx-background-color: linear-gradient(to bottom, #13b0da, #0d8bbf);" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
+   
+   <children>
+      <!-- Barre de Menu à Gauche -->
+      <VBox alignment="CENTER" layoutX="0.0" layoutY="0.0" prefHeight="600.0" prefWidth="220.0" spacing="20" style="-fx-background-color:rgb(14, 111, 153); -fx-border-width: 0 2 0 0; -fx-border-color:rgb(33, 184, 226);">
+         <children>
+            
+            <!-- Logo -->
+            <ImageView fitHeight="80.0" fitWidth="80.0">
+               <image>
+                  <Image url="@../img/71xzcr0FFvL.jpg" />
+               </image>
+            </ImageView>
+   
+            <!-- Menu -->
+            <VBox alignment="CENTER" spacing="15">
+               <children>
+                  <Button prefHeight="40" prefWidth="180" style="-fx-background-color: transparent; -fx-text-fill: white; -fx-font-size: 16px; -fx-border-width: 0 0 2 0; -fx-border-color: transparent;" text="Utilisateurs" onAction="#handleLoadViewUtilisateurs">
+                     <effect>
+                        <DropShadow color="#9643A9" radius="10" />
+                     </effect>
+                  </Button>
+   
+                  <Button prefHeight="40" prefWidth="180" style="-fx-background-color: transparent; -fx-text-fill: white; -fx-font-size: 16px; -fx-border-width: 0 0 2 0; -fx-border-color: transparent;" text="Jeux" onAction="#handleLoadViewJeux">
+                     <effect>
+                        <DropShadow color="#9643A9" radius="10" />
+                     </effect>
+                  </Button>
+   
+                  <Button prefHeight="40" prefWidth="180" style="-fx-background-color: transparent; -fx-text-fill: white; -fx-font-size: 16px; -fx-border-width: 0 0 2 0; -fx-border-color: transparent;" text="Postes" onAction="#handleLoadViewPostes">
+                     <effect>
+                        <DropShadow color="#9643A9" radius="10" />
+                     </effect>
+                  </Button>
+   
+                  <Button prefHeight="40" prefWidth="180" style="-fx-background-color: transparent; -fx-text-fill: white; -fx-font-size: 16px; -fx-border-width: 0 0 2 0; -fx-border-color: transparent;" text="Réservations" onAction="#handleLoadViewReservations">
+                     <effect>
+                        <DropShadow color="#9643A9" radius="10" />
+                     </effect>
+                  </Button>
+   
+                  <Button prefHeight="40" prefWidth="180" style="-fx-background-color: transparent; -fx-text-fill: white; -fx-font-size: 16px; -fx-border-width: 0 0 2 0; -fx-border-color: transparent;" text="Produits" onAction="#handleLoadViewProduits">
+                     <effect>
+                        <DropShadow color="#9643A9" radius="10" />
+                     </effect>
+                  </Button>
+   
+                  <Button prefHeight="40" prefWidth="180" style="-fx-background-color: transparent; -fx-text-fill: white; -fx-font-size: 16px; -fx-border-width: 0 0 2 0; -fx-border-color: transparent;" text="Finances" onAction="#handleLoadViewFinances">
+                     <effect>
+                        <DropShadow color="#9643A9" radius="10" />
+                     </effect>
+                  </Button>
+   
+              
+   
+                  <Button prefHeight="40" fx:id="btnDeconnexion" prefWidth="180" style="-fx-background-color: transparent; -fx-text-fill: white; -fx-font-size: 16px; -fx-border-width: 0 0 2 0; -fx-border-color: transparent;" text="Déconnexion" onAction="#handleDeconnexion">
+                     <effect>
+                        <DropShadow color="#9643A9" radius="10" />
+                     </effect>
+                  </Button>
+               </children>
+            </VBox>
+         </children>
+      </VBox>
+
+      <!-- Contenu Principal (chargement des vues) -->
+<AnchorPane fx:id="mainContent" layoutX="220.0" layoutY="0.0" AnchorPane.topAnchor="0" AnchorPane.bottomAnchor="0" AnchorPane.leftAnchor="220.0" AnchorPane.rightAnchor="0" style="-fx-background-color: rgba(255, 255, 255, 0.1); -fx-background-radius: 10;">
+</AnchorPane>
+
+   </children>
+</AnchorPane>

@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.image.*?>
+<?import javafx.scene.*?>
+<?import java.lang.*?>
+<?import javafx.scene.text.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.effect.DropShadow?>
+
+
+<AnchorPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="600.0" prefWidth="500.0" style="-fx-background-color: linear-gradient(to bottom, #13b0da, #0d8bbf);" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.controllers.RegisterController">
+   <children>
+      <!-- Titre -->
+      <Text fill="WHITE" layoutX="160.0" layoutY="60.0" strokeType="OUTSIDE" strokeWidth="0.0" text="INSCRIPTION" textAlignment="CENTER">
+         <font>
+            <Font name="Arial Bold" size="28.0" />
+         </font>
+      </Text>
+
+      <!-- Conteneur du formulaire -->
+      <GridPane hgap="15" layoutX="50.0" layoutY="210.0" prefHeight="160.0" prefWidth="400.0" vgap="15">
+         <columnConstraints>
+            <ColumnConstraints prefWidth="180.0" />
+            <ColumnConstraints prefWidth="180.0" />
+         </columnConstraints>
+
+         <rowConstraints>
+            <RowConstraints minHeight="40.0" />
+            <RowConstraints minHeight="40.0" />
+            <RowConstraints minHeight="40.0" />
+         </rowConstraints>
+
+         <children>
+            <!-- Nom -->
+            <TextField fx:id="txtName" promptText="Nom complet" style="-fx-background-color: rgba(255, 255, 255, 0.1); -fx-text-fill: white; -fx-border-color: #9643A9; -fx-border-radius: 10; -fx-background-radius: 10;">
+               <font>
+                  <Font name="System Bold" size="14.0" />
+               </font>
+            </TextField>
+
+            <!-- Email -->
+            <TextField fx:id="txtEmail" promptText="Email" style="-fx-background-color: rgba(255, 255, 255, 0.1); -fx-text-fill: white; -fx-border-color: #9643A9; -fx-border-radius: 10; -fx-background-radius: 10;" GridPane.columnIndex="1">
+            </TextField>
+
+            <!-- Mot de passe -->
+            <PasswordField fx:id="txtPassword" promptText="Mot de passe" style="-fx-background-color: rgba(255, 255, 255, 0.1); -fx-text-fill: white; -fx-border-color: #9643A9; -fx-border-radius: 10; -fx-background-radius: 10;" GridPane.rowIndex="1">
+            </PasswordField>
+
+            <!-- Rôle -->
+            <ComboBox fx:id="comboRole" prefHeight="30.0" prefWidth="180.0" promptText="Rôle" style="-fx-background-color: rgba(255, 255, 255, 0.1); -fx-text-fill: white; -fx-border-color: #9643A9; -fx-border-radius: 10; -fx-background-radius: 10;" GridPane.columnIndex="1" GridPane.rowIndex="1">
+            </ComboBox>
+         </children>
+      </GridPane>
+
+      <!-- Boutons alignés -->
+      <HBox layoutX="100.0" layoutY="420.0" spacing="25">
+         <children>
+            <Button fx:id="btnRegister" prefHeight="45" prefWidth="160" style="-fx-background-color: linear-gradient(to right, #13b0da, #0d8bbf); -fx-background-radius: 10; -fx-border-radius: 10; -fx-font-size: 18px;" text="S'inscrire" textFill="WHITE">
+               <effect>
+                  <DropShadow color="#9643A9" radius="10" />
+               </effect>
+               <cursor>
+                  <Cursor fx:constant="HAND" />
+               </cursor>
+            </Button>
+
+            <Button fx:id="btnBack" prefHeight="45" prefWidth="160" style="-fx-background-color: transparent; -fx-border-color: white; -fx-border-radius: 10; -fx-text-fill: white; -fx-font-size: 18px;" text="Retour" textFill="WHITE">
+               <cursor>
+                  <Cursor fx:constant="HAND" />
+               </cursor>
+            </Button>
+         </children>
+      </HBox>
+
+      <!-- Image -->
+      <ImageView fitHeight="100.0" fitWidth="120.0" layoutX="190.0" layoutY="110.0" pickOnBounds="true" preserveRatio="true">
+         <image>
+            <Image url="@../img/71xzcr0FFvL.jpg" />
+         </image>
+      </ImageView>
+   </children>
+</AnchorPane>
