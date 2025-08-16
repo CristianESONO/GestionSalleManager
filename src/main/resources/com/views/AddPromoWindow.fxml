@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.CheckBox?>
+<?import javafx.scene.control.DatePicker?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ListView?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.effect.DropShadow?>
+<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.layout.ColumnConstraints?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.RowConstraints?>
+<?import javafx.scene.text.Text?>
+
+<AnchorPane prefHeight="650.0" prefWidth="600.0" style="-fx-background-color: linear-gradient(to bottom right, #2c3e50, #4a69bd);" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.controllers.AddPromoController">
+   <children>
+      <Text fill="#ecf0f1" layoutX="30.0" layoutY="50.0" style="-fx-font-size: 28px; -fx-font-weight: bold;" text="Ajouter Promotion">
+         <effect>
+            <DropShadow color="#00000066" offsetX="0.0" offsetY="2.0" radius="5.0" />
+         </effect>
+      </Text>
+
+      <GridPane hgap="20" layoutX="30.0" layoutY="100.0" prefHeight="500.0" prefWidth="540.0" vgap="15">
+         <children>
+            <Label style="-fx-text-fill: #ecf0f1; -fx-font-size: 14px; -fx-font-weight: bold;" text="Nom de la promotion:" GridPane.columnIndex="0" GridPane.rowIndex="0" />
+            <TextField fx:id="nomField" prefHeight="35.0" prefWidth="250.0" promptText="Nom de la promotion" style="-fx-background-color: #ffffff; -fx-border-color: #bdc3c7; -fx-border-radius: 5px; -fx-background-radius: 5px; -fx-font-size: 14px; -fx-padding: 8px 10px; -fx-prompt-text-fill: #7f8c8d;">
+               <effect>
+                  <DropShadow color="#0000001a" offsetX="0.0" offsetY="1.0" radius="3.0" />
+               </effect>
+            </TextField>
+
+            <Label style="-fx-text-fill: #ecf0f1; -fx-font-size: 14px; -fx-font-weight: bold;" text="Taux de réduction (%):" GridPane.columnIndex="0" GridPane.rowIndex="1" />
+            <TextField fx:id="tauxField" prefHeight="35.0" prefWidth="250.0" promptText="Taux (ex: 10 pour 10%)" style="-fx-background-color: #ffffff; -fx-border-color: #bdc3c7; -fx-border-radius: 5px; -fx-background-radius: 5px; -fx-font-size: 14px; -fx-padding: 8px 10px; -fx-prompt-text-fill: #7f8c8d;" GridPane.columnIndex="1" GridPane.rowIndex="1">
+               <effect>
+                  <DropShadow color="#0000001a" offsetX="0.0" offsetY="1.0" radius="3.0" />
+               </effect>
+            </TextField>
+
+            <Label style="-fx-text-fill: #ecf0f1; -fx-font-size: 14px; -fx-font-weight: bold;" text="Date de début:" GridPane.columnIndex="0" GridPane.rowIndex="2" />
+            <DatePicker fx:id="dateDebutPicker" prefHeight="35.0" prefWidth="250.0" promptText="Sélectionner la date de début" style="-fx-background-color: #ffffff; -fx-border-color: #bdc3c7; -fx-border-radius: 5px; -fx-background-radius: 5px; -fx-font-size: 14px; -fx-padding: 8px 10px;" GridPane.columnIndex="1" GridPane.rowIndex="2">
+               <effect>
+                  <DropShadow color="#0000001a" offsetX="0.0" offsetY="1.0" radius="3.0" />
+               </effect>
+            </DatePicker>
+
+            <Label style="-fx-text-fill: #ecf0f1; -fx-font-size: 14px; -fx-font-weight: bold;" text="Date de fin:" GridPane.columnIndex="0" GridPane.rowIndex="3" />
+            <DatePicker fx:id="dateFinPicker" prefHeight="35.0" prefWidth="250.0" promptText="Sélectionner la date de fin" style="-fx-background-color: #ffffff; -fx-border-color: #bdc3c7; -fx-border-radius: 5px; -fx-background-radius: 5px; -fx-font-size: 14px; -fx-padding: 8px 10px;" GridPane.columnIndex="1" GridPane.rowIndex="3">
+               <effect>
+                  <DropShadow color="#0000001a" offsetX="0.0" offsetY="1.0" radius="3.0" />
+               </effect>
+            </DatePicker>
+
+            <Label style="-fx-text-fill: #ecf0f1; -fx-font-size: 14px; -fx-font-weight: bold;" text="Active:" GridPane.columnIndex="0" GridPane.rowIndex="4" />
+            <CheckBox fx:id="activeCheck" mnemonicParsing="false" style="-fx-text-fill: #ecf0f1; -fx-font-size: 14px; -fx-selected-box-color: #2ecc71; -fx-box-border: #bdc3c7;" text="La promotion est active" GridPane.columnIndex="1" GridPane.rowIndex="4">
+               <padding>
+                  <Insets left="5.0" />
+               </padding>
+            </CheckBox>
+
+            <Label style="-fx-text-fill: #ecf0f1; -fx-font-size: 14px; -fx-font-weight: bold;" text="Produits associés:" GridPane.columnIndex="0" GridPane.rowIndex="5" />
+            <ListView fx:id="produitsListView" prefHeight="150.0" prefWidth="300.0" style="-fx-control-inner-background: #ffffff; -fx-border-color: #bdc3c7; -fx-border-radius: 5px; -fx-background-radius: 5px; -fx-font-size: 14px;" GridPane.columnIndex="1" GridPane.rowIndex="5" GridPane.rowSpan="2">
+               <effect>
+                  <DropShadow color="#0000001a" offsetX="0.0" offsetY="1.0" radius="3.0" />
+               </effect>
+            </ListView>
+
+            <Button fx:id="addButton" onAction="#handleAdd" prefHeight="40.0" prefWidth="120.0" style="-fx-background-color: #2ecc71; -fx-text-fill: white; -fx-font-size: 14px; -fx-padding: 10px 20px; -fx-border-radius: 5px; -fx-background-radius: 5px; -fx-cursor: hand;" text="Ajouter" GridPane.halignment="LEFT" GridPane.rowIndex="7">
+               <effect>
+                  <DropShadow color="#00000033" offsetX="0.0" offsetY="2.0" radius="5.0" />
+               </effect>
+            </Button>
+            <Button fx:id="cancelButton" onAction="#cancel" prefHeight="40.0" prefWidth="120.0" style="-fx-background-color: #e74c3c; -fx-text-fill: white; -fx-font-size: 14px; -fx-padding: 10px 20px; -fx-border-radius: 5px; -fx-background-radius: 5px; -fx-cursor: hand;" text="Annuler" GridPane.columnIndex="1" GridPane.halignment="RIGHT" GridPane.rowIndex="7">
+               <effect>
+                  <DropShadow color="#00000033" offsetX="0.0" offsetY="2.0" radius="5.0" />
+               </effect>
+            </Button>
+         </children>
+         <columnConstraints>
+            <ColumnConstraints hgrow="SOMETIMES" maxWidth="200.0" minWidth="10.0" prefWidth="170.0" />
+            <ColumnConstraints hgrow="SOMETIMES" maxWidth="350.0" minWidth="10.0" prefWidth="250.0" />
+         </columnConstraints>
+         <rowConstraints>
+            <RowConstraints vgrow="SOMETIMES" />
+            <RowConstraints vgrow="SOMETIMES" />
+            <RowConstraints vgrow="SOMETIMES" />
+            <RowConstraints vgrow="SOMETIMES" />
+            <RowConstraints vgrow="SOMETIMES" />
+            <RowConstraints vgrow="SOMETIMES" />
+            <RowConstraints vgrow="SOMETIMES" />
+            <RowConstraints vgrow="SOMETIMES" />
+         </rowConstraints>
+      </GridPane>
+   </children>
+</AnchorPane>

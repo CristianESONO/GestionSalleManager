@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.*?>
+<?import javafx.scene.image.*?>
+<?import javafx.scene.text.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.effect.*?>
+<?import javafx.scene.paint.Color?>
+<?import javafx.scene.shape.Circle?>
+
+<AnchorPane prefHeight="570.0" prefWidth="680.0" style="-fx-background-color: linear-gradient(to bottom right, #2c3e50, #4a69bd);" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.controllers.AccueilController">
+
+    <children>
+        <VBox alignment="CENTER" AnchorPane.topAnchor="0.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0">
+            <Label text="Bienvenue sur la page d'accueil !" textFill="WHITE">
+                <font>
+                    <Font size="24.0" />
+                </font>
+            </Label>
+            <Label text="Le menu est maintenant toujours visible à gauche." textFill="WHITE">
+                <font>
+                    <Font size="16.0" />
+                </font>
+                <VBox.margin>
+                    <Insets top="10.0" />
+                </VBox.margin>
+            </Label>
+        </VBox>
+    </children>
+</AnchorPane>

@@ -1,0 +1,978 @@
+package com.services;
+
+import com.entities.*;
+import com.repositories.*; // Importe toutes les interfaces de dépôt
+import com.repositories.bd.*; // Importe les implémentations JPA spécifiques des dépôts
+import com.utils.ReservationReceiptPrinter;
+
+import java.math.BigDecimal;
+import java.time.Duration;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors; // Pour les opérations de stream
+
+import javax.persistence.EntityNotFoundException;
+import javax.transaction.Transactional;
+
+import org.hibernate.Hibernate;
+
+public class Service implements IService {
+
+    // Injection des dépendances des dépôts JPA
+    private IGameSessionRepository gameSessionRepository;
+    private IProduitRepository produitRepository;
+    private IReservationRepository reservationRepository;
+    private IUserRepository userRepository; // Pour User, Client, Parrain via héritage
+    private IPaymentRepository paymentRepository;
+    private IClientRepository clientRepository; // Pour les opérations spécifiques aux clients
+    private IGameRepository gameRepository;
+    private IPosteRepository posteRepository;
+    private IParrainRepository parrainRepository; // Pour les opérations spécifiques aux parrains
+    private IPromoRepository promoRepository;
+
+    // Champ pour l'utilisateur actuellement connecté
+    private User currentUser;
+
+    // Constructeur pour l'injection des dépôts
+    // La Fabrique sera responsable de fournir ces implémentations concrètes (par exemple, UserRepositoryJpa)
+    public Service(IGameSessionRepository gameSessionRepository, IProduitRepository produitRepository,
+                   IReservationRepository reservationRepository, IUserRepository userRepository,
+                   IPaymentRepository paymentRepository, IClientRepository clientRepository,
+                   IGameRepository gameRepository, IPosteRepository posteRepository,
+                   IParrainRepository parrainRepository, IPromoRepository promoRepository) {
+        this.gameSessionRepository = gameSessionRepository;
+        this.produitRepository = produitRepository;
+        this.reservationRepository = reservationRepository;
+        this.userRepository = userRepository;
+        this.paymentRepository = paymentRepository;
+        this.clientRepository = clientRepository;
+        this.gameRepository = gameRepository;
+        this.posteRepository = posteRepository;
+        this.parrainRepository = parrainRepository;
+        this.promoRepository = promoRepository;
+    }
+
+    // --- User methods ---
+    @Override
+    public User seConnecter(String login, String password) {
+        // La logique de connexion est déléguée au dépôt User
+        return userRepository.findUserByLoginAndPassword(login, password);
+    }
+
+    @Override
+    public List<User> findAllUsers() {
+        return userRepository.findAll();
+    }
+
+    @Override
+    public void addUser(User newUser) throws Exception {
+        // Logique métier avant l'ajout si nécessaire (ex: validation)
+        if (userRepository.existsByName(newUser.getName())) {
+            throw new Exception("Un utilisateur avec ce nom existe déjà.");
+        }
+        // Utilise la nouvelle méthode findByEmail du dépôt
+        if (newUser.getEmail() != null && userRepository.findByEmail(newUser.getEmail()) != null) {
+             throw new Exception("Un utilisateur avec cet email existe déjà.");
+        }
+        userRepository.addUser(newUser);
+    }
+
+    @Override
+    public void deleteUser(User user) throws Exception {
+        userRepository.delete(user.getId());
+    }
+
+    @Override
+    public void updateUser(User user) throws Exception {
+        userRepository.updateUser(user);
+    }
+
+    @Override
+    public User getCurrentUser() {
+        return currentUser;
+    }
+
+    @Override
+    public void setCurrentUser(User user) {
+        this.currentUser = user;
+    }
+
+    @Override
+    public boolean existsUserById(int id) {
+        return userRepository.existsById(id);
+    }
+
+    @Override
+    public boolean existsUserByName(String name) {
+        return userRepository.existsByName(name);
+    }
+
+    // --- Client methods ---
+    @Override
+    public List<Client> getAllClients() {
+        return clientRepository.findAll();
+    }
+
+    @Override
+    public Client addClient(Client client) throws Exception {
+        if (clientRepository.findByTel(client.getPhone()) != null) {
+            throw new Exception("Un client avec ce numéro de téléphone existe déjà.");
+        }
+        if (client.getEmail() != null && clientRepository.findByEmail(client.getEmail()) != null) {
+            throw new Exception("Un client avec cet email existe déjà.");
+        }
+        return clientRepository.insert(client);
+    }
+
+    @Override
+    public void updateClient(Client client) throws Exception {
+        clientRepository.update(client);
+    }
+
+    @Override
+    public void deleteClient(Client client) throws Exception {
+        clientRepository.delete(client);
+    }
+
+    @Override
+    public Client findByEmail(String email) {
+        return clientRepository.findByEmail(email);
+    }
+
+    @Override
+    public Client findByTel(String tel) {
+        return clientRepository.findByTel(tel);
+    }
+
+    @Override
+    public boolean existsClientById(int id) {
+        return clientRepository.findById(id) != null;
+    }
+
+    @Override
+    public boolean existsClientByName(String name) {
+        return clientRepository.existsByName(name);
+    }
+
+    // --- Parrain methods ---
+    @Override
+    public Parrain addParrain(Parrain parrain) throws Exception {
+        if (parrainRepository.findByCodeParrainage(parrain.getCodeParrainage()) != null) {
+            throw new Exception("Un parrain avec ce code de parrainage existe déjà.");
+        }
+        if (parrainRepository.findByEmail(parrain.getEmail()) != null) {
+            throw new Exception("Un parrain avec cet email existe déjà.");
+        }
+        return parrainRepository.insert(parrain);
+    }
+
+    @Override
+    public List<Parrain> getAllParrains() {
+        return parrainRepository.findAll();
+    }
+
+    @Override
+    public Parrain getParrainById(int id) {
+        return parrainRepository.findById(id);
+    }
+
+    @Override
+    public void updateParrain(Parrain parrain) throws Exception {
+        parrainRepository.update(parrain);
+    }
+
+    @Override
+    public void deleteParrain(Parrain parrain) throws Exception {
+        parrainRepository.delete(parrain);
+    }
+
+    @Override
+    public Parrain getParrainByCodeParrainage(String codeParrainage) {
+        return parrainRepository.findByCodeParrainage(codeParrainage);
+    }
+
+    @Override
+    public boolean existsParrainByName(String name) {
+        return parrainRepository.existsByName(name);
+    }
+
+    @Override
+    public boolean existsParrainById(int id) {
+        return parrainRepository.findById(id) != null;
+    }
+
+    // --- Game methods ---
+    @Override
+    public List<Game> getAllGames() {
+        return gameRepository.findAll();
+    }
+
+    @Override
+    public void deleteGame(Game game) throws Exception {
+        gameRepository.delete(game.getId());
+    }
+
+    @Override
+    public void updateGame(Game game) throws Exception {
+        gameRepository.update(game);
+    }
+
+    @Override
+    public void addGame(Game game) throws Exception {
+        if (gameRepository.existsByName(game.getName())) {
+            throw new Exception("Un jeu avec ce nom existe déjà.");
+        }
+        gameRepository.insert(game);
+    }
+
+    @Override
+    public boolean existsGameByName(String name) {
+        return gameRepository.existsByName(name);
+    }
+
+    @Override
+    public boolean existsGameById(int id) {
+        return gameRepository.existsById(id);
+    }
+
+    // --- Poste methods ---
+    @Override
+    public List<Poste> getPostes() {
+        return posteRepository.findAll();
+    }
+
+    public List<Poste> getPostesSansJeux() 
+    {
+        return posteRepository.findPostesSansJeux();
+    }
+
+
+    @Override
+    public void deletePoste(Poste poste) throws Exception {
+        posteRepository.delete(poste);
+    }
+
+    @Override
+    public void updatePoste(Poste poste) throws Exception {
+        posteRepository.update(poste);
+    }
+
+    @Override
+    public Poste addPoste(Poste poste) throws Exception {
+        // 1. Insérer le poste pour que l'ID soit généré
+        Poste newPoste = posteRepository.insert(poste);
+        
+        // 2. Mettre à jour le nom du poste avec l'ID généré
+        newPoste.setName("N°" + newPoste.getId());
+        
+        // 3. Persister la mise à jour du nom
+        posteRepository.update(newPoste);
+        
+        return newPoste;
+    }
+
+    @Override
+    public List<Poste> getPostesForGame(Game game) {
+        return posteRepository.findByGame(game);
+    }
+
+    @Override
+    public void addPosteToGame(Poste poste, Game game) throws Exception {
+        gameRepository.addPosteToGame(game.getId(), poste.getId());
+    }
+
+    @Override
+    public void removePosteFromGame(Poste poste, Game game) throws Exception {
+        gameRepository.removePosteFromGame(game.getId(), poste.getId());
+    }
+
+    @Override
+    public boolean existsPosteById(int id) {
+        return posteRepository.findById(id) != null;
+    }
+
+    // --- GameSession methods ---
+    @Override
+    public List<GameSession> getAllGameSessions() {
+        return gameSessionRepository.getAllGameSessions();
+    }
+
+    @Override
+    public GameSession addGameSession(GameSession gameSession) throws Exception {
+        // Logique métier avant l'ajout si nécessaire (ex: vérifier la disponibilité du poste)
+        if (!posteRepository.checkAvailability(gameSession.getPoste().getId())) {
+            throw new Exception("Le poste sélectionné n'est pas disponible.");
+        }
+        return gameSessionRepository.addGameSession(gameSession);
+    }
+
+    @Override
+    public GameSession getGameSessionById(int id) {
+        return gameSessionRepository.getGameSessionById(id);
+    }
+
+    @Override
+    public boolean updateGameSession(GameSession gameSession) throws Exception {
+        return gameSessionRepository.updateGameSession(gameSession);
+    }
+
+    @Override
+    public boolean deleteGameSession(int id) throws Exception {
+        return gameSessionRepository.deleteGameSession(id);
+    }
+
+    @Override
+    public GameSession getActiveSessionForPoste(Poste poste) {
+        // Utilise la nouvelle méthode du dépôt pour une recherche plus efficace
+        return gameSessionRepository.findActiveSessionForPoste(poste.getId());
+    }
+
+    @Override
+    public boolean reduceRemainingTime(int gameSessionId, Duration timeElapsed) throws Exception {
+        return gameSessionRepository.reduceRemainingTime(gameSessionId, timeElapsed);
+    }
+
+    @Override
+    public List<GameSession> findGameSessionsByClientId(int clientId) {
+        return gameSessionRepository.findGameSessionsByClientId(clientId);
+    }
+
+    @Override
+    public boolean existsGameSessionById(int id) {
+        return gameSessionRepository.existsById(id);
+    }
+
+    // --- Produit methods ---
+    @Override
+    public Produit insertProduit(Produit produit) throws Exception {
+        if (produitRepository.checkIfProduitExists(produit.getNom())) {
+            throw new Exception("Un produit avec ce nom existe déjà.");
+        }
+        return produitRepository.insert(produit);
+    }
+
+    @Override
+    public List<Produit> findAllProduits() {
+        return produitRepository.findAll();
+    }
+
+    @Override
+    public Produit findProduitById(int id) {
+        return produitRepository.findById(id);
+    }
+
+    @Override
+    public void updateProduit(Produit produit) throws Exception {
+        produitRepository.update(produit);
+    }
+
+    @Override
+    public void deleteProduit(Produit produit) throws Exception {
+        produitRepository.delete(produit);
+    }
+
+    @Override
+    public List<Produit> findProduitsEnStock() {
+        return produitRepository.findProduitsEnStock();
+    }
+
+    @Override
+    public boolean checkIfProduitExists(String nom) {
+        return produitRepository.checkIfProduitExists(nom);
+    }
+
+    @Override
+    public void updateProduitStocks(Map<Produit, Integer> produitsEtQuantites) throws Exception {
+        for (Map.Entry<Produit, Integer> entry : produitsEtQuantites.entrySet()) {
+            Produit produit = entry.getKey();
+            Integer quantite = entry.getValue();
+            Produit managedProduit = produitRepository.findById(produit.getId()); // Récupérer l'entité gérée
+            if (managedProduit != null) {
+                if (managedProduit.reducerStock(quantite)) { // Utilise la logique métier de l'entité
+                    produitRepository.update(managedProduit); // Persiste le changement
+                } else {
+                    throw new Exception("Stock insuffisant pour le produit : " + managedProduit.getNom());
+                }
+            } else {
+                throw new Exception("Produit non trouvé pour la mise à jour du stock : " + produit.getNom());
+            }
+        }
+    }
+
+
+
+    @Override
+    public boolean existsProduitById(int id) {
+        return produitRepository.findById(id) != null;
+    }
+
+    // --- Reservation methods ---
+    @Override
+    public Reservation insertReservation(Reservation reservation) throws Exception {
+        // Logique métier avant l'insertion (ex: vérifier la disponibilité du poste, du jeu)
+        if (!posteRepository.checkAvailability(reservation.getPoste().getId())) {
+            throw new Exception("Le poste sélectionné n'est pas disponible.");
+        }
+        // Assurez-vous que les entités liées (Client, Poste, Game, Promotion) sont gérées
+        // ou rattachées si elles viennent d'un contexte détaché.
+        // Le dépôt JPA gérera cela avec em.persist().
+        return reservationRepository.insert(reservation);
+    }
+
+    @Override
+    public List<Reservation> findAllReservations() {
+        return reservationRepository.findAll();
+    }
+
+    @Override
+    public Reservation findReservationById(int id) {
+        return reservationRepository.findById(id);
+    }
+
+    @Override
+    public boolean updateReservation(Reservation reservation) throws Exception {
+        return reservationRepository.update(reservation);
+    }
+
+    @Override
+    public boolean deleteReservation(int id) throws Exception {
+        return reservationRepository.delete(id);
+    }
+
+    @Override
+    public List<Reservation> findReservationsByClientId(int clientId) {
+        return reservationRepository.findByClientId(clientId);
+    }
+
+    @Override
+    public boolean existsByTicketNumber(String numeroTicket) {
+        return reservationRepository.existsByTicketNumber(numeroTicket);
+    }
+
+    @Override
+    public boolean existsReservationById(int id) {
+        return reservationRepository.existsById(id);
+    }
+
+    @Override
+    public List<Reservation> findReservationsByClientIdAndDateRange(int clientId, LocalDateTime startDate, LocalDateTime endDate) {
+        return reservationRepository.findByClientIdAndDateRange(clientId, startDate, endDate);
+    }
+
+    @Override
+    public double calculateReservationPrice(Reservation reservation) throws Exception {
+        // La logique de calcul est déjà dans l'entité Reservation, il suffit de l'appeler.
+        // Assurez-vous que 'appliedPromotion' est chargé si nécessaire pour le calcul.
+        return reservation.calculatePriceBasedOnDuration();
+    }
+
+    @Override
+    public Reservation saveReservation(Reservation reservation, Optional<Promotion> promotion) throws Exception {
+        // Assurez-vous que la promotion est bien attachée à la réservation si elle est présente
+        promotion.ifPresent(reservation::setAppliedPromotion);
+        // Le calcul du prix se fait dans le constructeur de Reservation ou avant l'insertion
+        // reservation.setTotalPrice(calculateReservationPrice(reservation)); // Si non déjà fait
+        return insertReservation(reservation);
+    }
+
+    // --- Payment methods ---
+    @Override
+    public List<Payment> getAllPayments() {
+        return paymentRepository.getAllPayments();
+    }
+
+    @Override
+    public void addPayment(Payment payment) throws Exception {
+        paymentRepository.addPayment(payment);
+    }
+
+    @Override
+    public Optional<Payment> getPaymentById(int id) {
+        return paymentRepository.getPaymentById(id);
+    }
+
+    @Override
+    public void updatePayment(Payment payment) throws Exception {
+        paymentRepository.updatePayment(payment);
+    }
+
+    @Override
+    public void deletePayment(int id) throws Exception {
+        paymentRepository.deletePayment(id);
+    }
+
+    @Override
+    public boolean existsPaymentById(int id) {
+        return paymentRepository.existsById(id);
+    }
+
+    // --- Promotion methods ---
+    @Override
+    public Promotion addPromotion(Promotion promo) throws Exception {
+        if (promoRepository.findByNom(promo.getNom()).isPresent()) {
+            throw new Exception("Une promotion avec ce nom existe déjà.");
+        }
+        return promoRepository.insert(promo);
+    }
+
+    @Override
+    public void updatePromotion(Promotion promo) throws Exception {
+        promoRepository.update(promo);
+    }
+
+    @Override
+    public void deletePromotion(Promotion promo) throws Exception {
+        // Avant de supprimer la promotion, retirez-la des produits associés
+        // Ceci est une logique métier qui peut nécessiter une transaction.
+        // Si CascadeType.ALL est utilisé sur la relation Produit-Promotion,
+        // la suppression de la promotion pourrait aussi supprimer les produits,
+        // ce qui n'est probablement pas souhaité.
+        // Il est préférable de gérer la dissociation manuellement ou via une requête JPQL.
+
+        // Logique pour restaurer les prix des produits liés à cette promotion AVANT de la supprimer
+        // Ceci nécessiterait de récupérer tous les produits liés à cette promotion
+        // et de restaurer leurs prix.
+        // Exemple (nécessiterait une méthode dans ProduitRepository pour trouver par promotion) :
+        // List<Produit> produitsAssocies = produitRepository.findByPromotionId(promo.getId());
+        // for (Produit p : produitsAssocies) {
+        //     // Logique pour restaurer le prix du produit p
+        //     // p.setPrix(p.getAncienPrix()); // Ou une autre logique de restauration
+        //     // produitRepository.update(p);
+        // }
+        
+        // Ou, si la relation ManyToMany est gérée côté Promotion, vous pouvez simplement vider la liste:
+        // promo.getProduits().clear();
+        // promoRepository.update(promo); // Pour persister le changement de relation
+
+        promoRepository.delete(promo);
+    }
+
+    @Override
+    public List<Promotion> getAllPromotions() {
+        return promoRepository.findAll();
+    }
+
+    @Override
+    public Promotion getPromotionById(int id) {
+        // Utilise la méthode findById du dépôt
+        return promoRepository.findById(id);
+    }
+
+    @Override
+    @Transactional
+public void appliquerPromotion(Promotion promo) throws Exception {
+    Promotion managedPromo = promoRepository.findByIdWithProduits(promo.getId());
+    if (managedPromo == null) {
+        throw new Exception("Promotion non trouvée");
+    }
+    
+    // Sauvegarder les prix actuels comme anciens prix
+    for (Produit p : managedPromo.getProduits()) {
+        if (p.getAncienPrix() == null) {
+            p.setAncienPrix(p.getPrix());
+        }
+        p.appliquerPromotion();
+        produitRepository.update(p);
+    }
+    
+    managedPromo.setActif(true);
+    promoRepository.update(managedPromo);
+}
+
+@Transactional
+public void retirerPromotion(Promotion promo) throws Exception {
+    Promotion managedPromo = promoRepository.findByIdWithProduits(promo.getId());
+    if (managedPromo == null) {
+        throw new Exception("Promotion non trouvée");
+    }
+    
+    // Restaurer les prix originaux
+    for (Produit p : managedPromo.getProduits()) {
+        if (p.getAncienPrix() != null) {
+            p.setPrix(p.getAncienPrix());
+            p.setAncienPrix(null);
+            produitRepository.update(p);
+        }
+    }
+    
+    managedPromo.setActif(false);
+    promoRepository.update(managedPromo);
+}
+
+
+   @Transactional
+    @Override
+    public void addProduitToPromotion(int produitId, int promotionId) throws Exception {
+        // 1. Trouver les entités gérées avec leurs relations
+        Promotion promo = promoRepository.findByIdWithProduits(promotionId);
+        Produit produit = produitRepository.findByIdWithPromotions(produitId);
+
+        if (promo == null || produit == null) {
+            throw new Exception("Produit ou Promotion non trouvé pour l'ajout de relation.");
+        }
+
+        // 2. Vérifier que le produit n'est pas déjà associé
+        if (promo.getProduits().contains(produit)) {
+            throw new Exception("Le produit est déjà associé à cette promotion.");
+        }
+
+        // 3. Ajouter le produit à la promotion et vice-versa
+        promo.addProduit(produit);
+        produit.addPromotion(promo);
+
+        // 4. Sauvegarder les modifications
+        promoRepository.update(promo);
+        produitRepository.update(produit);
+    }
+
+    @Override
+    @Transactional
+    public void removeProduitFromPromotion(int produitId, int promotionId) throws Exception {
+        // 1. Trouver les entités gérées
+        Promotion promo = promoRepository.findById(promotionId);
+        Produit produit = produitRepository.findById(produitId);
+
+        if (promo == null || produit == null) {
+            throw new Exception("Produit ou Promotion non trouvé pour la suppression de relation.");
+        }
+
+        // 2. Vérifier que le produit est associé à la promotion
+        if (!promo.getProduits().contains(produit)) {
+            throw new Exception("Le produit n'est pas associé à cette promotion.");
+        }
+
+        // 3. Retirer le produit de la promotion
+        promo.removeProduit(produit);
+        promoRepository.update(promo);
+
+        // 4. Restaurer le prix du produit si c'était la seule promotion active
+        if (produit.getPromotions().isEmpty() && produit.getAncienPrix() != null) {
+            produit.setPrix(produit.getAncienPrix());
+            produit.setAncienPrix(null);
+            produitRepository.update(produit);
+        }
+    }
+
+
+    @Override
+    public boolean existsProduitInPromotion(int produitId, int promotionId) {
+        Promotion promo = promoRepository.findById(promotionId);
+        Produit produit = produitRepository.findById(produitId);
+        return promo != null && produit != null && promo.getProduits().contains(produit);
+    }
+
+    @Override
+    @Transactional
+    public void removeAllProduitsFromPromotion(int promotionId) throws Exception {
+        // 1. Trouver la promotion gérée
+        Promotion promo = promoRepository.findById(promotionId);
+        if (promo == null) {
+            throw new Exception("Promotion non trouvée.");
+        }
+
+        // 2. Restaurer les prix des produits et retirer la promotion
+        if (promo.getProduits() != null) {
+            // Utiliser une copie pour éviter ConcurrentModificationException
+            for (Produit p : new HashSet<>(promo.getProduits())) {
+                if (p.getAncienPrix() != null) {
+                    p.setPrix(p.getAncienPrix());
+                    p.setAncienPrix(null);
+                    produitRepository.update(p);
+                }
+                // Retirer la promotion du côté du produit
+                p.getPromotions().remove(promo);
+                produitRepository.update(p);
+            }
+            promo.getProduits().clear(); // Vider la collection de la promotion
+            promoRepository.update(promo);
+        }
+    }
+
+
+    @Override
+    public void updatePrixEtAncienPrix(int produitId, BigDecimal ancienPrix, BigDecimal nouveauPrix) throws Exception {
+        produitRepository.updatePrixEtAncienPrix(produitId, ancienPrix, nouveauPrix);
+    }
+
+    @Override
+    public void restaurerPrixInitial(int produitId, BigDecimal ancienPrixPassed) {
+        try {
+            produitRepository.restaurerPrixInitial(produitId, ancienPrixPassed);
+        } catch (Exception e) {
+            System.err.println("Erreur lors de la restauration du prix initial du produit : " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Erreur lors de la restauration du prix initial du produit", e);
+        }
+    }
+
+    @Override
+    public List<Promotion> getValidPromotionsForDate(LocalDate date) {
+        return promoRepository.findAll().stream()
+                .filter(p -> p.isValid(date))  // Utilise la méthode isValid(LocalDate) de Promotion
+                .collect(Collectors.toList());
+    }
+
+
+    @Override
+    public Optional<Promotion> getPromotionByNom(String nom) {
+        return promoRepository.findByNom(nom);
+    }
+
+    @Override
+    public List<Promotion> getActiveAndValidPromotions(LocalDate date) {
+        return promoRepository.findAll().stream()
+                .filter(p -> p.isActif() && p.isValid(date))  // Utilise la méthode isValid(LocalDate) de Promotion
+                .collect(Collectors.toList());
+    }
+
+
+    @Override
+    @Transactional
+    public void restoreProductPricesAfterAllPromotionsRemoved(int produitId) throws Exception {
+        Produit produit = produitRepository.findById(produitId);
+        if (produit == null) {
+            throw new Exception("Produit non trouvé pour la restauration des prix.");
+        }
+
+        // S'il n'y a plus de promotions associées et qu'un ancien prix existe
+        if (produit.getPromotions().isEmpty() && produit.getAncienPrix() != null) {
+            produit.setPrix(produit.getAncienPrix());
+            produit.setAncienPrix(null);
+            produitRepository.update(produit);
+        }
+    }
+
+    // Dans ton Service.java
+    public Optional<Promotion> getActivePromotionForToday() {
+        LocalDate today = LocalDate.now();
+        return promoRepository.findAll().stream()
+            .filter(p -> p.isActif() && p.isValid(today))
+            .findFirst();
+    }
+
+    @Transactional
+    public Promotion getPromotionByIdWithProduits(int id) {
+        Promotion promo = promoRepository.findByIdWithProduits(id);
+        if (promo != null) {
+            // Force initialization of the collection
+            Hibernate.initialize(promo.getProduits());
+            // Also initialize promotions for each product if needed
+            for (Produit p : promo.getProduits()) {
+                Hibernate.initialize(p.getPromotions());
+            }
+        }
+        return promo;
+    }
+
+    @Transactional
+    public List<Produit> getProduitsByPromotionId(int promotionId) {
+        Promotion promo = getPromotionByIdWithProduits(promotionId);
+        if (promo != null) {
+            return new ArrayList<>(promo.getProduits());
+        }
+        return Collections.emptyList();
+    }
+
+
+
+
+    @Override
+    public boolean existsPromotionById(int id) {
+        return promoRepository.findById(id) != null;
+    }
+
+    @Override
+    public boolean existsPromotionByName(String name) {
+        return promoRepository.findByNom(name).isPresent();
+    }
+
+
+    // --- Total Play Time (calculé à partir des réservations) ---
+    @Override
+    public Duration getTotalPlayTime(int clientId) {
+        List<Reservation> reservations = reservationRepository.findByClientId(clientId);
+        if (reservations == null || reservations.isEmpty()) {
+            return Duration.ZERO;
+        }
+        return reservations.stream()
+                .map(Reservation::getDuration)
+                .filter(Objects::nonNull) // Assurez-vous que la durée n'est pas nulle
+                .reduce(Duration.ZERO, Duration::plus);
+    }
+
+    @Override
+    // Dans votre Service.java
+    public List<Reservation> findReservationsByUser(User user) {
+        if (user == null) return Collections.emptyList();
+        
+        // Solution 1: Utilisation directe du repository si vous utilisez Spring Data JPA
+        // return reservationRepository.findByCreatedBy(user);
+        
+        // Solution 2: Filtrage manuel
+        return reservationRepository.findAll().stream()
+            .filter(r -> {
+                User createdBy = r.getCreatedBy();
+                return createdBy != null && createdBy.getId() == user.getId(); // Compare par ID
+            })
+            .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional
+    public void pauseGameSession(GameSession session) throws Exception {
+        if (!"Active".equalsIgnoreCase(session.getStatus())) {
+            throw new Exception("Seules les sessions actives peuvent être mises en pause.");
+        }
+
+        // Calculer le temps restant
+        LocalDateTime endTime = session.getStartTime().plus(session.getPaidDuration());
+        Duration remainingTime = Duration.between(LocalDateTime.now(), endTime);
+        session.setPausedRemainingTime(remainingTime);
+        session.setPaused(true);
+        session.setStatus("En pause");
+        gameSessionRepository.updateGameSession(session);
+
+        // Mettre à jour la réservation associée
+        Reservation reservation = session.getReservation();
+        if (reservation != null) {
+            reservation.setStatus("En pause");
+            reservationRepository.update(reservation);
+        }
+
+        // Libérer le poste
+        Poste poste = session.getPoste();
+        if (poste != null) {
+            poste.setHorsService(false); // S'assurer que le poste n'est pas marqué comme hors service
+            posteRepository.update(poste);
+        }
+    }
+
+
+    @Override
+    @Transactional
+    public void resumeGameSession(GameSession session) throws Exception {
+        if (!"En pause".equalsIgnoreCase(session.getStatus())) {
+            throw new Exception("Seules les sessions en pause peuvent être reprises.");
+        }
+        // Vérifier que le poste est disponible
+        Poste poste = session.getPoste();
+        if (poste == null) {
+            throw new Exception("Aucun poste associé à cette session.");
+        }
+        // Vérifier qu'il n'y a pas déjà une session active sur ce poste
+        GameSession activeSessionOnPoste = getActiveSessionForPoste(poste);
+        if (activeSessionOnPoste != null && "Active".equalsIgnoreCase(activeSessionOnPoste.getStatus())) {
+            throw new Exception("Le poste " + poste.getName() + " est déjà occupé par une autre session.");
+        }
+        // Reprendre la session
+        LocalDateTime newEndTime = LocalDateTime.now().plus(session.getPausedRemainingTime());
+        session.setEndTime(newEndTime);
+        session.setPaused(false);
+        session.setStatus("Active");
+        gameSessionRepository.updateGameSession(session);
+        // Mettre à jour la réservation associée
+        Reservation reservation = session.getReservation();
+        if (reservation != null) {
+            reservation.setStatus("Active");
+            reservationRepository.update(reservation);
+        }
+        // Le poste est maintenant occupé par cette session
+    }
+
+
+
+
+    @Override
+    @Transactional
+    public void terminateSessionAndReservation(GameSession session) throws Exception {
+        session.setStatus("Terminée");
+        session.setEndTime(LocalDateTime.now());
+        gameSessionRepository.updateGameSession(session);
+
+        // Recharger la session avec ses relations pour éviter les problèmes de LAZY loading
+        GameSession managedSession = gameSessionRepository.findGameSessionByIdWithRelations(session.getId());
+        Reservation reservation = managedSession.getReservation();
+
+        if (reservation != null) {
+            reservation.setStatus("Terminée");
+            // Forcer le merge pour s'assurer que l'entité est attachée
+            reservationRepository.update(reservation);
+        }
+    }
+
+
+    @Override
+@Transactional
+public void extendGameSession(GameSession session, int additionalMinutes, String connectedUserName) throws Exception {
+    Objects.requireNonNull(session, "La session ne peut pas être null.");
+    if (additionalMinutes <= 0) {
+        throw new IllegalArgumentException("Le nombre de minutes supplémentaires doit être positif.");
+    }
+
+    // 1. Charge la session avec toutes ses relations (y compris poste.games, appliedPromotion, game)
+    GameSession managedSession = gameSessionRepository.findGameSessionByIdWithRelations(session.getId());
+    if (managedSession == null) {
+        throw new Exception("Session introuvable avec l'ID : " + session.getId());
+    }
+
+    // 2. Vérifie que la réservation est chargée
+    Reservation reservation = managedSession.getReservation();
+    if (reservation == null) {
+        throw new Exception("Aucune réservation associée à cette session.");
+    }
+
+    // 3. Vérifie que le jeu est chargé (déjà fait par JOIN FETCH, mais vérification par sécurité)
+    Game game = reservation.getGame();
+    if (game == null) {
+        throw new Exception("Aucun jeu associé à cette réservation.");
+    }
+
+    // 4. Prolonge la session
+    Duration extraDuration = Duration.ofMinutes(additionalMinutes);
+    managedSession.addExtraTime(extraDuration);
+
+    // 5. Met à jour la réservation
+    double originalAmount = reservation.getTotalPrice();
+    reservation.setDuration(reservation.getDuration().plus(extraDuration));
+    reservation.setTotalPrice(reservation.calculatePriceBasedOnDuration());
+
+    // 6. Sauvegarde les modifications
+    gameSessionRepository.updateGameSession(managedSession);
+    reservationRepository.update(reservation);
+
+    // 7. Imprime le ticket
+    ReservationReceiptPrinter printer = new ReservationReceiptPrinter(
+        reservation,
+        connectedUserName,
+        true,
+        additionalMinutes,
+        originalAmount
+    );
+    printer.printReceipt();
+}
+
+
+
+
+
+
+
+    @Override
+    public List<Payment> getPaymentsByUser(User currentUser) {
+         if (currentUser == null) return Collections.emptyList();
+         return paymentRepository.getAllPayments().stream()
+        .filter(r -> {
+            User createdBy = r.getCreatedBy();
+            return createdBy != null && createdBy.getId() == currentUser.getId(); // Compare par ID
+        })
+        .collect(Collectors.toList());
+    }
+}

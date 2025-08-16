@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.*?>
+<?import javafx.scene.effect.*?>
+<?import javafx.scene.*?>
+<?import java.lang.*?>
+<?import javafx.scene.image.*?>
+<?import javafx.scene.text.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<AnchorPane prefHeight="640.0" prefWidth="360.0" style="-fx-background-color: linear-gradient(to bottom right, #2c3e50, #4a69bd);" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.controllers.ConnexionController">
+   <children>
+      <VBox alignment="CENTER" layoutX="0.0" layoutY="0.0" prefHeight="640.0" prefWidth="360.0" spacing="20" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+         <children>
+            <ImageView fitHeight="120.0" fitWidth="120.0" pickOnBounds="true" preserveRatio="true">
+               <image>
+                  <Image url="@../img/kayplaywhite.png" />
+               </image>
+               <VBox.margin>
+                  <Insets bottom="20.0" />
+               </VBox.margin>
+            </ImageView>
+
+            <Label text="CONNEXION" textFill="WHITE">
+               <font>
+                  <Font name="System Bold" size="28.0" />
+               </font>
+               <VBox.margin>
+                  <Insets bottom="30.0" />
+               </VBox.margin>
+            </Label>
+
+            <Label fx:id="lblError" alignment="CENTER" textFill="#FF6B6B" visible="false">
+               <font>
+                  <Font size="14.0" />
+               </font>
+               <VBox.margin>
+                  <Insets bottom="10.0" left="20.0" right="20.0" />
+               </VBox.margin>
+            </Label>
+
+            <TextField fx:id="txtLogin" promptText="Nom d'utilisateur" styleClass="material-text-field">
+               <VBox.margin>
+                  <Insets left="40.0" right="40.0" />
+               </VBox.margin>
+            </TextField>
+
+            <PasswordField fx:id="txtPassword" promptText="Mot de passe" styleClass="material-text-field">
+               <VBox.margin>
+                  <Insets left="40.0" right="40.0" />
+               </VBox.margin>
+            </PasswordField>
+
+            <VBox alignment="CENTER" spacing="15.0">
+               <children>
+                  <Button onAction="#handleConnexion" prefHeight="45.0" prefWidth="280.0" styleClass="material-button-primary" text="SE CONNECTER" textFill="WHITE">
+                     <cursor>
+                        <Cursor fx:constant="HAND" />
+                     </cursor>
+                  </Button>
+                  <Button fx:id="btnInscription" onAction="#handleInscription" prefHeight="45.0" prefWidth="280.0" styleClass="material-button-secondary" text="S'INSCRIRE" textFill="WHITE">
+                     <cursor>
+                        <Cursor fx:constant="HAND" />
+                     </cursor>
+                  </Button>
+               </children>
+               <VBox.margin>
+                  <Insets top="20.0" />
+               </VBox.margin>
+            </VBox>
+         </children>
+      </VBox>
+   </children>
+</AnchorPane>

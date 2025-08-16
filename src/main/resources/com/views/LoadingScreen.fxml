@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.text.Text?>
+<?import javafx.scene.control.ProgressIndicator?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.layout.VBox?>
+
+<AnchorPane style="-fx-background-color: linear-gradient(to bottom right, #2c3e50, #4a69bd);" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
+    <VBox alignment="CENTER" spacing="20" AnchorPane.topAnchor="200" AnchorPane.leftAnchor="50" AnchorPane.rightAnchor="50">
+        <Text fill="WHITE" text="Chargement en cours..." style="-fx-font-size: 24px; -fx-font-weight: bold;" />
+        <ProgressIndicator progress="-1" style="-fx-progress-color: white;" />
+    </VBox>
+</AnchorPane>
