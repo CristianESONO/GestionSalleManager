@@ -5,6 +5,7 @@ import javax.persistence.EntityManagerFactory;
 import javax.persistence.Persistence;
 
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
@@ -19,31 +20,22 @@ public class JpaUtil {
 
         
         // --- MODE PRODUCTION --- (désactivé)
-        String programFilesX86 = System.getenv("ProgramFiles(x86)");
-        String programFiles64 = System.getenv("ProgramW6432");
-
-        String foundPath = null;
-
-        if (programFilesX86 != null) {
-            String path1 = Paths.get(programFilesX86, "GestionSalles", fileName).toString();
-            if (Files.exists(Paths.get(path1))) {
-                foundPath = path1;
+         String appDataPath = System.getenv("APPDATA"); // Chemin vers AppData\Roaming
+        if (appDataPath != null) {
+            Path dbDir = Paths.get(appDataPath, "GestionSalles");
+            try {
+                // Crée le dossier s'il n'existe pas
+                if (!Files.exists(dbDir)) {
+                    Files.createDirectories(dbDir);
+                }
+                DB_FILE_PATH = Paths.get(dbDir.toString(), fileName).toString();
+            } catch (Exception e) {
+                System.err.println("Erreur lors de la création du dossier AppData : " + e.getMessage());
+                DB_FILE_PATH = fileName; // Re repli sur le répertoire courant
             }
+        } else {
+            DB_FILE_PATH = fileName; // Repli sur le répertoire courant si APPDATA n'est pas défini
         }
-
-        if (foundPath == null && programFiles64 != null) {
-            String path2 = Paths.get(programFiles64, "GestionSalles", fileName).toString();
-            if (Files.exists(Paths.get(path2))) {
-                foundPath = path2;
-            }
-        }
-
-        if (foundPath == null) {
-            System.err.println("Base de données introuvable dans Program Files. Tentative de créer dans le répertoire courant.");
-            foundPath = fileName;
-        }
-
-        DB_FILE_PATH = foundPath.replace("%20", " ");
       
 
         // --- MODE DEVELOPPEMENT ---

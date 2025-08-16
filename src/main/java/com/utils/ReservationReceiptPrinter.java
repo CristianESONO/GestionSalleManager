@@ -156,13 +156,13 @@ public class ReservationReceiptPrinter implements Printable {
 
         // --- 5. Détails de la réservation (version compacte) ---
         g2d.setFont(fontBold);
-        int leftMargin = 15;
-        int rightMargin = 15;
+        int leftMargin = 25;  // Augmenté de 15 à 25 (plus d'espace à gauche)
+        int rightMargin = 25; // Augmenté de 15 à 25 (plus d'espace à droite)
 
         // En-têtes alignés
         g2d.setFont(fontBold);
         int col1 = leftMargin;
-        int col2 = (int)(RECEIPT_WIDTH_POINTS * 0.4);
+        int col2 = (int)(RECEIPT_WIDTH_POINTS * 0.5);
         int col3 = (int)RECEIPT_WIDTH_POINTS - rightMargin - g2d.getFontMetrics().stringWidth("Total");
 
         g2d.drawString("Poste", col1, y);
