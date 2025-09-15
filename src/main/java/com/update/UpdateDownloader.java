@@ -49,8 +49,16 @@ public class UpdateDownloader {
     }
 
     private static void installUpdate(String setupPath) throws Exception {
+        // Créer un fichier de verrouillage
+        String lockFilePath = System.getProperty("user.home") + "/Desktop/update_lock.txt";
+        java.nio.file.Files.write(java.nio.file.Paths.get(lockFilePath), "update_in_progress".getBytes());
+
+        // Lancer le setup
         ProcessBuilder pb = new ProcessBuilder(setupPath, "/SILENT", "/NORESTART");
         pb.start();
+
+        // Fermer l'application
         System.exit(0);
     }
+
 }
