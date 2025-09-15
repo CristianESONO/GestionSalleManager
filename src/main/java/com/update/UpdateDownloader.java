@@ -1,6 +1,8 @@
 package com.update;
+import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
+import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
@@ -41,12 +43,39 @@ public class UpdateDownloader {
     }
 
     private static void downloadUpdate(String downloadUrl, String destinationPath) throws Exception {
-        try (InputStream in = new URL(downloadUrl).openStream();
-             ReadableByteChannel rbc = Channels.newChannel(in);
-             FileOutputStream fos = new FileOutputStream(destinationPath)) {
-            fos.getChannel().transferFrom(rbc, 0, Long.MAX_VALUE);
+    try {
+        URL url = new URL(downloadUrl);
+        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+        connection.setRequestProperty("User-Agent", "Mozilla/5.0");
+        
+        // Vérifier le code de réponse HTTP
+        int responseCode = connection.getResponseCode();
+        if (responseCode != HttpURLConnection.HTTP_OK) {
+            throw new Exception("Erreur HTTP: " + responseCode);
         }
+        
+        try (InputStream in = connection.getInputStream();
+             FileOutputStream fos = new FileOutputStream(destinationPath)) {
+            
+            byte[] buffer = new byte[4096];
+            int bytesRead;
+            long totalBytesRead = 0;
+            
+            while ((bytesRead = in.read(buffer)) != -1) {
+                fos.write(buffer, 0, bytesRead);
+                totalBytesRead += bytesRead;
+            }
+            
+            if (totalBytesRead == 0) {
+                throw new Exception("Aucune donnée téléchargée");
+            }
+        }
+    } catch (Exception e) {
+        // Supprimer le fichier potentiellement corrompu
+        new File(destinationPath).delete();
+        throw e;
     }
+}
 
     private static void installUpdate(String setupPath) throws Exception {
         // Créer un fichier de verrouillage
