@@ -25,6 +25,7 @@ import javax.persistence.EntityNotFoundException;
 import javax.transaction.Transactional;
 
 import org.hibernate.Hibernate;
+import org.mindrot.jbcrypt.BCrypt;
 
 public class Service implements IService {
 
@@ -63,11 +64,21 @@ public class Service implements IService {
     }
 
     // --- User methods ---
-    @Override
+   @Override
     public User seConnecter(String login, String password) {
-        // La logique de connexion est déléguée au dépôt User
-        return userRepository.findUserByLoginAndPassword(login, password);
+        // 1. Récupère l'utilisateur par login/email depuis la base de données
+        User user = userRepository.findByEmail(login);
+        if (user == null) {
+            return null; // Utilisateur non trouvé
+        }
+        // 2. Vérifie si le mot de passe saisi correspond au hash stocké
+        if (BCrypt.checkpw(password, user.getPassword())) {
+            return user; // Mot de passe correct
+        } else {
+            return null; // Mot de passe incorrect
+        }
     }
+
 
     @Override
     public List<User> findAllUsers() {

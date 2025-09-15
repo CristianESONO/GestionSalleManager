@@ -80,6 +80,8 @@ public class UserRepositoryJpa implements IUserRepository {
         return user;
     }
 
+    
+
     @Override
     public List<User> findAll() {
         EntityManager em = JpaUtil.getEntityManager();
