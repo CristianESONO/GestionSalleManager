@@ -6,7 +6,6 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
-import javafx.scene.control.ButtonType;
 import javafx.scene.image.Image;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
@@ -48,7 +47,7 @@ public class App extends Application {
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
-            checkForUpdates(); // Appelle checkForUpdates() sans Platform.runLater()
+            checkForUpdates();
         }).start();
     }
 
@@ -69,26 +68,17 @@ public class App extends Application {
     private static void checkForUpdates() {
         String currentVersion = "1.0.0";
         String lastVersion = VersionChecker.getLastVersionFromServer();
-        System.out.println("Dernière version récupérée : " + lastVersion); // Log pour débogage
+        System.out.println("Dernière version récupérée : " + lastVersion);
 
         if (lastVersion != null && !lastVersion.equals(currentVersion)) {
             Platform.runLater(() -> {
-                Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-                alert.setTitle("Mise à jour disponible");
-                alert.setHeaderText("Une nouvelle version est disponible !");
+                Alert alert = new Alert(Alert.AlertType.INFORMATION);
+                alert.setTitle("Mise à jour en cours");
+                alert.setHeaderText("Une nouvelle version est en cours d'installation.");
                 alert.setContentText("Version actuelle : " + currentVersion + "\nDernière version : " + lastVersion);
-                ButtonType buttonOui = new ButtonType("Oui");
-                ButtonType buttonNon = new ButtonType("Non");
-                alert.getButtonTypes().setAll(buttonOui, buttonNon);
-                alert.showAndWait().ifPresent(response -> {
-                    if (response == buttonOui) {
-                        UpdateDownloader.downloadAndInstallUpdate(lastVersion);
-                    } else {
-                        mainSceneController.loadView("connexion");
-                        mainStage.centerOnScreen();
-                    }
-                });
+                alert.show();
             });
+            UpdateDownloader.downloadAndInstallUpdate(lastVersion);
         } else {
             mainSceneController.loadView("connexion");
             mainStage.centerOnScreen();
