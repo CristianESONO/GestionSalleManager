@@ -3,11 +3,9 @@ package com.controllers;
 import java.io.IOException;
 import java.net.URL;
 import java.util.ResourceBundle;
-
 import com.App;
 import com.core.Fabrique;
 import com.entities.User;
-
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.Button;
@@ -30,14 +28,18 @@ public class ConnexionController implements Initializable {
     @Override
     public void initialize(URL location, ResourceBundle resources) {
         lblError.setVisible(false);
-        
+
+        // Vérifie s'il existe déjà un SuperAdmin et désactive le bouton si c'est le cas
+        boolean superAdminExists = Fabrique.getService().superAdminExists();
+        btnInscription.setDisable(superAdminExists);
+
         // Gestionnaire pour la touche Entrer
         EventHandler<KeyEvent> enterKeyHandler = event -> {
             if (event.getCode() == KeyCode.ENTER) {
                 handleConnexion();
             }
         };
-        
+
         // Appliquer le gestionnaire aux deux champs de texte
         txtLogin.setOnKeyPressed(enterKeyHandler);
         txtPassword.setOnKeyPressed(enterKeyHandler);
@@ -47,19 +49,16 @@ public class ConnexionController implements Initializable {
     public void handleConnexion() {
         String login = txtLogin.getText().trim();
         String password = txtPassword.getText().trim();
-
         if (login.isEmpty() || password.isEmpty()) {
             showError("Veuillez entrer un login et un mot de passe.");
             return;
         }
-
         user = Fabrique.getService().seConnecter(login, password);
         if (user == null) {
             showError("Identifiants incorrects.");
         } else {
             Fabrique.getService().setCurrentUser(user);
             lblError.setVisible(false);
-
             try {
                 // Charger la vue "accueil"
                 MainSceneController.getInstance().loadView("accueil");

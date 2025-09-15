@@ -403,41 +403,39 @@ public class ReservationController implements Initializable {
     }
 
     private void promptForExtension(GameSession session) {
-    TextInputDialog dialog = new TextInputDialog("30");
-    dialog.setTitle("Prolonger la durée");
-    dialog.setHeaderText("Prolonger la session pour le poste " + session.getPoste().getName());
-    dialog.setContentText("Ajouter des minutes supplémentaires (ex: 15 pour 15 minutes, ou 1.5 pour 1h30) :");
+        TextInputDialog dialog = new TextInputDialog("30");
+        dialog.setTitle("Prolonger la durée");
+        dialog.setHeaderText("Prolonger la session pour le poste " + session.getPoste().getName());
+        dialog.setContentText("Ajouter des minutes supplémentaires (ex: 15 pour 15 minutes, ou 1.5 pour 1h30) :");
+        dialog.showAndWait().ifPresent(durationStr -> {
+            try {
+                String cleanedInput = durationStr.trim().replace(",", ".");
+                double value = Double.parseDouble(cleanedInput);
+                if (value <= 0) {
+                    ControllerUtils.showErrorAlert("Erreur de durée", "Veuillez saisir un nombre positif.");
+                    return;
+                }
+                int additionalMinutes = cleanedInput.contains(".") ? (int) Math.round(value * 60) : (int) value;
+                if (additionalMinutes <= 0) {
+                    ControllerUtils.showErrorAlert("Erreur de durée", "La durée doit être supérieure à zéro.");
+                    return;
+                }
 
-    dialog.showAndWait().ifPresent(durationStr -> {
-        try {
-            String cleanedInput = durationStr.trim().replace(",", ".");
-            double value = Double.parseDouble(cleanedInput);
+                // Appelle la méthode du service qui gère tout
+                Fabrique.getService().extendGameSession(session, additionalMinutes, connectedUserName);
 
-            if (value <= 0) {
-                ControllerUtils.showErrorAlert("Erreur de durée", "Veuillez saisir un nombre positif.");
-                return;
+                Platform.runLater(() -> {
+                    loadActiveSessions();
+                    loadReservations();
+                });
+            } catch (NumberFormatException e) {
+                ControllerUtils.showErrorAlert("Erreur de saisie", "Veuillez saisir un nombre valide (ex: 30 ou 1.5).");
+            } catch (Exception e) {
+                ControllerUtils.showErrorAlert("Erreur", "Échec de la prolongation : " + e.getMessage());
             }
+        });
+    }
 
-            int additionalMinutes = cleanedInput.contains(".") ? (int) Math.round(value * 60) : (int) value;
-
-            if (additionalMinutes <= 0) {
-                ControllerUtils.showErrorAlert("Erreur de durée", "La durée doit être supérieure à zéro.");
-                return;
-            }
-
-            Fabrique.getService().extendGameSession(session, additionalMinutes, connectedUserName);
-            Platform.runLater(() -> {
-                loadActiveSessions();
-                loadReservations();
-            });
-
-        } catch (NumberFormatException e) {
-            ControllerUtils.showErrorAlert("Erreur de saisie", "Veuillez saisir un nombre valide (ex: 30 ou 1.5).");
-        } catch (Exception e) {
-            ControllerUtils.showErrorAlert("Erreur", "Échec de la prolongation : " + e.getMessage());
-        }
-    });
-}
 
 
     private void terminateGameSession(GameSession session) {
@@ -473,7 +471,10 @@ public class ReservationController implements Initializable {
                 .stream()
                 .filter(s -> "Active".equalsIgnoreCase(s.getStatus()) && !s.isPaused())
                 .collect(Collectors.toList());
-        activeSessions.forEach(session -> {
+
+        boolean sessionsUpdated = false;
+
+        for (GameSession session : activeSessions) {
             if (session.getStartTime() != null && session.getPaidDuration() != null) {
                 LocalDateTime endTime = session.getStartTime().plus(session.getPaidDuration());
                 if (LocalDateTime.now().isAfter(endTime)) {
@@ -481,18 +482,34 @@ public class ReservationController implements Initializable {
                         session.setStatus("Terminée");
                         session.setEndTime(endTime);
                         Fabrique.getService().updateGameSession(session);
-                        updateReservationStatusForSession(session);
+
+                        Reservation reservation = session.getReservation();
+                        if (reservation != null) {
+                            reservation.setStatus("Terminée");
+                            Fabrique.getService().updateReservation(reservation);
+                        }
+
                         if (!notifiedSessions.contains(session.getId())) {
                             notifiedSessions.add(session.getId());
                             Platform.runLater(() -> ControllerUtils.showInfoAlert("Session terminée", "La session sur le poste " + session.getPoste().getName() + " a expiré."));
                         }
+
+                        sessionsUpdated = true;
                     } catch (Exception e) {
                         System.err.println("Erreur lors de la mise à jour de la session " + session.getId() + ": " + e.getMessage());
                     }
                 }
             }
-        });
+        }
+
+        if (sessionsUpdated) {
+            Platform.runLater(() -> {
+                loadActiveSessions();
+                loadReservations();
+            });
+        }
     }
+
 
     @FXML
     private void openAddReservationWindow() {

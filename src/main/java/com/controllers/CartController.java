@@ -248,7 +248,8 @@ public class CartController {
             double montantTotal = calculerPrixTotal();
             String detailsProduits = getDetailsProduits();
             paymentController.setConnectedUser(connectedUser); // À ajouter
-            paymentController.initializeData(clients, montantTotal, detailsProduits, produitsDansLePanier);
+            paymentController.initializeData(clients, montantTotal, detailsProduits, "", produitsDansLePanier);
+
             
             // Callback pour le paiement réussi : vider le panier, fermer la fenêtre du panier et rafraîchir la liste des produits
             paymentController.setOnPaymentSuccessCallback(() -> {

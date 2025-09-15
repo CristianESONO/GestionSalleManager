@@ -35,18 +35,19 @@ public class Payment {
     @JoinColumn(name = "created_by")
     private User createdBy;
     
-  
+   // Détails des produits achetés sous forme de texte (nullable)
+    @Column(columnDefinition = "TEXT", nullable = true)
+    private String detailsProduits;
 
-    // Liste des produits achetés sous forme de texte
-    // Si ce champ peut être très long, vous pourriez envisager @Column(columnDefinition = "TEXT")
-    // ou @Lob si la base de données le supporte pour des CLOBs.
-    private String detailsProduits; 
+    // Détails des réservations sous forme de texte (nullable)
+    @Column(columnDefinition = "TEXT", nullable = true)
+    private String detailReservations;
     
     // Constructeur par défaut (OBLIGATOIRE pour JPA)
     public Payment() { }
 
     // Constructeur avec paramètres (avec ID)
-    public Payment(int id, String numeroTicket, Date dateHeure, double montantTotal, String modePaiement, Client client, String detailsProduits, User createdBy) {
+    public Payment(int id, String numeroTicket, Date dateHeure, double montantTotal, String modePaiement, Client client, String detailsProduits, String detailReservations, User createdBy) {
         this.id = id;
         this.numeroTicket = numeroTicket;
         this.dateHeure = dateHeure;
@@ -54,28 +55,31 @@ public class Payment {
         this.modePaiement = modePaiement;
         this.client = client;
         this.detailsProduits = detailsProduits;
+        this.detailReservations = detailReservations;
         this.createdBy = createdBy;
     }
 
     // Constructeur sans Client pour les cas où le client est encore inconnu ou optionnel
-    public Payment(int id, String numeroTicket, Date dateHeure, double montantTotal, String modePaiement, String detailsProduits, User createdBy) {
+    public Payment(int id, String numeroTicket, Date dateHeure, double montantTotal, String modePaiement, String detailsProduits, String detailReservations, User createdBy) {
         this.id = id;
         this.numeroTicket = numeroTicket;
         this.dateHeure = dateHeure;
         this.montantTotal = montantTotal;
         this.modePaiement = modePaiement;
         this.detailsProduits = detailsProduits;
+        this.detailReservations = detailReservations;
         this.createdBy = createdBy;
     }
     
     // Constructeur pour les nouvelles entités sans ID (l'ID sera généré par la DB)
-    public Payment(String numeroTicket, Date dateHeure, double montantTotal, String modePaiement, Client client, String detailsProduits, User createdBy) {
+    public Payment(String numeroTicket, Date dateHeure, double montantTotal, String modePaiement, Client client, String detailsProduits, String detailReservations, User createdBy) {
         this.numeroTicket = numeroTicket;
         this.dateHeure = dateHeure;
         this.montantTotal = montantTotal;
         this.modePaiement = modePaiement;
         this.client = client;
         this.detailsProduits = detailsProduits;
+        this.detailReservations = detailReservations;
         this.createdBy = createdBy;
     }
 
@@ -143,6 +147,15 @@ public class Payment {
 
     public void setDetailsProduits(String detailsProduits) {
         this.detailsProduits = detailsProduits;
+    }
+
+       // Getter et setter pour detailReservations
+    public String getDetailReservations() {
+        return detailReservations;
+    }
+
+    public void setDetailReservations(String detailReservations) {
+        this.detailReservations = detailReservations;
     }
 
     // Méthode pour afficher un résumé du paiement

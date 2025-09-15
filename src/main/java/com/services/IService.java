@@ -63,6 +63,7 @@ public interface IService {
     void setCurrentUser(User user);
     boolean existsUserById(int id); // Ajouté pour cohérence avec le dépôt JPA
     boolean existsUserByName(String name); // Ajouté pour cohérence avec le dépôt JPA
+    boolean superAdminExists();
 
     // Payment methods
     List<Payment> getAllPayments();
@@ -141,6 +142,8 @@ public interface IService {
      */
     Duration getTotalPlayTime(int clientId); // CONSERVER CETTE MÉTHODE
     Optional<Promotion> getActivePromotionForToday();
+    Optional<Promotion> getBestActivePromotionForToday();
     Promotion getPromotionByIdWithProduits(int id);
+    List<Promotion> getValidReservationsPromotionsForDate(LocalDate date);
     
 }

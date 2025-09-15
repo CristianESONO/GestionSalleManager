@@ -100,6 +100,7 @@ public class UserController {
     public void initialize() {
         // 1. Initialiser les colonnes des TableView
         setupTables();
+        setupColumnResizePolicies();
 
         // 2. Charger toutes les données depuis la fabrique (base de données/service)
         refreshAllData(); // Use this method to initially load and filter
@@ -144,6 +145,13 @@ public class UserController {
         codeParrainageColumn.setCellValueFactory(new PropertyValueFactory<>("codeParrainage"));
         pointsParrainageColumn.setCellValueFactory(new PropertyValueFactory<>("parrainagePoints"));
         parrainTable.setItems(displayedParrains); // Lie le TableView à la liste des parrains affichés
+    }
+
+    private void setupColumnResizePolicies() {
+        // Utilisez la politique de redimensionnement moderne
+        clientTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
+        userTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
+        parrainTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
     }
 
     /**
@@ -328,7 +336,6 @@ public class UserController {
      */
     private void managePermissions() {
         User currentUser = ConnexionController.user;
-
         boolean isSuperAdmin = currentUser != null && currentUser.getRole().equals(Role.SuperAdmin);
         boolean isAdmin = currentUser != null && currentUser.getRole().equals(Role.Admin);
 
@@ -338,15 +345,15 @@ public class UserController {
         if (deleteAdminButton != null) deleteAdminButton.setVisible(isSuperAdmin);
 
         // Client buttons
-        // Assuming Admin can edit clients based on previous discussions. SuperAdmin can delete.
-        if (editClientButton != null) editClientButton.setVisible(isSuperAdmin || isAdmin);
+        if (editClientButton != null) editClientButton.setVisible(isSuperAdmin); // Seuls les SuperAdmin peuvent modifier
         if (deleteClientButton != null) deleteClientButton.setVisible(isSuperAdmin);
 
         // Sponsor (Parrain) buttons
         if (addParrainButton != null) addParrainButton.setVisible(isSuperAdmin || isAdmin);
-        if (editParrainButton != null) editParrainButton.setVisible(isSuperAdmin || isAdmin);
+        if (editParrainButton != null) editParrainButton.setVisible(isSuperAdmin); // Seuls les SuperAdmin peuvent modifier
         if (deleteParrainButton != null) deleteParrainButton.setVisible(isSuperAdmin);
     }
+
 
     private void openModalWindow(String fxmlPath, String title, Object entity) {
         try {
@@ -413,16 +420,25 @@ public class UserController {
         openModalWindow("/com/views/AddClientWindow.fxml", "Ajouter un client", null);
     }
 
-    @FXML
+   @FXML
     private void openEditClientWindow() {
+        // 1. Vérifie d'abord si l'utilisateur est un SuperAdmin
+        if (ConnexionController.user == null || !ConnexionController.user.getRole().equals(Role.SuperAdmin)) {
+            showAlert(AlertType.WARNING, "Accès refusé : Vous n'avez pas les permissions nécessaires pour modifier un client.");
+            return; // Arrête l'exécution si l'utilisateur n'a pas les droits
+        }
+
+        // 2. Vérifie qu'un client est sélectionné
         Client selectedClient = clientTable.getSelectionModel().getSelectedItem();
         if (selectedClient == null) {
             showAlert(AlertType.WARNING, "Veuillez sélectionner un client à modifier.");
             return;
         }
-        // Add permission check if needed, e.g., if only admins can edit clients
+
+        // 3. Ouvre la fenêtre de modification
         openModalWindow("/com/views/EditClientWindow.fxml", "Modifier un client", selectedClient);
     }
+
 
     @FXML
     private void openAddParrainWindow() {
@@ -432,14 +448,23 @@ public class UserController {
 
     @FXML
     private void openEditParrainWindow() {
+        // 1. Vérifie les permissions
+        if (ConnexionController.user == null || !ConnexionController.user.getRole().equals(Role.SuperAdmin)) {
+            showAlert(AlertType.WARNING, "Accès refusé : Vous n'avez pas les permissions nécessaires pour modifier un parrain.");
+            return;
+        }
+
+        // 2. Vérifie la sélection
         Parrain selectedParrain = parrainTable.getSelectionModel().getSelectedItem();
         if (selectedParrain == null) {
             showAlert(AlertType.WARNING, "Veuillez sélectionner un parrain à modifier.");
             return;
         }
-        // Permission check might be needed here
+
+        // 3. Ouvre la fenêtre
         openModalWindow("/com/views/EditParrainWindow.fxml", "Modifier un parrain", selectedParrain);
     }
+
 
     @FXML
     private void deleteUser() {

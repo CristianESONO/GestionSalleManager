@@ -2,6 +2,7 @@ package com.repositories.bd;
 
 import com.core.JpaUtil;
 import com.entities.Promotion;
+import com.entities.TypePromotion;
 import com.entities.Produit;
 import com.repositories.IPromoRepository;
 
@@ -15,6 +16,7 @@ import javax.persistence.criteria.Root;
 
 import org.hibernate.Hibernate;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -103,7 +105,10 @@ public class PromotionRepositoryJpa implements IPromoRepository {
         EntityManager em = JpaUtil.getEntityManager();
         try {
             TypedQuery<Promotion> query = em.createQuery(
-                "SELECT DISTINCT p FROM Promotion p LEFT JOIN FETCH p.produits WHERE p.id = :id", 
+                "SELECT DISTINCT p FROM Promotion p " +
+                "LEFT JOIN FETCH p.produits produits " +
+                "LEFT JOIN FETCH produits.promotions " +
+                "WHERE p.id = :id",
                 Promotion.class);
             query.setParameter("id", id);
             return query.getSingleResult();
@@ -113,6 +118,7 @@ public class PromotionRepositoryJpa implements IPromoRepository {
             em.close();
         }
     }
+
 
     @Override
     public List<Promotion> findAll() {
@@ -125,6 +131,24 @@ public class PromotionRepositoryJpa implements IPromoRepository {
             em.close();
         }
     }
+
+    @Override
+    public List<Promotion> findValidPromotionsByTypeAndDate(TypePromotion type, LocalDate date) {
+        EntityManager em = JpaUtil.getEntityManager();
+        try {
+            TypedQuery<Promotion> query = em.createQuery(
+                "SELECT p FROM Promotion p WHERE p.typePromotion = :type AND p.actif = true " +
+                "AND p.dateDebut <= :date AND p.dateFin >= :date", Promotion.class);
+            query.setParameter("type", type);
+            query.setParameter("date", date);
+            return query.getResultList();
+        } catch (Exception e) {
+            throw new RuntimeException("Erreur lors de la recherche des promotions valides", e);
+        } finally {
+            em.close();
+        }
+    }
+
 
     @Override
     public Optional<Promotion> findByNom(String nom) {

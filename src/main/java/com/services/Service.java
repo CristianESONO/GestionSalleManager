@@ -11,6 +11,8 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -475,13 +477,39 @@ public class Service implements IService {
     }
 
     @Override
+    @Transactional
     public Reservation saveReservation(Reservation reservation, Optional<Promotion> promotion) throws Exception {
-        // Assurez-vous que la promotion est bien attachée à la réservation si elle est présente
-        promotion.ifPresent(reservation::setAppliedPromotion);
-        // Le calcul du prix se fait dans le constructeur de Reservation ou avant l'insertion
-        // reservation.setTotalPrice(calculateReservationPrice(reservation)); // Si non déjà fait
+        // Applique la promotion si elle est présente
+        if (promotion.isPresent()) {
+            Promotion promo = promotion.get();
+
+            // 1. Vérifie le type de promotion
+            if (promo.getTypePromotion() != TypePromotion.RESERVATION) {
+                throw new Exception("Seules les promotions de type 'Réservation' peuvent être appliquées à une réservation.");
+            }
+
+            // 2. Vérifie la validité de la promotion pour la date de réservation
+            if (!promo.isValid(reservation.getReservationDate().toLocalDate())) {
+                throw new Exception("La promotion n'est pas valide pour la date de cette réservation.");
+            }
+
+            // 3. Assigne la promotion à la réservation
+            reservation.setAppliedPromotion(promo);
+        }
+
+        // Recalcule toujours le prix (avec ou sans promotion)
+        reservation.setTotalPrice(reservation.calculatePriceBasedOnDuration());
+
+        // Persiste la réservation
         return insertReservation(reservation);
     }
+
+
+    @Override
+    public List<Promotion> getValidReservationsPromotionsForDate(LocalDate date) {
+        return promoRepository.findValidPromotionsByTypeAndDate(TypePromotion.RESERVATION, date);
+    }
+
 
     // --- Payment methods ---
     @Override
@@ -566,46 +594,104 @@ public class Service implements IService {
         return promoRepository.findById(id);
     }
 
-    @Override
     @Transactional
-public void appliquerPromotion(Promotion promo) throws Exception {
-    Promotion managedPromo = promoRepository.findByIdWithProduits(promo.getId());
-    if (managedPromo == null) {
-        throw new Exception("Promotion non trouvée");
-    }
-    
-    // Sauvegarder les prix actuels comme anciens prix
-    for (Produit p : managedPromo.getProduits()) {
-        if (p.getAncienPrix() == null) {
-            p.setAncienPrix(p.getPrix());
+    @Override
+    public void appliquerPromotion(Promotion promo) throws Exception {
+        Promotion managedPromo = getPromotionByIdWithProduits(promo.getId());
+        if (managedPromo == null) {
+            throw new Exception("Promotion non trouvée");
         }
-        p.appliquerPromotion();
-        produitRepository.update(p);
-    }
-    
-    managedPromo.setActif(true);
-    promoRepository.update(managedPromo);
-}
 
-@Transactional
-public void retirerPromotion(Promotion promo) throws Exception {
-    Promotion managedPromo = promoRepository.findByIdWithProduits(promo.getId());
-    if (managedPromo == null) {
-        throw new Exception("Promotion non trouvée");
-    }
-    
-    // Restaurer les prix originaux
-    for (Produit p : managedPromo.getProduits()) {
-        if (p.getAncienPrix() != null) {
-            p.setPrix(p.getAncienPrix());
-            p.setAncienPrix(null);
-            produitRepository.update(p);
+        // Activer la promotion
+        managedPromo.setActif(true);
+        promoRepository.update(managedPromo);
+
+        // Appliquer la promotion
+        if (managedPromo.getTypePromotion() == TypePromotion.PRODUIT) {
+            for (Produit p : managedPromo.getProduits()) {
+                // Trouver toutes les promotions actives pour ce produit
+                List<Promotion> activePromotionsForProduit = p.getPromotions().stream()
+                    .filter(pr -> pr.isActif() && pr.getTypePromotion() == TypePromotion.PRODUIT)
+                    .collect(Collectors.toList());
+
+                // Si d'autres promotions actives existent, comparer les taux de réduction
+                if (!activePromotionsForProduit.isEmpty()) {
+                    // Trouver la promotion avec le taux de réduction le plus élevé
+                    Promotion highestRatePromo = activePromotionsForProduit.stream()
+                        .max(Comparator.comparingDouble(Promotion::getTauxReduction))
+                        .orElse(null);
+
+                    // Si la promotion actuelle a un taux de réduction plus élevé, l'appliquer
+                    if (highestRatePromo == null || managedPromo.getTauxReduction() > highestRatePromo.getTauxReduction()) {
+                        // Appliquer la réduction au produit
+                        BigDecimal prixOriginal = p.getAncienPrix() != null ? p.getAncienPrix() : p.getPrix();
+                        BigDecimal nouveauPrix = prixOriginal.multiply(BigDecimal.ONE.subtract(BigDecimal.valueOf(managedPromo.getTauxReduction())));
+                        p.setAncienPrix(prixOriginal);
+                        p.setPrix(nouveauPrix);
+                        produitRepository.update(p);
+                    }
+                } else {
+                    // Aucune autre promotion active, appliquer la réduction
+                    BigDecimal prixOriginal = p.getPrix();
+                    BigDecimal nouveauPrix = prixOriginal.multiply(BigDecimal.ONE.subtract(BigDecimal.valueOf(managedPromo.getTauxReduction())));
+                    p.setAncienPrix(prixOriginal);
+                    p.setPrix(nouveauPrix);
+                    produitRepository.update(p);
+                }
+            }
+        } else if (managedPromo.getTypePromotion() == TypePromotion.RESERVATION) {
+            // Pour les promotions de type RESERVATION, on ne fait rien ici
+            // car elles sont appliquées directement lors de la création ou de la mise à jour d'une réservation
         }
     }
-    
-    managedPromo.setActif(false);
-    promoRepository.update(managedPromo);
-}
+
+    @Transactional
+    @Override
+    public void retirerPromotion(Promotion promo) throws Exception {
+        Promotion managedPromo = promoRepository.findByIdWithProduits(promo.getId());
+        if (managedPromo == null) {
+            throw new Exception("Promotion non trouvée");
+        }
+
+        // Désactiver la promotion
+        managedPromo.setActif(false);
+        promoRepository.update(managedPromo);
+
+        // Restaurer les prix originaux des produits si nécessaire
+        if (managedPromo.getTypePromotion() == TypePromotion.PRODUIT) {
+            for (Produit p : managedPromo.getProduits()) {
+                // Vérifier si le produit a encore d'autres promotions actives
+                List<Promotion> activePromotionsForProduit = p.getPromotions().stream()
+                    .filter(pr -> pr.isActif() && pr.getTypePromotion() == TypePromotion.PRODUIT && !pr.equals(managedPromo))
+                    .collect(Collectors.toList());
+
+                // Si aucune autre promotion active n'existe, restaurer le prix original
+                if (activePromotionsForProduit.isEmpty()) {
+                    if (p.getAncienPrix() != null) {
+                        p.setPrix(p.getAncienPrix());
+                        p.setAncienPrix(null);
+                        produitRepository.update(p);
+                    }
+                } else {
+                    // Sinon, appliquer la promotion avec le taux de réduction le plus élevé
+                    Promotion highestRatePromo = activePromotionsForProduit.stream()
+                        .max(Comparator.comparingDouble(Promotion::getTauxReduction))
+                        .orElse(null);
+
+                    if (highestRatePromo != null) {
+                        BigDecimal prixOriginal = p.getAncienPrix() != null ? p.getAncienPrix() : p.getPrix();
+                        BigDecimal nouveauPrix = prixOriginal.multiply(BigDecimal.ONE.subtract(BigDecimal.valueOf(highestRatePromo.getTauxReduction())));
+                        p.setAncienPrix(prixOriginal);
+                        p.setPrix(nouveauPrix);
+                        produitRepository.update(p);
+                    }
+                }
+            }
+        } else if (managedPromo.getTypePromotion() == TypePromotion.RESERVATION) {
+            // Pour les promotions de type RESERVATION, on ne fait rien ici
+            // car elles ne modifient pas directement les prix des produits
+        }
+    }
 
 
    @Transactional
@@ -754,23 +840,29 @@ public void retirerPromotion(Promotion promo) throws Exception {
     public Optional<Promotion> getActivePromotionForToday() {
         LocalDate today = LocalDate.now();
         return promoRepository.findAll().stream()
-            .filter(p -> p.isActif() && p.isValid(today))
+            .filter(p -> p.isActif()
+                && p.getTypePromotion() == TypePromotion.RESERVATION  // Filtre par type RESERVATION
+                && p.isValid(today))
             .findFirst();
     }
 
+    public Optional<Promotion> getBestActivePromotionForToday() {
+        LocalDate today = LocalDate.now();
+        return promoRepository.findAll().stream()
+            .filter(p -> p.isActif()
+                && p.getTypePromotion() == TypePromotion.RESERVATION
+                && p.isValid(today))
+            .max(Comparator.comparingDouble(Promotion::getTauxReduction)); // Sélectionne la promotion avec le taux le plus élevé
+    }
+
+
+
     @Transactional
     public Promotion getPromotionByIdWithProduits(int id) {
-        Promotion promo = promoRepository.findByIdWithProduits(id);
-        if (promo != null) {
-            // Force initialization of the collection
-            Hibernate.initialize(promo.getProduits());
-            // Also initialize promotions for each product if needed
-            for (Produit p : promo.getProduits()) {
-                Hibernate.initialize(p.getPromotions());
-            }
-        }
-        return promo;
+        return promoRepository.findByIdWithProduits(id);
     }
+
+
 
     @Transactional
     public List<Produit> getProduitsByPromotionId(int promotionId) {
@@ -887,7 +979,10 @@ public void retirerPromotion(Promotion promo) throws Exception {
         // Le poste est maintenant occupé par cette session
     }
 
-
+    @Override
+    public boolean superAdminExists() {
+        return userRepository.existsByRole(Role.SuperAdmin);
+    }
 
 
     @Override
@@ -909,54 +1004,129 @@ public void retirerPromotion(Promotion promo) throws Exception {
     }
 
 
-    @Override
-@Transactional
-public void extendGameSession(GameSession session, int additionalMinutes, String connectedUserName) throws Exception {
-    Objects.requireNonNull(session, "La session ne peut pas être null.");
-    if (additionalMinutes <= 0) {
-        throw new IllegalArgumentException("Le nombre de minutes supplémentaires doit être positif.");
+   @Override
+    @Transactional
+    public void extendGameSession(GameSession session, int additionalMinutes, String connectedUserName) throws Exception {
+        Objects.requireNonNull(session, "La session ne peut pas être null.");
+        if (additionalMinutes <= 0) {
+            throw new IllegalArgumentException("Le nombre de minutes supplémentaires doit être positif.");
+        }
+
+        // Déclare et initialise le mode de paiement par défaut
+        String modePaiement = "En Espèce";
+
+        // 1. Charge la session avec toutes ses relations
+        GameSession managedSession = gameSessionRepository.findGameSessionByIdWithRelations(session.getId());
+        if (managedSession == null) {
+            throw new Exception("Session introuvable avec l'ID : " + session.getId());
+        }
+        // 2. Vérifie que la réservation est chargée
+        Reservation reservation = managedSession.getReservation();
+        if (reservation == null) {
+            throw new Exception("Aucune réservation associée à cette session.");
+        }
+        // 3. Vérifie que le jeu est chargé
+        Game game = reservation.getGame();
+        if (game == null) {
+            throw new Exception("Aucun jeu associé à cette réservation.");
+        }
+        // 4. Calcule le prix supplémentaire
+        double additionalPrice = calculateExtensionPrice(additionalMinutes, reservation);
+        // 5. Met à jour la durée de la session et de la réservation
+        Duration extraDuration = Duration.ofMinutes(additionalMinutes);
+        managedSession.addExtraTime(extraDuration);
+        // 6. Met à jour le prix total de la réservation en ajoutant uniquement le prix supplémentaire
+        double originalAmount = reservation.getTotalPrice();
+        reservation.setDuration(reservation.getDuration().plus(extraDuration));
+        reservation.setTotalPrice(originalAmount + additionalPrice);
+        // 7. Met à jour les points de fidélité
+        updateLoyaltyPoints(reservation, additionalMinutes);
+        // 8. Met à jour les points de parrainage
+        updateParrainPoints(reservation, additionalMinutes);
+        // 9. Sauvegarde les modifications
+        gameSessionRepository.updateGameSession(managedSession);
+        reservationRepository.update(reservation);
+        // 9.5. Crée un paiement pour la prolongation
+        String detailReservations = String.format(
+            "Prolongation de %d minutes pour la réservation %s (Poste %d) - Jeu: %s",
+            additionalMinutes,
+            reservation.getNumeroTicket(),
+            reservation.getPoste().getId(),
+            game.getName()
+        );
+        Payment payment = new Payment(
+            "EXT-" + reservation.getNumeroTicket(),
+            new Date(),
+            additionalPrice,
+            modePaiement, // Utilise la variable locale
+            reservation.getClient(),
+            "",
+            detailReservations,
+            currentUser
+        );
+        paymentRepository.addPayment(payment);
+        // 10. Imprime le ticket avec le mode de paiement
+        ReservationReceiptPrinter printer = new ReservationReceiptPrinter(
+            reservation,
+            connectedUserName,
+            true,
+            additionalMinutes,
+            originalAmount,
+            modePaiement // Utilise la variable locale
+        );
+        printer.printReceipt();
     }
 
-    // 1. Charge la session avec toutes ses relations (y compris poste.games, appliedPromotion, game)
-    GameSession managedSession = gameSessionRepository.findGameSessionByIdWithRelations(session.getId());
-    if (managedSession == null) {
-        throw new Exception("Session introuvable avec l'ID : " + session.getId());
+private double calculateExtensionPrice(int additionalMinutes, Reservation reservation) {
+    double additionalPrice = 0.0;
+    int remainingMinutes = additionalMinutes;
+
+    if (remainingMinutes <= 15) {
+        additionalPrice += 300.0;
+    } else if (remainingMinutes <= 30) {
+        additionalPrice += 500.0;
+    } else {
+        additionalPrice += 500.0;
+        remainingMinutes -= 30;
+        int numberOf15MinBlocks = (int) Math.ceil((double) remainingMinutes / 15);
+        additionalPrice += numberOf15MinBlocks * 250.0;
     }
 
-    // 2. Vérifie que la réservation est chargée
-    Reservation reservation = managedSession.getReservation();
-    if (reservation == null) {
-        throw new Exception("Aucune réservation associée à cette session.");
+    // Appliquer la promotion si elle est valide
+    if (reservation.getAppliedPromotion() != null && reservation.getAppliedPromotion().isValid(LocalDate.now())) {
+        additionalPrice *= (1 - reservation.getAppliedPromotion().getTauxReduction());
     }
 
-    // 3. Vérifie que le jeu est chargé (déjà fait par JOIN FETCH, mais vérification par sécurité)
-    Game game = reservation.getGame();
-    if (game == null) {
-        throw new Exception("Aucun jeu associé à cette réservation.");
+    return additionalPrice;
+}
+
+private void updateLoyaltyPoints(Reservation reservation, int additionalMinutes) {
+    if (reservation.getClient() != null) {
+        Client client = reservation.getClient();
+        int pointsEarned = additionalMinutes / 15;
+        client.setLoyaltyPoints(client.getLoyaltyPoints() + pointsEarned);
+        try {
+            clientRepository.update(client);
+        } catch (Exception e) {
+            throw new RuntimeException("Erreur lors de la mise à jour des points de fidélité: " + e.getMessage(), e);
+        }
     }
+}
 
-    // 4. Prolonge la session
-    Duration extraDuration = Duration.ofMinutes(additionalMinutes);
-    managedSession.addExtraTime(extraDuration);
-
-    // 5. Met à jour la réservation
-    double originalAmount = reservation.getTotalPrice();
-    reservation.setDuration(reservation.getDuration().plus(extraDuration));
-    reservation.setTotalPrice(reservation.calculatePriceBasedOnDuration());
-
-    // 6. Sauvegarde les modifications
-    gameSessionRepository.updateGameSession(managedSession);
-    reservationRepository.update(reservation);
-
-    // 7. Imprime le ticket
-    ReservationReceiptPrinter printer = new ReservationReceiptPrinter(
-        reservation,
-        connectedUserName,
-        true,
-        additionalMinutes,
-        originalAmount
-    );
-    printer.printReceipt();
+private void updateParrainPoints(Reservation reservation, int additionalMinutes) {
+    if (reservation.getCodeParrainage() != null && !reservation.getCodeParrainage().isEmpty()) {
+        String parrainCode = reservation.getCodeParrainage();
+        Parrain parrain = parrainRepository.findByCodeParrainage(parrainCode);
+        if (parrain != null) {
+            int pointsEarned = additionalMinutes / 15;
+            parrain.addParrainagePoints(pointsEarned);
+            try {
+                parrainRepository.update(parrain);
+            } catch (Exception e) {
+                throw new RuntimeException("Erreur lors de la mise à jour des points de parrainage: " + e.getMessage(), e);
+            }
+        }
+    }
 }
 
 

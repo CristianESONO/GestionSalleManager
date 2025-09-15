@@ -3,6 +3,7 @@ package com.repositories;
 import java.util.List;
 
 import com.entities.Client;
+import com.entities.Role;
 import com.entities.User;
 
 public interface IUserRepository {
@@ -21,4 +22,5 @@ public interface IUserRepository {
      * @return true if a user with the specified ID exists, false otherwise.
      */
     public boolean existsById(int id); // Nouvelle méthode ajout
+    boolean existsByRole(Role role);
 }

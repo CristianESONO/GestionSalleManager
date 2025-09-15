@@ -2,6 +2,7 @@ package com.repositories.bd; // Ou com.repositories.bd si vous préférez
 
 import com.core.JpaUtil; // Importez votre classe utilitaire JPA
 import com.entities.Client; // Importez Client car findById retourne un Client
+import com.entities.Role;
 import com.entities.User;
 import com.repositories.IUserRepository;
 
@@ -36,6 +37,25 @@ public class UserRepositoryJpa implements IUserRepository {
             em.close(); // Ferme l'EntityManager
         }
         return user;
+    }
+
+    @Override
+    public boolean existsByRole(Role role) {
+        EntityManager em = JpaUtil.getEntityManager();
+        try {
+            // Requête JPQL pour vérifier l'existence d'un utilisateur avec le rôle spécifié
+            TypedQuery<Long> query = em.createQuery(
+                "SELECT COUNT(u) FROM User u WHERE u.role = :role", Long.class);
+            query.setParameter("role", role);
+            Long count = query.getSingleResult();
+            return count > 0;
+        } catch (Exception e) {
+            System.err.println("Erreur lors de la vérification de l'existence d'un utilisateur par rôle : " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        } finally {
+            em.close();
+        }
     }
 
     // Dans com.repositories.jpa.UserRepositoryJpa.java

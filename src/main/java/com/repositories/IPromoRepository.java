@@ -1,7 +1,9 @@
 package com.repositories;
 
 import com.entities.Promotion;
+import com.entities.TypePromotion;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -13,6 +15,7 @@ public interface IPromoRepository {
     void delete(Promotion promo);
     Promotion findById(int id);
     List<Promotion> findAll();
+    List<Promotion> findValidPromotionsByTypeAndDate(TypePromotion type, LocalDate date);
     
         /**
      * Recherche une promotion par son nom.

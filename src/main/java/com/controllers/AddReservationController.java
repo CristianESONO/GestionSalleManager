@@ -4,6 +4,7 @@ import com.core.Fabrique;
 import com.entities.Client;
 import com.entities.Game;
 import com.entities.Parrain;
+import com.entities.Payment;
 import com.entities.Poste;
 import com.entities.Promotion;
 import com.entities.Reservation;
@@ -40,6 +41,9 @@ public class AddReservationController {
     private ComboBox<Poste> posteComboBox;
     @FXML
     private ComboBox<Game> gameComboBox;
+    @FXML
+    private ComboBox<String> modePaiementComboBox;
+
 
     @FXML
     private ComboBox<Integer> hoursComboBox;
@@ -87,6 +91,10 @@ public class AddReservationController {
                 return null; // Pas nécessaire pour cette utilisation
             }
         });
+
+        modePaiementComboBox.setItems(FXCollections.observableArrayList(
+            "En Espèce", "Wave", "Orange Money", "free money"
+        ));
 
         // 4. Mettre à jour le ComboBox des postes pour afficher TOUS les postes au démarrage
         // (avant qu'un jeu ne soit sélectionné). C'est l'état initial.
@@ -219,29 +227,30 @@ public class AddReservationController {
     private void calculateAndSetAmount() {
         Reservation tempReservation = new Reservation();
         Duration currentDuration = getSelectedDuration();
+        tempReservation.setDuration(currentDuration);
 
-        tempReservation.setDuration(currentDuration); 
-        // **Applique automatiquement la promotion active si elle existe**
-        Optional<Promotion> activePromo = Fabrique.getService().getActivePromotionForToday();
+        Optional<Promotion> activePromo = Fabrique.getService().getBestActivePromotionForToday();
         activePromo.ifPresent(tempReservation::setAppliedPromotion);
 
         double amount = tempReservation.calculatePriceBasedOnDuration();
-        amountLabel.setText(String.format("Montant : %.2f FCFA", amount));
+        String promoInfo = activePromo.map(p -> " (Promo: " + p.getNom() + ")").orElse("");
+        amountLabel.setText(String.format("Montant : %.2f FCFA%s", amount, promoInfo));
     }
 
-    @FXML
+
+   @FXML
     private void addReservation(ActionEvent event) throws Exception {
         String clientName = nameField.getText().trim();
         String clientPhone = phoneField.getText().trim();
         String clientAddress = addressField.getText().trim();
-
         Poste poste = posteComboBox.getValue();
         Game game = gameComboBox.getValue();
         Duration duration = getSelectedDuration();
         Parrain parrain = parrainComboBox.getValue();
 
         if (clientName.isEmpty() || clientPhone.isEmpty() || poste == null || game == null || duration.toMinutes() < 15) {
-            ControllerUtils.showErrorAlert("Champs manquants ou durée invalide", "Veuillez remplir le nom du client, le numéro de téléphone, choisir un poste, un jeu et une durée valide (minimum 15 minutes).");
+            ControllerUtils.showErrorAlert("Champs manquants ou durée invalide",
+                "Veuillez remplir le nom du client, le numéro de téléphone, choisir un poste, un jeu et une durée valide (minimum 15 minutes).");
             return;
         }
 
@@ -250,22 +259,31 @@ public class AddReservationController {
         try {
             totalPrice = Double.parseDouble(amountText);
         } catch (NumberFormatException e) {
-            ControllerUtils.showErrorAlert("Erreur de calcul du prix", "Le montant n'a pas pu être déterminé. Veuillez vérifier la durée saisie.");
+            ControllerUtils.showErrorAlert("Erreur de calcul du prix",
+                "Le montant n'a pas pu être déterminé. Veuillez vérifier la durée saisie.");
             return;
         }
 
-         // VÉRIFICATION CRUCIALE DE L'UTILISATEUR
+        String modePaiement = modePaiementComboBox.getSelectionModel().getSelectedItem();
+        if (modePaiement == null) {
+            ControllerUtils.showErrorAlert("Mode de paiement manquant",
+                "Veuillez sélectionner un mode de paiement.");
+            return;
+        }
+
         if (connectedUser == null) {
             connectedUser = Fabrique.getService().getCurrentUser();
             if (connectedUser == null) {
-                ControllerUtils.showErrorAlert("Erreur d'authentification", 
+                ControllerUtils.showErrorAlert("Erreur d'authentification",
                     "Aucun utilisateur connecté détecté. Veuillez vous reconnecter.");
                 return;
             }
         }
 
+        // --- Gestion du client (corrigé) ---
         Client client = Fabrique.getService().findByTel(clientPhone);
         if (client == null) {
+            // Nouveau client : création et ajout
             client = new Client();
             client.setName(clientName);
             client.setPhone(clientPhone);
@@ -273,33 +291,34 @@ public class AddReservationController {
             client.setLoyaltyPoints(0);
             client.setRegistrationDate(new java.util.Date());
             Fabrique.getService().addClient(client);
-            ControllerUtils.showInfoAlert("Nouveau client", String.format("Le client '%s' a été ajouté avec succès avec le numéro %s.", client.getName(), client.getPhone()));
+            ControllerUtils.showInfoAlert("Nouveau client",
+                String.format("Le client '%s' a été ajouté avec succès avec le numéro %s.", client.getName(), client.getPhone()));
         } else {
-            boolean updated = false;
-            if (!clientName.isEmpty() && !client.getName().equals(clientName)) {
-                client.setName(clientName);
-                updated = true;
-            }
-            
-            if (!clientAddress.isEmpty() && (client.getAddress() == null || !client.getAddress().equals(clientAddress))) {
-                client.setAddress(clientAddress);
-                updated = true;
-            }
-            if (updated) {
-                Fabrique.getService().updateClient(client);
-                ControllerUtils.showInfoAlert("Client mis à jour", String.format("Les informations du client '%s' ont été mises à jour.", client.getName()));
-            }
+            // Client existant : création d'une COPIE pour éviter les références partagées
+            Client updatedClient = new Client();
+            updatedClient.setId(client.getId());
+            updatedClient.setName(clientName);
+            updatedClient.setPhone(client.getPhone());
+            updatedClient.setAddress(clientAddress.isEmpty() ? client.getAddress() : clientAddress);
+            updatedClient.setLoyaltyPoints(client.getLoyaltyPoints());
+            updatedClient.setRegistrationDate(client.getRegistrationDate());
+            // Mise à jour de la COPIE
+            Fabrique.getService().updateClient(updatedClient);
+            // Rechargement du client depuis la base pour s'assurer de la cohérence
+            client = Fabrique.getService().findByTel(clientPhone);
+            ControllerUtils.showInfoAlert("Client mis à jour",
+                String.format("Les informations du client '%s' ont été mises à jour.", client.getName()));
         }
 
-        // C'est ici que l'on met à jour les points du parrain
+        // --- Gestion du parrain ---
         if (parrain != null) {
-            // Utilisation de la méthode addParrainagePoints() de votre classe Parrain
             parrain.addParrainagePoints(1);
-            // Appel à la méthode de service pour mettre à jour l'objet Parrain dans la base de données
             Fabrique.getService().updateParrain(parrain);
-            ControllerUtils.showInfoAlert("Points de parrainage", String.format("1 point a été ajouté au parrain %s.", parrain.getCodeParrainage()));
+            ControllerUtils.showInfoAlert("Points de parrainage",
+                String.format("1 point a été ajouté au parrain %s.", parrain.getCodeParrainage()));
         }
 
+        // --- Création de la réservation ---
         Reservation reservation = new Reservation();
         reservation.setNumeroTicket(Reservation.generateRandomTicketNumber());
         reservation.setClient(client);
@@ -310,46 +329,69 @@ public class AddReservationController {
         reservation.setTotalPrice(totalPrice);
         reservation.setCodeParrainage(parrain != null ? parrain.getCodeParrainage() : null);
         reservation.setStatus("En attente");
-        reservation.setCreatedBy(connectedUser); // Enregistre l'utilisateur connecté qui a créé la réservation
-
-         // **1. Récupère la promotion active pour aujourd'hui**
-        Optional<Promotion> activePromo = Fabrique.getService().getActivePromotionForToday();
-
-        // **2. Si une promotion est active, l'appliquer à la réservation**
+        reservation.setCreatedBy(connectedUser);
+        Optional<Promotion> activePromo = Fabrique.getService().getBestActivePromotionForToday();
         activePromo.ifPresent(reservation::setAppliedPromotion);
-
-        // **3. Calcule le prix (qui tiendra compte de la promotion si elle existe)**
         reservation.setTotalPrice(reservation.calculatePriceBasedOnDuration());
 
         try {
             Fabrique.getService().insertReservation(reservation);
 
+            // --- Création du paiement ---
+            String detailReservations = String.format(
+                "Réservation pour %s (Poste %d) - Durée: %d minutes",
+                game.getName(),
+                poste.getId(),
+                duration.toMinutes()
+            );
+            Payment payment = new Payment(
+                reservation.getNumeroTicket(),
+                new Date(),
+                reservation.getTotalPrice(),
+                modePaiement,
+                client,
+                "",
+                detailReservations,
+                connectedUser
+            );
+            Fabrique.getService().addPayment(payment);
+
+            // --- Gestion des points de fidélité ---
             int pointsEarned = calculateLoyaltyPoints(duration);
             if (client != null && pointsEarned > 0) {
-                client.setLoyaltyPoints(client.getLoyaltyPoints() + pointsEarned);
-                Fabrique.getService().updateClient(client);
+                // Rechargement du client pour éviter les références partagées
+                Client freshClient = Fabrique.getService().findByTel(clientPhone);
+                freshClient.setLoyaltyPoints(freshClient.getLoyaltyPoints() + pointsEarned);
+                Fabrique.getService().updateClient(freshClient);
                 ControllerUtils.showInfoAlert("Points de fidélité ajoutés",
                     String.format("Le client '%s' a gagné %d points de fidélité. Total actuel : %d points.",
-                        client.getName(), pointsEarned, client.getLoyaltyPoints()));
+                        freshClient.getName(), pointsEarned, freshClient.getLoyaltyPoints()));
             }
 
-            ControllerUtils.showInfoAlert("Réservation ajoutée", "Réservation et session de jeu active ajoutées avec succès!");
+            ControllerUtils.showInfoAlert("Réservation ajoutée",
+                "Réservation et paiement enregistrés avec succès!");
 
-            ReservationReceiptPrinter printer = new ReservationReceiptPrinter(reservation, connectedUserName);
+            // --- Impression du ticket ---
+            ReservationReceiptPrinter printer = new ReservationReceiptPrinter(reservation, connectedUserName, modePaiement);
             printer.printReceipt();
 
+            // --- Rafraîchissement des données ---
             if (parentController != null) {
                 parentController.loadReservations();
+                parentController.loadActiveSessions();
             }
 
+            // --- Fermeture de la fenêtre ---
             Stage stage = (Stage) ((Button) event.getSource()).getScene().getWindow();
             stage.close();
-
         } catch (Exception e) {
             e.printStackTrace();
-            ControllerUtils.showErrorAlert("Erreur", "Erreur lors de l'ajout de la réservation et de la session de jeu : " + e.getMessage());
+            ControllerUtils.showErrorAlert("Erreur",
+                "Erreur lors de l'ajout de la réservation et du paiement : " + e.getMessage());
         }
     }
+
+
 
     private int calculateLoyaltyPoints(Duration duration) {
         long totalMinutes = duration.toMinutes();

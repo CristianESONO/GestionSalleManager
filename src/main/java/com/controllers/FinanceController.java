@@ -539,12 +539,11 @@ public class FinanceController {
                 PDPage page = new PDPage(PDRectangle.A4);
                 document.addPage(page);
                 PDPageContentStream contentStream = new PDPageContentStream(document, page);
-
                 float margin = 50;
                 float yStart = page.getMediaBox().getHeight() - margin;
                 float tableWidth = page.getMediaBox().getWidth() - 2 * margin;
                 float yPosition = yStart;
-                float leading = 20;
+                float leading = 25;
 
                 // Logo de l'entreprise
                 try {
@@ -564,7 +563,7 @@ public class FinanceController {
 
                 // En-tête de l'entreprise
                 contentStream.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 16);
-                float textWidth = new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD).getStringWidth("KAY PLAY GAMING ROOM") / 1000 * 12;
+                float textWidth = new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD).getStringWidth("KAY PLAY GAMING ROOM") / 1000 * 16;
                 float textX = (page.getMediaBox().getWidth() - textWidth) / 2;
                 contentStream.beginText();
                 contentStream.newLineAtOffset(textX, yPosition);
@@ -581,11 +580,11 @@ public class FinanceController {
                 contentStream.endText();
                 yPosition -= leading;
 
-                textWidth = new PDType1Font(Standard14Fonts.FontName.HELVETICA).getStringWidth("Tel. +221338220000") / 1000 * 12;
+                textWidth = new PDType1Font(Standard14Fonts.FontName.HELVETICA).getStringWidth("Tel. +221 338134720 / 771128514 ") / 1000 * 12;
                 textX = (page.getMediaBox().getWidth() - textWidth) / 2;
                 contentStream.beginText();
                 contentStream.newLineAtOffset(textX, yPosition);
-                contentStream.showText("Tel. +221338220000");
+                contentStream.showText("Tel. +221 338134720 / 771128514 ");
                 contentStream.endText();
                 yPosition -= leading;
 
@@ -597,14 +596,24 @@ public class FinanceController {
                 contentStream.endText();
                 yPosition -= leading * 2;
 
+                // Ligne de séparation
+                contentStream.setStrokingColor(0.7f, 0.7f, 0.7f);
+                contentStream.moveTo(margin, yPosition);
+                contentStream.lineTo(page.getMediaBox().getWidth() - margin, yPosition);
+                contentStream.stroke();
+                contentStream.setStrokingColor(0f, 0f, 0f);
+                yPosition -= 10;
+
                 // Titre du rapport
                 contentStream.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 18);
+                contentStream.setNonStrokingColor(0.2f, 0.4f, 0.6f);
                 textWidth = new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD).getStringWidth("Rapport Journalier - " + today.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))) / 1000 * 18;
                 textX = (page.getMediaBox().getWidth() - textWidth) / 2;
                 contentStream.beginText();
                 contentStream.newLineAtOffset(textX, yPosition);
                 contentStream.showText("Rapport Journalier - " + today.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")));
                 contentStream.endText();
+                contentStream.setNonStrokingColor(0f, 0f, 0f);
                 yPosition -= leading;
 
                 contentStream.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA), 12);
@@ -616,84 +625,110 @@ public class FinanceController {
                 contentStream.endText();
                 yPosition -= leading * 2;
 
+                // Ligne de séparation
+                contentStream.setStrokingColor(0.7f, 0.7f, 0.7f);
+                contentStream.moveTo(margin, yPosition);
+                contentStream.lineTo(page.getMediaBox().getWidth() - margin, yPosition);
+                contentStream.stroke();
+                contentStream.setStrokingColor(0f, 0f, 0f);
+                yPosition -= 10;
+
                 // Ventes de Produits
-                contentStream.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 14);
-                contentStream.beginText();
-                contentStream.newLineAtOffset(margin, yPosition);
-                contentStream.showText("Ventes de Produits :");
-                contentStream.endText();
-                yPosition -= leading;
+                if (!dailyOperations.stream().filter(o -> o instanceof Payment).collect(Collectors.toList()).isEmpty()) {
+                    contentStream.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 14);
+                    contentStream.beginText();
+                    contentStream.newLineAtOffset(margin, yPosition);
+                    contentStream.showText("Ventes de Produits:");
+                    contentStream.endText();
+                    yPosition -= leading;
 
-                float[] paymentColumnWidths = {0.20f, 0.20f, 0.15f, 0.15f, 0.20f};
-                yPosition = drawTable(document, contentStream, page, yPosition, margin, paymentColumnWidths, new String[]{"N° Ticket", "Client", "Montant", "Mode Paiement", "Heure"},
-                        dailyOperations.stream().filter(o -> o instanceof Payment).collect(Collectors.toList()),
-                        (item, cs, startX, startY, columnWidths) -> {
-                            Payment p = (Payment) item;
-                            cs.showText(p.getNumeroTicket());
-                            cs.newLineAtOffset(columnWidths[0], 0);
-                            cs.showText(p.getClient() != null ? p.getClient().getName() : "N/A");
-                            cs.newLineAtOffset(columnWidths[1], 0);
-                            cs.showText(String.format("%.2f", p.getMontantTotal()));
-                            cs.newLineAtOffset(columnWidths[2], 0);
-                            cs.showText(p.getModePaiement());
-                            cs.newLineAtOffset(columnWidths[3], 0);
-                            cs.showText(p.getDateHeure().toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime().format(DateTimeFormatter.ofPattern("HH:mm:ss")));
-                        }
-                );
+                    float[] paymentColumnWidths = {0.20f, 0.20f, 0.15f, 0.15f, 0.20f};
+                    yPosition = drawTable(document, contentStream, page, yPosition, margin, paymentColumnWidths, new String[]{"N° Ticket", "Client", "Montant", "Mode Paiement", "Heure"},
+                            dailyOperations.stream().filter(o -> o instanceof Payment).collect(Collectors.toList()),
+                            (item, cs, startX, startY, columnWidths) -> {
+                                Payment p = (Payment) item;
+                                cs.showText(p.getNumeroTicket());
+                                cs.newLineAtOffset(columnWidths[0], 0);
+                                cs.showText(p.getClient() != null ? p.getClient().getName() : "N/A");
+                                cs.newLineAtOffset(columnWidths[1], 0);
+                                cs.showText(String.format("%.2f", p.getMontantTotal()));
+                                cs.newLineAtOffset(columnWidths[2], 0);
+                                cs.showText(p.getModePaiement());
+                                cs.newLineAtOffset(columnWidths[3], 0);
+                                cs.showText(p.getDateHeure().toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime().format(DateTimeFormatter.ofPattern("HH:mm:ss")));
+                            }
+                    );
 
+                    double totalVentes = dailyOperations.stream()
+                            .filter(o -> o instanceof Payment)
+                            .mapToDouble(o -> ((Payment) o).getMontantTotal())
+                            .sum();
+                    contentStream.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 12);
+                    contentStream.setNonStrokingColor(0.2f, 0.6f, 0.2f);
+                    contentStream.beginText();
+                    contentStream.newLineAtOffset(page.getMediaBox().getWidth() - margin - 150, yPosition);
+                    contentStream.showText(String.format("Total Ventes : %.2f F", totalVentes));
+                    contentStream.endText();
+                    contentStream.setNonStrokingColor(0f, 0f, 0f);
+                    yPosition -= leading * 2;
+                }
+
+                // Réservations
+                if (!dailyOperations.stream().filter(o -> o instanceof Reservation).collect(Collectors.toList()).isEmpty()) {
+                    contentStream.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 14);
+                    contentStream.beginText();
+                    contentStream.newLineAtOffset(margin, yPosition);
+                    contentStream.showText("Réservations:");
+                    contentStream.endText();
+                    yPosition -= leading;
+
+                    float[] reservationColumnWidths = {0.20f, 0.20f, 0.15f, 0.15f, 0.20f};
+                    yPosition = drawTable(document, contentStream, page, yPosition, margin, reservationColumnWidths, new String[]{"N° Ticket", "Client", "Montant", "Poste", "Heure"},
+                            dailyOperations.stream().filter(o -> o instanceof Reservation).collect(Collectors.toList()),
+                            (item, cs, startX, startY, columnWidths) -> {
+                                Reservation r = (Reservation) item;
+                                cs.showText(r.getNumeroTicket());
+                                cs.newLineAtOffset(columnWidths[0], 0);
+                                cs.showText(r.getClient() != null ? r.getClient().getName() : "N/A");
+                                cs.newLineAtOffset(columnWidths[1], 0);
+                                cs.showText(String.format("%.2f", r.getTotalPrice()));
+                                cs.newLineAtOffset(columnWidths[2], 0);
+                                cs.showText(r.getPoste() != null ? r.getPoste().getName() : "N/A");
+                                cs.newLineAtOffset(columnWidths[3], 0);
+                                cs.showText(r.getReservationDate().format(DateTimeFormatter.ofPattern("HH:mm:ss")));
+                            }
+                    );
+
+                    double totalReservations = dailyOperations.stream()
+                            .filter(o -> o instanceof Reservation)
+                            .mapToDouble(o -> ((Reservation) o).getTotalPrice())
+                            .sum();
+                    contentStream.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 12);
+                    contentStream.setNonStrokingColor(0.2f, 0.6f, 0.2f);
+                    contentStream.beginText();
+                    contentStream.newLineAtOffset(page.getMediaBox().getWidth() - margin - 150, yPosition);
+                    contentStream.showText(String.format("Total Réservations : %.2f F", totalReservations));
+                    contentStream.endText();
+                    contentStream.setNonStrokingColor(0f, 0f, 0f);
+                    yPosition -= leading * 2;
+                }
+
+                // Grand Total Journalier
                 double totalVentes = dailyOperations.stream()
                         .filter(o -> o instanceof Payment)
                         .mapToDouble(o -> ((Payment) o).getMontantTotal())
                         .sum();
-                contentStream.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 12);
-                contentStream.beginText();
-                contentStream.newLineAtOffset(page.getMediaBox().getWidth() - margin - 150, yPosition);
-                contentStream.showText(String.format("Total Ventes : %.2f F", totalVentes));
-                contentStream.endText();
-                yPosition -= leading * 4;
-
-                // Réservations
-                contentStream.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 14);
-                contentStream.beginText();
-                contentStream.newLineAtOffset(margin, yPosition);
-                contentStream.showText("Réservations :");
-                contentStream.endText();
-                yPosition -= leading;
-
-                float[] reservationColumnWidths = {0.20f, 0.20f, 0.15f, 0.15f, 0.20f};
-                yPosition = drawTable(document, contentStream, page, yPosition, margin, reservationColumnWidths, new String[]{"N° Ticket", "Client", "Montant", "Poste", "Heure"},
-                        dailyOperations.stream().filter(o -> o instanceof Reservation).collect(Collectors.toList()),
-                        (item, cs, startX, startY, columnWidths) -> {
-                            Reservation r = (Reservation) item;
-                            cs.showText(r.getNumeroTicket());
-                            cs.newLineAtOffset(columnWidths[0], 0);
-                            cs.showText(r.getClient() != null ? r.getClient().getName() : "N/A");
-                            cs.newLineAtOffset(columnWidths[1], 0);
-                            cs.showText(String.format("%.2f", r.getTotalPrice()));
-                            cs.newLineAtOffset(columnWidths[2], 0);
-                            cs.showText(r.getPoste() != null ? r.getPoste().getName() : "N/A");
-                            cs.newLineAtOffset(columnWidths[3], 0);
-                            cs.showText(r.getReservationDate().format(DateTimeFormatter.ofPattern("HH:mm:ss")));
-                        }
-                );
-
                 double totalReservations = dailyOperations.stream()
                         .filter(o -> o instanceof Reservation)
                         .mapToDouble(o -> ((Reservation) o).getTotalPrice())
                         .sum();
-                contentStream.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 12);
-                contentStream.beginText();
-                contentStream.newLineAtOffset(page.getMediaBox().getWidth() - margin - 150, yPosition);
-                contentStream.showText(String.format("Total Réservations : %.2f F", totalReservations));
-                contentStream.endText();
-                yPosition -= leading * 2;
-
-                // Grand Total Journalier
                 contentStream.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 16);
+                contentStream.setNonStrokingColor(0.2f, 0.4f, 0.6f);
                 contentStream.beginText();
                 contentStream.newLineAtOffset(page.getMediaBox().getWidth() - margin - 150, yPosition);
                 contentStream.showText(String.format("Grand Total Journalier : %.2f F", totalVentes + totalReservations));
                 contentStream.endText();
+                contentStream.setNonStrokingColor(0f, 0f, 0f);
 
                 contentStream.close();
                 document.save(file);
@@ -706,7 +741,8 @@ public class FinanceController {
                 e.printStackTrace();
             }
         }
-    }
+}
+
 
     private void generateAndOpenPdf(Object item, boolean saveToFile) {
         if (!(item instanceof AdminDailyReport)) {
@@ -782,11 +818,11 @@ public class FinanceController {
             contentStream.endText();
             yPosition -= leading;
 
-            textWidth = new PDType1Font(Standard14Fonts.FontName.HELVETICA).getStringWidth("Tel. +221338220000") / 1000 * 12;
+            textWidth = new PDType1Font(Standard14Fonts.FontName.HELVETICA).getStringWidth("Tel. +221 338134720 / 771128514 ") / 1000 * 12;
             textX = (page.getMediaBox().getWidth() - textWidth) / 2;
             contentStream.beginText();
             contentStream.newLineAtOffset(textX, yPosition);
-            contentStream.showText("Tel. +221338220000");
+            contentStream.showText("Tel. +221 338134720 / 771128514 ");
             contentStream.endText();
             yPosition -= leading;
 
@@ -911,155 +947,182 @@ public class FinanceController {
     }
 
     @FXML
-    private void generateSelectedJournalPdf() {
-        if (isAdmin) return;
-        ObservableList<Object> selectedItems = journalTable.getSelectionModel().getSelectedItems();
-        if (selectedItems.isEmpty()) {
-            showAlert(Alert.AlertType.WARNING, "Aucune sélection", "Veuillez sélectionner au moins une ligne à inclure dans le rapport PDF.");
-            return;
-        }
-        FileChooser fileChooser = new FileChooser();
-        fileChooser.setTitle("Enregistrer le rapport sélectionné");
-        fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Fichiers PDF", "*.pdf"));
-        fileChooser.setInitialFileName("Rapport_Selection_" + LocalDate.now().format(DateTimeFormatter.ofPattern("dd-MM-yyyy")) + ".pdf");
-        File file = fileChooser.showSaveDialog(new Stage());
-        if (file != null) {
-            try (PDDocument document = new PDDocument()) {
-                PDPage page = new PDPage(PDRectangle.A4);
-                document.addPage(page);
-                PDPageContentStream contentStream = new PDPageContentStream(document, page);
+private void generateSelectedJournalPdf() {
+    if (isAdmin) return;
+    ObservableList<Object> selectedItems = journalTable.getSelectionModel().getSelectedItems();
+    if (selectedItems.isEmpty()) {
+        showAlert(Alert.AlertType.WARNING, "Aucune sélection", "Veuillez sélectionner au moins une ligne à inclure dans le rapport PDF.");
+        return;
+    }
+    FileChooser fileChooser = new FileChooser();
+    fileChooser.setTitle("Enregistrer le rapport sélectionné");
+    fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Fichiers PDF", "*.pdf"));
+    fileChooser.setInitialFileName("Rapport_Selection_" + LocalDate.now().format(DateTimeFormatter.ofPattern("dd-MM-yyyy")) + ".pdf");
+    File file = fileChooser.showSaveDialog(new Stage());
+    if (file != null) {
+        try (PDDocument document = new PDDocument()) {
+            PDPage page = new PDPage(PDRectangle.A4);
+            document.addPage(page);
+            PDPageContentStream contentStream = new PDPageContentStream(document, page);
+            float margin = 50;
+            float yStart = page.getMediaBox().getHeight() - margin;
+            float tableWidth = page.getMediaBox().getWidth() - 2 * margin;
+            float yPosition = yStart;
+            float leading = 25;
 
-                float margin = 50;
-                float yStart = page.getMediaBox().getHeight() - margin;
-                float tableWidth = page.getMediaBox().getWidth() - 2 * margin;
-                float yPosition = yStart;
-                float leading = 20;
-
-                // Logo de l'entreprise
-                try {
-                    InputStream logoStream = getClass().getResourceAsStream("/com/img/register.png");
-                    if (logoStream != null) {
-                        BufferedImage logoImage = ImageIO.read(logoStream);
-                        PDImageXObject pdLogo = LosslessFactory.createFromImage(document, logoImage);
-                        float logoWidth = 150;
-                        float logoHeight = (logoWidth / logoImage.getWidth()) * logoImage.getHeight();
-                        float logoX = (page.getMediaBox().getWidth() - logoWidth) / 2;
-                        contentStream.drawImage(pdLogo, logoX, yPosition - logoHeight, logoWidth, logoHeight);
-                        yPosition -= logoHeight + leading;
-                    }
-                } catch (Exception e) {
-                    System.err.println("Erreur lors du chargement du logo: " + e.getMessage());
+            // Logo de l'entreprise
+            try {
+                InputStream logoStream = getClass().getResourceAsStream("/com/img/register.png");
+                if (logoStream != null) {
+                    BufferedImage logoImage = ImageIO.read(logoStream);
+                    PDImageXObject pdLogo = LosslessFactory.createFromImage(document, logoImage);
+                    float logoWidth = 150;
+                    float logoHeight = (logoWidth / logoImage.getWidth()) * logoImage.getHeight();
+                    float logoX = (page.getMediaBox().getWidth() - logoWidth) / 2;
+                    contentStream.drawImage(pdLogo, logoX, yPosition - logoHeight, logoWidth, logoHeight);
+                    yPosition -= logoHeight + leading;
                 }
-
-                // En-tête de l'entreprise
-                contentStream.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 16);
-                float textWidth = new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD).getStringWidth("KAY PLAY GAMING ROOM") / 1000 * 16;
-                float textX = (page.getMediaBox().getWidth() - textWidth) / 2;
-                contentStream.beginText();
-                contentStream.newLineAtOffset(textX, yPosition);
-                contentStream.showText("KAY PLAY GAMING ROOM");
-                contentStream.endText();
-                yPosition -= leading;
-
-                contentStream.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA), 12);
-                textWidth = new PDType1Font(Standard14Fonts.FontName.HELVETICA).getStringWidth("Jaxaay, Parcelle Unité 24, BP 17000, KEUR MASSAR") / 1000 * 12;
-                textX = (page.getMediaBox().getWidth() - textWidth) / 2;
-                contentStream.beginText();
-                contentStream.newLineAtOffset(textX, yPosition);
-                contentStream.showText("Jaxaay, Parcelle Unité 24, BP 17000, KEUR MASSAR");
-                contentStream.endText();
-                yPosition -= leading;
-
-                textWidth = new PDType1Font(Standard14Fonts.FontName.HELVETICA).getStringWidth("Tel. +221338220000") / 1000 * 12;
-                textX = (page.getMediaBox().getWidth() - textWidth) / 2;
-                contentStream.beginText();
-                contentStream.newLineAtOffset(textX, yPosition);
-                contentStream.showText("Tel. +221338220000");
-                contentStream.endText();
-                yPosition -= leading;
-
-                textWidth = new PDType1Font(Standard14Fonts.FontName.HELVETICA).getStringWidth("www.Kayplay.gamingroom.com") / 1000 * 12;
-                textX = (page.getMediaBox().getWidth() - textWidth) / 2;
-                contentStream.beginText();
-                contentStream.newLineAtOffset(textX, yPosition);
-                contentStream.showText("www.Kayplay.gamingroom.com");
-                contentStream.endText();
-                yPosition -= leading * 2;
-
-                // Titre du rapport
-                contentStream.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 18);
-                textWidth = new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD).getStringWidth("Rapport Sélectionné") / 1000 * 18;
-                textX = (page.getMediaBox().getWidth() - textWidth) / 2;
-                contentStream.beginText();
-                contentStream.newLineAtOffset(textX, yPosition);
-                contentStream.showText("Rapport Sélectionné");
-                contentStream.endText();
-                yPosition -= leading;
-
-                contentStream.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA), 12);
-                textWidth = new PDType1Font(Standard14Fonts.FontName.HELVETICA).getStringWidth("Généré par : " + currentUser.getName()) / 1000 * 12;
-                textX = (page.getMediaBox().getWidth() - textWidth) / 2;
-                contentStream.beginText();
-                contentStream.newLineAtOffset(textX, yPosition);
-                contentStream.showText("Généré par : " + currentUser.getName());
-                contentStream.endText();
-                yPosition -= leading * 2;
-
-                float[] columnWidths = {0.25f, 0.25f, 0.25f, 0.25f};
-                yPosition = drawTable(document, contentStream, page, yPosition, margin, columnWidths,
-                        new String[]{"Admin", "Date", "Total Ventes", "Total Réservations"},
-                        selectedItems,
-                        (item, cs, startX, startY, colWidths) -> {
-                            AdminDailyReport report = (AdminDailyReport) item;
-                            cs.showText(report.getAdmin().getName());
-                            cs.newLineAtOffset(colWidths[0], 0);
-                            cs.showText(report.getDate().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")));
-                            cs.newLineAtOffset(colWidths[1], 0);
-                            cs.showText(String.format("%.2f F", report.getPayments().stream().mapToDouble(Payment::getMontantTotal).sum()));
-                            cs.newLineAtOffset(colWidths[2], 0);
-                            cs.showText(String.format("%.2f F", report.getReservations().stream().mapToDouble(Reservation::getTotalPrice).sum()));
-                        }
-                );
-
-                double totalVentes = selectedItems.stream()
-                        .mapToDouble(item -> ((AdminDailyReport) item).getPayments().stream().mapToDouble(Payment::getMontantTotal).sum())
-                        .sum();
-                double totalReservations = selectedItems.stream()
-                        .mapToDouble(item -> ((AdminDailyReport) item).getReservations().stream().mapToDouble(Reservation::getTotalPrice).sum())
-                        .sum();
-                double totalGlobal = totalVentes + totalReservations;
-
-                contentStream.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 12);
-                contentStream.beginText();
-                contentStream.newLineAtOffset(page.getMediaBox().getWidth() - margin - 150, yPosition);
-                contentStream.showText(String.format("Total Global Ventes : %.2f F", totalVentes));
-                contentStream.endText();
-                yPosition -= leading;
-
-                contentStream.beginText();
-                contentStream.newLineAtOffset(page.getMediaBox().getWidth() - margin - 150, yPosition);
-                contentStream.showText(String.format("Total Global Réservations : %.2f F", totalReservations));
-                contentStream.endText();
-                yPosition -= leading;
-
-                contentStream.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 14);
-                contentStream.beginText();
-                contentStream.newLineAtOffset(page.getMediaBox().getWidth() - margin - 150, yPosition);
-                contentStream.showText(String.format("Total Global : %.2f F", totalGlobal));
-                contentStream.endText();
-
-                contentStream.close();
-                document.save(file);
-                showAlert(Alert.AlertType.INFORMATION, "Succès", "Rapport PDF généré avec succès !");
-                if (Desktop.isDesktopSupported()) {
-                    Desktop.getDesktop().open(file);
-                }
-            } catch (IOException e) {
-                showAlert(Alert.AlertType.ERROR, "Erreur PDF", "Impossible de générer le rapport PDF : " + e.getMessage());
-                e.printStackTrace();
+            } catch (Exception e) {
+                System.err.println("Erreur lors du chargement du logo: " + e.getMessage());
             }
+
+            // En-tête de l'entreprise
+            contentStream.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 16);
+            float textWidth = new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD).getStringWidth("KAY PLAY GAMING ROOM") / 1000 * 16;
+            float textX = (page.getMediaBox().getWidth() - textWidth) / 2;
+            contentStream.beginText();
+            contentStream.newLineAtOffset(textX, yPosition);
+            contentStream.showText("KAY PLAY GAMING ROOM");
+            contentStream.endText();
+            yPosition -= leading;
+
+            contentStream.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA), 12);
+            textWidth = new PDType1Font(Standard14Fonts.FontName.HELVETICA).getStringWidth("Jaxaay, Parcelle Unité 24, BP 17000, KEUR MASSAR") / 1000 * 12;
+            textX = (page.getMediaBox().getWidth() - textWidth) / 2;
+            contentStream.beginText();
+            contentStream.newLineAtOffset(textX, yPosition);
+            contentStream.showText("Jaxaay, Parcelle Unité 24, BP 17000, KEUR MASSAR");
+            contentStream.endText();
+            yPosition -= leading;
+
+            textWidth = new PDType1Font(Standard14Fonts.FontName.HELVETICA).getStringWidth("Tel. +221 338134720 / 771128514 ") / 1000 * 12;
+            textX = (page.getMediaBox().getWidth() - textWidth) / 2;
+            contentStream.beginText();
+            contentStream.newLineAtOffset(textX, yPosition);
+            contentStream.showText("Tel. +221 338134720 / 771128514 ");
+            contentStream.endText();
+            yPosition -= leading;
+
+            textWidth = new PDType1Font(Standard14Fonts.FontName.HELVETICA).getStringWidth("www.Kayplay.gamingroom.com") / 1000 * 12;
+            textX = (page.getMediaBox().getWidth() - textWidth) / 2;
+            contentStream.beginText();
+            contentStream.newLineAtOffset(textX, yPosition);
+            contentStream.showText("www.Kayplay.gamingroom.com");
+            contentStream.endText();
+            yPosition -= leading * 2;
+
+            // Ligne de séparation
+            contentStream.setStrokingColor(0.7f, 0.7f, 0.7f);
+            contentStream.moveTo(margin, yPosition);
+            contentStream.lineTo(page.getMediaBox().getWidth() - margin, yPosition);
+            contentStream.stroke();
+            contentStream.setStrokingColor(0f, 0f, 0f);
+            yPosition -= 10;
+
+            // Titre du rapport
+            contentStream.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 18);
+            contentStream.setNonStrokingColor(0.2f, 0.4f, 0.6f);
+            textWidth = new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD).getStringWidth("Rapport Sélectionné") / 1000 * 18;
+            textX = (page.getMediaBox().getWidth() - textWidth) / 2;
+            contentStream.beginText();
+            contentStream.newLineAtOffset(textX, yPosition);
+            contentStream.showText("Rapport Sélectionné");
+            contentStream.endText();
+            contentStream.setNonStrokingColor(0f, 0f, 0f);
+            yPosition -= leading;
+
+            contentStream.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA), 12);
+            textWidth = new PDType1Font(Standard14Fonts.FontName.HELVETICA).getStringWidth("Généré par : " + currentUser.getName()) / 1000 * 12;
+            textX = (page.getMediaBox().getWidth() - textWidth) / 2;
+            contentStream.beginText();
+            contentStream.newLineAtOffset(textX, yPosition);
+            contentStream.showText("Généré par : " + currentUser.getName());
+            contentStream.endText();
+            yPosition -= leading * 2;
+
+            // Ligne de séparation
+            contentStream.setStrokingColor(0.7f, 0.7f, 0.7f);
+            contentStream.moveTo(margin, yPosition);
+            contentStream.lineTo(page.getMediaBox().getWidth() - margin, yPosition);
+            contentStream.stroke();
+            contentStream.setStrokingColor(0f, 0f, 0f);
+            yPosition -= 10;
+
+            float[] columnWidths = {0.25f, 0.25f, 0.25f, 0.25f};
+            yPosition = drawTable(document, contentStream, page, yPosition, margin, columnWidths,
+                    new String[]{"Admin", "Date", "Total Ventes", "Total Réservations"},
+                    selectedItems,
+                    (item, cs, startX, startY, colWidths) -> {
+                        AdminDailyReport report = (AdminDailyReport) item;
+                        cs.showText(report.getAdmin().getName());
+                        cs.newLineAtOffset(colWidths[0], 0);
+                        cs.showText(report.getDate().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")));
+                        cs.newLineAtOffset(colWidths[1], 0);
+                        cs.showText(String.format("%.2f F", report.getPayments().stream().mapToDouble(Payment::getMontantTotal).sum()));
+                        cs.newLineAtOffset(colWidths[2], 0);
+                        cs.showText(String.format("%.2f F", report.getReservations().stream().mapToDouble(Reservation::getTotalPrice).sum()));
+                    }
+            );
+
+            double totalVentes = selectedItems.stream()
+                    .mapToDouble(item -> ((AdminDailyReport) item).getPayments().stream().mapToDouble(Payment::getMontantTotal).sum())
+                    .sum();
+            double totalReservations = selectedItems.stream()
+                    .mapToDouble(item -> ((AdminDailyReport) item).getReservations().stream().mapToDouble(Reservation::getTotalPrice).sum())
+                    .sum();
+            double totalGlobal = totalVentes + totalReservations;
+
+            // Ligne de séparation
+            contentStream.setStrokingColor(0.7f, 0.7f, 0.7f);
+            contentStream.moveTo(margin, yPosition);
+            contentStream.lineTo(page.getMediaBox().getWidth() - margin, yPosition);
+            contentStream.stroke();
+            contentStream.setStrokingColor(0f, 0f, 0f);
+            yPosition -= 10;
+
+            contentStream.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 12);
+            contentStream.setNonStrokingColor(0.2f, 0.6f, 0.2f);
+            contentStream.beginText();
+            contentStream.newLineAtOffset(page.getMediaBox().getWidth() - margin - 150, yPosition);
+            contentStream.showText(String.format("Total Global Ventes : %.2f F", totalVentes));
+            contentStream.endText();
+            yPosition -= leading;
+
+            contentStream.beginText();
+            contentStream.newLineAtOffset(page.getMediaBox().getWidth() - margin - 150, yPosition);
+            contentStream.showText(String.format("Total Global Réservations : %.2f F", totalReservations));
+            contentStream.endText();
+            yPosition -= leading;
+
+            contentStream.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 14);
+            contentStream.beginText();
+            contentStream.newLineAtOffset(page.getMediaBox().getWidth() - margin - 150, yPosition);
+            contentStream.showText(String.format("Total Global : %.2f F", totalGlobal));
+            contentStream.endText();
+            contentStream.close();
+
+            document.save(file);
+            showAlert(Alert.AlertType.INFORMATION, "Succès", "Rapport PDF généré avec succès !");
+            if (Desktop.isDesktopSupported()) {
+                Desktop.getDesktop().open(file);
+            }
+        } catch (IOException e) {
+            showAlert(Alert.AlertType.ERROR, "Erreur PDF", "Impossible de générer le rapport PDF : " + e.getMessage());
+            e.printStackTrace();
         }
     }
+}
+
 
     @FunctionalInterface
     interface PDFRowDrawer {
@@ -1085,7 +1148,8 @@ public class FinanceController {
             actualColumnWidths[i] = columnWidths[i] * tableWidth;
         }
 
-        contentStream.setNonStrokingColor(0.9f, 0.9f, 0.9f);
+        // En-tête du tableau
+        contentStream.setNonStrokingColor(0.7f, 0.7f, 0.7f);
         contentStream.addRect(margin, yPosition - rowHeight, tableWidth, rowHeight);
         contentStream.fill();
         contentStream.setNonStrokingColor(0f, 0f, 0f);
@@ -1103,6 +1167,7 @@ public class FinanceController {
         contentStream.lineTo(margin + tableWidth, yPosition);
         contentStream.stroke();
 
+        // Lignes du tableau
         contentStream.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA), 9);
         for (Object item : dataList) {
             if (yPosition < margin + rowHeight) {
@@ -1111,7 +1176,7 @@ public class FinanceController {
                 document.addPage(page);
                 contentStream = new PDPageContentStream(document, page);
                 yPosition = page.getMediaBox().getHeight() - margin;
-                contentStream.setNonStrokingColor(0.9f, 0.9f, 0.9f);
+                contentStream.setNonStrokingColor(0.7f, 0.7f, 0.7f);
                 contentStream.addRect(margin, yPosition - rowHeight, tableWidth, rowHeight);
                 contentStream.fill();
                 contentStream.setNonStrokingColor(0f, 0f, 0f);
@@ -1131,10 +1196,25 @@ public class FinanceController {
                 contentStream.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA), 9);
             }
 
+            // Dessine les bordures verticales
+            currentX = margin;
+            for (int i = 0; i < actualColumnWidths.length; i++) {
+                contentStream.moveTo(currentX, yPosition);
+                contentStream.lineTo(currentX, yPosition + rowHeight);
+                contentStream.stroke();
+                currentX += actualColumnWidths[i];
+            }
+            contentStream.moveTo(currentX, yPosition);
+            contentStream.lineTo(currentX, yPosition + rowHeight);
+            contentStream.stroke();
+
+            // Contenu de la ligne
             contentStream.beginText();
             contentStream.newLineAtOffset(margin + cellMargin, yPosition - rowHeight + 5);
             rowDrawer.draw(item, contentStream, margin + cellMargin, yPosition - rowHeight + 5, actualColumnWidths);
             contentStream.endText();
+
+            // Ligne horizontale en bas de la ligne
             yPosition -= rowHeight;
             contentStream.moveTo(margin, yPosition);
             contentStream.lineTo(margin + tableWidth, yPosition);
@@ -1142,6 +1222,7 @@ public class FinanceController {
         }
         return yPosition;
     }
+
 
     private void showAlert(Alert.AlertType type, String title, String message) {
         Alert alert = new Alert(type);

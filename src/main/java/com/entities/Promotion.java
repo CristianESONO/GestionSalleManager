@@ -5,6 +5,7 @@ import java.time.LocalDate; // Importation pour LocalDate
 import java.util.HashSet;
 import java.util.Set;
 
+
 @Entity
 @Table(name = "promotions")
 public class Promotion {
@@ -18,6 +19,9 @@ public class Promotion {
     private boolean actif;
 
     private float tauxReduction;
+
+    @Enumerated(EnumType.STRING)
+    private TypePromotion typePromotion;
 
     @Column(name = "date_debut") // Nouvelle colonne pour la date de début
     private LocalDate dateDebut;
@@ -35,10 +39,11 @@ public class Promotion {
 
     public Promotion() {}
 
-    public Promotion(String nom, boolean actif, float tauxReduction, LocalDate dateDebut, LocalDate dateFin) {
+    public Promotion(String nom, boolean actif, float tauxReduction,TypePromotion typePromotion, LocalDate dateDebut, LocalDate dateFin) {
         this.nom = nom;
         this.actif = actif;
         this.tauxReduction = tauxReduction;
+        this.typePromotion = typePromotion;
         this.dateDebut = dateDebut;
         this.dateFin = dateFin;
     }
@@ -59,6 +64,15 @@ public class Promotion {
 
     public void setNom(String nom) {
         this.nom = nom;
+    }
+
+    // Getter et setter pour typePromotion
+    public TypePromotion getTypePromotion() {
+        return typePromotion;
+    }
+
+    public void setTypePromotion(TypePromotion typePromotion) {
+        this.typePromotion = typePromotion;
     }
 
     public boolean isActif() {
