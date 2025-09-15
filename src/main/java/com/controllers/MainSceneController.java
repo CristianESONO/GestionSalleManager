@@ -108,7 +108,7 @@ public class MainSceneController implements Initializable {
 
         if (isLoggedIn) {
             if (lblUserRole != null) {
-                lblUserRole.setText("(" + user.getRole().name() + ")");
+                lblUserRole.setText(user.getName() + " : (" + user.getRole().name() + ")");
             }
 
             // Gérer la visibilité des boutons en fonction du rôle
