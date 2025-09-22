@@ -512,28 +512,55 @@ public class ReservationController implements Initializable {
 
 
     @FXML
-    private void openAddReservationWindow() {
-        try {
-            WindowManager.closeWindowsForView("AddReservationWindow");
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/views/AddReservationWindow.fxml"));
-            Scene scene = new Scene(loader.load());
-            Stage stage = new Stage();
-            AddReservationController addController = loader.getController();
-            addController.setParentController(this);
-            addController.setConnectedUser(connectedUser);
-            stage.setScene(scene);
-            stage.initModality(Modality.APPLICATION_MODAL);
-            WindowManager.register("AddReservationWindow", stage);
-            stage.sizeToScene();
-            stage.setResizable(false);
-            stage.centerOnScreen();
-            stage.showAndWait();
-            loadReservations();
-            loadActiveSessions();
-        } catch (IOException e) {
-            ControllerUtils.showErrorAlert("Erreur", "Erreur lors de l'ouverture de la fenêtre d'ajout.");
+private void openAddReservationWindow() {
+    try {
+        System.out.println("DEBUG: Début de l'ouverture de AddReservationWindow");
+        
+        WindowManager.closeWindowsForView("AddReservationWindow");
+        
+        // Vérifier que le fichier FXML existe
+        URL fxmlUrl = getClass().getResource("/com/views/AddReservationWindow.fxml");
+        if (fxmlUrl == null) {
+            System.err.println("ERREUR: Fichier FXML non trouvé");
+            ControllerUtils.showErrorAlert("Erreur", "Fichier de vue non trouvé: AddReservationWindow.fxml");
+            return;
         }
+        
+        System.out.println("DEBUG: Chargement du FXML...");
+        FXMLLoader loader = new FXMLLoader(fxmlUrl);
+        Scene scene = new Scene(loader.load());
+        
+        Stage stage = new Stage();
+        AddReservationController addController = loader.getController();
+        
+        if (addController == null) {
+            System.err.println("ERREUR: Controller non initialisé");
+            ControllerUtils.showErrorAlert("Erreur", "Le contrôleur n'a pas été initialisé.");
+            return;
+        }
+        
+        addController.setParentController(this);
+        addController.setConnectedUser(connectedUser);
+        
+        stage.setScene(scene);
+        stage.initModality(Modality.APPLICATION_MODAL);
+        WindowManager.register("AddReservationWindow", stage);
+        stage.sizeToScene();
+        stage.setResizable(false);
+        stage.centerOnScreen();
+        
+        System.out.println("DEBUG: Affichage de la fenêtre...");
+        stage.showAndWait();
+        
+        loadReservations();
+        loadActiveSessions();
+        
+    } catch (Exception e) {
+        System.err.println("ERREUR DÉTAILLÉE dans openAddReservationWindow:");
+        e.printStackTrace();
+        ControllerUtils.showErrorAlert("Erreur", "Erreur lors de l'ouverture de la fenêtre d'ajout: " + e.getMessage());
     }
+}
 
     @FXML
     private void openEditReservationWindow() {

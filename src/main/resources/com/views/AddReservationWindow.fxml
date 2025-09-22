@@ -108,6 +108,13 @@
                             </effect>
                         </ComboBox>
 
+                        <!-- AJOUTEZ CETTE SECTION -->
+                        <ComboBox fx:id="modePaiementComboBox" prefHeight="35.0" promptText="Mode de paiement *" style="-fx-background-color: #ffffff; -fx-border-color: #bdc3c7; -fx-border-radius: 5px; -fx-background-radius: 5px; -fx-font-size: 14px; -fx-padding: 8px 10px;">
+                            <effect>
+                                <DropShadow color="#0000001a" offsetX="0.0" offsetY="1.0" radius="3.0" />
+                            </effect>
+                        </ComboBox>
+
                         <Label fx:id="amountLabel" style="-fx-font-size: 20px; -fx-text-fill: #2ecc71; -fx-font-weight: bold;" text="Montant : 0.00 FCFA" />
                     </children>
                 </VBox>

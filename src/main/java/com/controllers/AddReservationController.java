@@ -11,6 +11,7 @@ import com.entities.Reservation;
 import com.entities.User;
 import com.utils.ReservationReceiptPrinter;
 
+import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
@@ -23,6 +24,7 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
@@ -63,56 +65,149 @@ public class AddReservationController {
     private List<Poste> allPostes;
 
     @FXML
-    public void initialize() 
-    {
-        // 1. Chargement initial de TOUS les postes
-        // C'est crucial que getPostes() retourne des Postes avec leurs listes de Games remplies
-        // grâce aux modifications dans PosteRepository.
-        allPostes = Fabrique.getService().getPostes();
+public void initialize() {
+    try {
+        System.out.println("DEBUG: Début de l'initialisation de AddReservationController");
         
-        // 2. Charger les jeux et les parrains en premier
-        loadGames();
-        loadParrains();
+        // VÉRIFIER QUE TOUS LES CHAMPS FXML SONT INJECTÉS
+        checkFXMLFields();
+        
+        // 1. Configurer d'abord les éléments simples
         setupHoursAndMinutesComboBoxes();
+        System.out.println("DEBUG: ComboBox heures/minutes configurées");
+        
+        loadGames();
+        System.out.println("DEBUG: Jeux chargés");
+        
+        loadParrains();
+        System.out.println("DEBUG: Parrains chargés");
 
-        // 3. Configurer le StringConverter pour posteComboBox AVANT de définir les items
-        // Cela garantit que l'affichage est correct dès le premier chargement ou filtrage.
-        posteComboBox.setConverter(new StringConverter<Poste>() {
-            @Override
-            public String toString(Poste poste) {
-                // Assurez-vous que votre classe Poste a une méthode getName()
-                // ou une propriété "name" si la colonne s'appelle "name" dans la DB.
-                // Si votre poste n'a pas de nom mais juste un ID, affichez l'ID.
-                return poste != null ? "Poste " + poste.getId() : ""; // Exemple: "Poste 1", "Poste 2"
-            }
+        // 2. Configurer le mode de paiement (MAINTENANT AVEC VÉRIFICATION NULL)
+        if (modePaiementComboBox != null) {
+            modePaiementComboBox.setItems(FXCollections.observableArrayList(
+                "En Espèce", "Wave", "Orange Money", "free money"
+            ));
+            System.out.println("DEBUG: Mode de paiement configuré");
+        } else {
+            System.err.println("ERREUR: modePaiementComboBox est null");
+        }
 
-            @Override
-            public Poste fromString(String string) {
-                return null; // Pas nécessaire pour cette utilisation
-            }
-        });
+        // 3. Configurer le StringConverter pour posteComboBox
+        if (posteComboBox != null) {
+            posteComboBox.setConverter(new StringConverter<Poste>() {
+                @Override
+                public String toString(Poste poste) {
+                    if (poste == null) return "";
+                    return "Poste " + poste.getId() + " - " + (poste.getName() != null ? poste.getName() : "");
+                }
 
-        modePaiementComboBox.setItems(FXCollections.observableArrayList(
-            "En Espèce", "Wave", "Orange Money", "free money"
-        ));
+                @Override
+                public Poste fromString(String string) {
+                    return null;
+                }
+            });
+            System.out.println("DEBUG: StringConverter configuré");
+        } else {
+            System.err.println("ERREUR: posteComboBox est null");
+        }
 
-        // 4. Mettre à jour le ComboBox des postes pour afficher TOUS les postes au démarrage
-        // (avant qu'un jeu ne soit sélectionné). C'est l'état initial.
-        posteComboBox.setItems(FXCollections.observableArrayList(allPostes));
+        // 4. Charger les postes EN DERNIER avec gestion d'erreur
+        loadPostes();
 
-        // 5. Listener pour gameComboBox: quand un nouveau jeu est sélectionné
-        gameComboBox.valueProperty().addListener((obs, oldVal, newGame) -> {
-            filterPostesByGame(newGame); // Filtrer les postes en fonction du jeu sélectionné
-            calculateAndSetAmount(); // Recalculer le montant après changement du jeu/poste potentiel
-        });
+        // 5. Listeners (uniquement si les ComboBox existent)
+        if (gameComboBox != null) {
+            gameComboBox.valueProperty().addListener((obs, oldVal, newGame) -> {
+                System.out.println("DEBUG: Jeu sélectionné changé: " + (newGame != null ? newGame.getName() : "null"));
+                filterPostesByGame(newGame);
+                calculateAndSetAmount();
+            });
+        }
 
-        // 6. Les autres listeners restent les mêmes
-        posteComboBox.valueProperty().addListener((obs, oldVal, newVal) -> calculateAndSetAmount());
-        hoursComboBox.valueProperty().addListener((obs, oldVal, newVal) -> calculateAndSetAmount());
-        minutesComboBox.valueProperty().addListener((obs, oldVal, newVal) -> calculateAndSetAmount());
+        if (posteComboBox != null) {
+            posteComboBox.valueProperty().addListener((obs, oldVal, newVal) -> {
+                System.out.println("DEBUG: Poste sélectionné changé: " + (newVal != null ? newVal.getId() : "null"));
+                calculateAndSetAmount();
+            });
+        }
 
-        // Calcul initial du montant
+        if (hoursComboBox != null) {
+            hoursComboBox.valueProperty().addListener((obs, oldVal, newVal) -> calculateAndSetAmount());
+        }
+
+        if (minutesComboBox != null) {
+            minutesComboBox.valueProperty().addListener((obs, oldVal, newVal) -> calculateAndSetAmount());
+        }
+
         calculateAndSetAmount();
+        
+        System.out.println("DEBUG: AddReservationController initialisé avec succès");
+
+    } catch (Exception e) {
+        System.err.println("ERREUR CRITIQUE lors de l'initialisation de AddReservationController:");
+        e.printStackTrace();
+        throw new RuntimeException("Erreur d'initialisation du contrôleur", e);
+    }
+}
+
+/** Vérifie que tous les champs FXML sont correctement injectés */
+private void checkFXMLFields() {
+    System.out.println("DEBUG: Vérification des champs FXML...");
+    
+    if (nameField == null) System.err.println("ERREUR: nameField est null");
+    if (phoneField == null) System.err.println("ERREUR: phoneField est null");
+    if (addressField == null) System.err.println("ERREUR: addressField est null");
+    if (posteComboBox == null) System.err.println("ERREUR: posteComboBox est null");
+    if (gameComboBox == null) System.err.println("ERREUR: gameComboBox est null");
+    if (modePaiementComboBox == null) System.err.println("ERREUR: modePaiementComboBox est null");
+    if (hoursComboBox == null) System.err.println("ERREUR: hoursComboBox est null");
+    if (minutesComboBox == null) System.err.println("ERREUR: minutesComboBox est null");
+    if (parrainComboBox == null) System.err.println("ERREUR: parrainComboBox est null");
+    if (amountLabel == null) System.err.println("ERREUR: amountLabel est null");
+    
+    System.out.println("DEBUG: Vérification des champs FXML terminée");
+}
+
+    private void loadPostes() {
+        try {
+            System.out.println("DEBUG: Tentative de chargement des postes...");
+            allPostes = Fabrique.getService().getPostes();
+            System.out.println("DEBUG: " + (allPostes != null ? allPostes.size() : "null") + " postes chargés");
+            
+            if (allPostes == null) {
+                System.err.println("ERREUR: La liste des postes est null");
+                allPostes = new ArrayList<>();
+            }
+            
+            // Vérifier le chargement des jeux pour chaque poste
+            for (Poste poste : allPostes) {
+                System.out.println("DEBUG: Poste " + poste.getId() + 
+                    " - Nom: " + poste.getName() + 
+                    " - HorsService: " + poste.isHorsService() +
+                    " - Jeux: " + (poste.getGames() != null ? poste.getGames().size() : "null"));
+                
+                if (poste.getGames() != null) {
+                    for (Game game : poste.getGames()) {
+                        System.out.println("DEBUG:   - Jeu: " + game.getName() + " (ID: " + game.getId() + ")");
+                    }
+                }
+            }
+            
+            // Mettre à jour la ComboBox
+            posteComboBox.setItems(FXCollections.observableArrayList(allPostes));
+            System.out.println("DEBUG: ComboBox des postes mise à jour avec " + allPostes.size() + " éléments");
+            
+        } catch (Exception e) {
+            System.err.println("ERREUR lors du chargement des postes: " + e.getMessage());
+            e.printStackTrace();
+            allPostes = new ArrayList<>();
+            posteComboBox.setItems(FXCollections.observableArrayList());
+            
+            // Afficher une alerte à l'utilisateur
+            Platform.runLater(() -> {
+                ControllerUtils.showErrorAlert("Erreur de chargement", 
+                    "Impossible de charger la liste des postes: " + e.getMessage());
+            });
+        }
     }
 
     public void setConnectedUser(User user) {
@@ -135,27 +230,42 @@ public class AddReservationController {
      * Filtre la ComboBox des postes en fonction du jeu sélectionné.
      * @param selectedGame Le jeu sélectionné dans gameComboBox, ou null si aucun.
      */
-    private void filterPostesByGame(Game selectedGame) {
-        // Efface la sélection actuelle du poste pour éviter de conserver un poste
-        // qui ne correspond plus au nouveau jeu sélectionné.
-        posteComboBox.setValue(null); 
+   private void filterPostesByGame(Game selectedGame) {
+    try {
+        System.out.println("DEBUG: Filtrage des postes pour le jeu: " + 
+            (selectedGame != null ? selectedGame.getName() + " (ID: " + selectedGame.getId() + ")" : "null"));
+        
+        posteComboBox.setValue(null);
         
         if (selectedGame == null) {
-            // Si aucun jeu n'est sélectionné, affiche tous les postes
+            // Afficher tous les postes
             posteComboBox.setItems(FXCollections.observableArrayList(allPostes));
+            System.out.println("DEBUG: Affichage de tous les postes: " + allPostes.size());
         } else {
-            // Filtre les postes qui contiennent le jeu sélectionné.
-            // C'est ici que la méthode equals() et hashCode() de Game est CRUCIALE.
+            // Filtrer les postes qui contiennent le jeu sélectionné
             List<Poste> filteredPostes = allPostes.stream()
-                                                    .filter(poste -> poste.getGames() != null && poste.getGames().contains(selectedGame))
-                                                    .collect(Collectors.toList());
+                .filter(poste -> {
+                    if (poste.getGames() == null) {
+                        System.out.println("DEBUG: Poste " + poste.getId() + " - games list is null");
+                        return false;
+                    }
+                    boolean containsGame = poste.getGames().contains(selectedGame);
+                    System.out.println("DEBUG: Poste " + poste.getId() + " contient le jeu " + 
+                        selectedGame.getName() + ": " + containsGame);
+                    return containsGame;
+                })
+                .collect(Collectors.toList());
+                
             posteComboBox.setItems(FXCollections.observableArrayList(filteredPostes));
+            System.out.println("DEBUG: Postes filtrés: " + filteredPostes.size() + " postes correspondent au jeu");
         }
-        
-        // **IMPORTANT** : Le StringConverter pour posteComboBox DOIT être configuré
-        // une seule fois, idéalement dans `initialize()`, et non ici à chaque filtrage.
-        // J'ai déplacé ce bloc dans initialize().
+    } catch (Exception e) {
+        System.err.println("ERREUR dans filterPostesByGame: " + e.getMessage());
+        e.printStackTrace();
+        // En cas d'erreur, afficher tous les postes
+        posteComboBox.setItems(FXCollections.observableArrayList(allPostes));
     }
+}
 
     private void loadGames() {
         List<Game> games = Fabrique.getService().getAllGames();
