@@ -7,8 +7,11 @@ import com.entities.Produit;
 import com.entities.Reservation;
 import com.entities.Role;
 import com.entities.User;
+
+import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
+import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
@@ -121,6 +124,39 @@ public class FinanceController {
             + "-fx-background-insets: 0, 0 0 1 0;");
         applyRoleBasedView(currentUser);
         calculateTotals();
+
+      // Utilisez :
+        ventesList.addListener((ListChangeListener<Object>) change -> {
+            Platform.runLater(() -> {
+                ventesPagination.setPageCount((int) Math.ceil(ventesList.size() / (double) ITEMS_PER_PAGE));
+                ventesPagination.setCurrentPageIndex(0);
+                updateVentesPagination(0);
+            });
+        });
+
+        stockList.addListener((ListChangeListener<Object>) change -> {
+            Platform.runLater(() -> {
+                stockPagination.setPageCount((int) Math.ceil(stockList.size() / (double) ITEMS_PER_PAGE));
+                stockPagination.setCurrentPageIndex(0);
+                updateStockPagination(0);
+            });
+        });
+
+        journalList.addListener((ListChangeListener<Object>) change -> {
+            Platform.runLater(() -> {
+                journalPagination.setPageCount((int) Math.ceil(journalList.size() / (double) ITEMS_PER_PAGE));
+                journalPagination.setCurrentPageIndex(0);
+                updateJournalPagination(0);
+            });
+        });
+
+        filteredJournalList.addListener((ListChangeListener<Object>) change -> {
+            Platform.runLater(() -> {
+                journalPagination.setPageCount((int) Math.ceil(filteredJournalList.size() / (double) ITEMS_PER_PAGE));
+                journalPagination.setCurrentPageIndex(0);
+                updateJournalPagination(0);
+            });
+        });
     }
 
     // Méthode pour identifier le type d'opération basée sur les détails
@@ -135,6 +171,15 @@ public class FinanceController {
         return payment.getDetailsProduits() != null && 
             !payment.getDetailsProduits().trim().isEmpty();
     }
+
+    private void refreshData() {
+        Platform.runLater(() -> {
+            loadVentes();
+            loadStock();
+            loadJournal();
+        });
+    }
+
 
     private void configureColumns() {
         numeroTicketVenteColumn.prefWidthProperty().bind(ventesTable.widthProperty().multiply(0.20));
