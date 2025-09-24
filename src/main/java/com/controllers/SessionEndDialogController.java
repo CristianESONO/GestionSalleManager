@@ -76,8 +76,8 @@ private void promptForExtension(GameSession session) {
 
     // ComboBox pour les minutes (15, 30, 45)
     ComboBox<Integer> minutesComboBox = new ComboBox<>();
-    minutesComboBox.getItems().addAll(15, 30, 45);
-    minutesComboBox.getSelectionModel().select(0); // Sélectionne 15 par défaut
+    minutesComboBox.getItems().addAll(00, 15, 30, 45);
+    minutesComboBox.getSelectionModel().select(1); // Sélectionne 15 par défaut
 
     // ComboBox pour les moyens de paiement
     ComboBox<String> paymentMethodComboBox = new ComboBox<>();

@@ -74,6 +74,9 @@ public void initialize() {
         
         // VÉRIFIER QUE TOUS LES CHAMPS FXML SONT INJECTÉS
         checkFXMLFields();
+
+         // 1. Configurer le champ téléphone (LIMITATION À 9 CHIFFRES)
+        setupPhoneField();
         
         // 1. Configurer d'abord les éléments simples
         setupHoursAndMinutesComboBoxes();
@@ -354,6 +357,29 @@ private void checkFXMLFields() {
         calculatedAmount = tempReservation.calculatePriceBasedOnDuration();
         String promoInfo = activePromo.map(p -> " (Promo: " + p.getNom() + ")").orElse("");
         amountLabel.setText(String.format("Montant : %.2f FCFA%s", calculatedAmount, promoInfo));
+    }
+
+
+    private void setupPhoneField() {
+        // Limiter à 9 chiffres maximum
+        phoneField.textProperty().addListener((observable, oldValue, newValue) -> {
+            if (newValue == null || newValue.isEmpty()) {
+                return;
+            }
+
+            // Supprimer tout caractère non numérique
+            String filteredValue = newValue.replaceAll("[^0-9]", "");
+
+            // Limiter à 9 chiffres
+            if (filteredValue.length() > 9) {
+                filteredValue = filteredValue.substring(0, 9);
+            }
+
+            // Mettre à jour le champ si nécessaire
+            if (!filteredValue.equals(newValue)) {
+                phoneField.setText(filteredValue);
+            }
+        });
     }
 
 

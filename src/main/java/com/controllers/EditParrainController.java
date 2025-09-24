@@ -19,8 +19,32 @@ public class EditParrainController {
 
     @FXML
     private void initialize() {
-        // Initialisation si nécessaire
+        // Limiter le champ téléphone à 9 chiffres
+        setupPhoneField();
     }
+
+    private void setupPhoneField() {
+        phoneField.textProperty().addListener((observable, oldValue, newValue) -> {
+            if (newValue == null || newValue.isEmpty()) {
+                return;
+            }
+
+            // Ne garder que les chiffres
+            String filteredValue = newValue.replaceAll("[^0-9]", "");
+
+            // Limiter à 9 chiffres
+            if (filteredValue.length() > 9) {
+                filteredValue = filteredValue.substring(0, 9);
+            }
+
+            // Mettre à jour le champ si nécessaire
+            if (!filteredValue.equals(newValue)) {
+                phoneField.setText(filteredValue);
+            }
+        });
+    }
+
+
 
     /**
      * Charge les informations du parrain dans les champs du formulaire.

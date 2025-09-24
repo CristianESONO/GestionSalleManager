@@ -16,12 +16,14 @@ public class ReceiptPrinter implements Printable {
     private String numeroTicket;
     private String userName;
     private static final double RECEIPT_WIDTH_POINTS = 220;
-    private static final double RECEIPT_HEIGHT_POINTS = 72 * 25; // Ajusté pour le contenu
+    private static final double RECEIPT_HEIGHT_POINTS = 72 * 25;
     private static final int LINE_HEIGHT = 12;
     private static final int SECTION_SPACING = 10;
+    private static final double MARGIN_LEFT = 10;
+    private static final double MARGIN_RIGHT = 10;
+    private static final double CONTENT_WIDTH = RECEIPT_WIDTH_POINTS - MARGIN_LEFT - MARGIN_RIGHT;
     private Image logoImage;
     private Image socialMediaImage;
-    private Image canalImage;
     private Image qrCodeImage;
     private String modePaiement;
 
@@ -48,10 +50,6 @@ public class ReceiptPrinter implements Printable {
         if (rsStream != null) {
             socialMediaImage = ImageIO.read(rsStream);
         }
-        InputStream rsStream1 = getClass().getResourceAsStream("/com/img/rs.jpg");
-        if (rsStream1 != null) {
-            canalImage = ImageIO.read(rsStream1);
-        }
         InputStream qrStream = getClass().getResourceAsStream("/com/img/QRCode.png");
         if (qrStream != null) {
             qrCodeImage = ImageIO.read(qrStream);
@@ -72,41 +70,49 @@ public class ReceiptPrinter implements Printable {
         Font fontBold = new Font("Calibri", Font.BOLD, 9);
         Font fontHeader = new Font("Calibri", Font.BOLD, 10);
         Font fontItalic = new Font("Calibri", Font.ITALIC, 8);
+
         int y = 0;
 
         // --- 1. LOGO ---
         if (logoImage != null) {
-            int logoWidth = 100;
+            int logoWidth = (int) CONTENT_WIDTH;
             int logoHeight = (int) (logoImage.getHeight(null) * (double) logoWidth / logoImage.getWidth(null));
-            int xLogo = (int) ((RECEIPT_WIDTH_POINTS - logoWidth) / 2);
+            int xLogo = (int) MARGIN_LEFT;
             g2d.drawImage(logoImage, xLogo, y, logoWidth, logoHeight, null);
             y += logoHeight + SECTION_SPACING;
         }
 
         // --- 2. Informations de l'entreprise ---
         g2d.setFont(fontNormal);
-        centerString(g2d, "Jaxaay, Parcelle Unité 24, BP 17000, KEUR MASSAR", (int) RECEIPT_WIDTH_POINTS, y);
+        centerString(g2d, "Jaxaay, Parcelle Unité 24, BP 17000, KEUR MASSAR", y);
         y += LINE_HEIGHT;
-        centerString(g2d, "Tel. +221 33 813 47 20 / 77 112 85 14", (int) RECEIPT_WIDTH_POINTS, y);
+        centerString(g2d, "Tel. +221 33 813 47 20 / 77 112 85 14", y);
         y += LINE_HEIGHT;
-        centerString(g2d, "Kayplay.gamingroom@gmail.com", (int) RECEIPT_WIDTH_POINTS, y);
-        y += SECTION_SPACING + 5; // Espace supplémentaire après l'email
+        centerString(g2d, "Kayplay.gamingroom@gmail.com", y);
+        y += SECTION_SPACING + 5;
 
         // --- 3. Numéro de ticket et date ---
         g2d.setFont(fontBold);
-        centerString(g2d, "TICKET-" + numeroTicket, (int) RECEIPT_WIDTH_POINTS, y);
+        centerString(g2d, "TICKET-" + numeroTicket, y);
         y += LINE_HEIGHT;
-        centerString(g2d, LocalDateTime.now().format(DateTimeFormatter.ofPattern("EEE dd/MM/yyyy HH:mm")), (int) RECEIPT_WIDTH_POINTS, y);
+        centerString(g2d, LocalDateTime.now().format(DateTimeFormatter.ofPattern("EEE dd/MM/yyyy HH:mm")), y);
         y += LINE_HEIGHT;
-        centerString(g2d, "Vendeur: " + userName, (int) RECEIPT_WIDTH_POINTS, y);
+        centerString(g2d, "Vendeur: " + userName, y);
         y += SECTION_SPACING;
 
         // --- 4. En-tête du tableau ---
-        g2d.drawString("-------------------------------------------", 0, y);
+        g2d.drawString("-------------------------------------------", (int) MARGIN_LEFT, y);
         y += LINE_HEIGHT;
-        g2d.drawString(String.format("%-8s %-20s %10s", "Qté", "Articles", "CFA"), 0, y);
+        g2d.drawString(
+            String.format(
+                "%-" + (int)(CONTENT_WIDTH * 0.2) + "s %-" + (int)(CONTENT_WIDTH * 0.6) + "s %" + (int)(CONTENT_WIDTH * 0.2) + "s",
+                "Qté", "Articles", "CFA"
+            ),
+            (int) MARGIN_LEFT,
+            y
+        );
         y += LINE_HEIGHT;
-        g2d.drawString("-------------------------------------------", 0, y);
+        g2d.drawString("-------------------------------------------", (int) MARGIN_LEFT, y);
         y += LINE_HEIGHT;
 
         // --- 5. Liste des produits ---
@@ -120,74 +126,75 @@ public class ReceiptPrinter implements Printable {
             if (nomProduit.length() > 20) {
                 nomProduit = nomProduit.substring(0, 17) + "...";
             }
-            String line = String.format("%-8d %-20s %10.0f", quantite, nomProduit, totalLigne);
-            g2d.drawString(line, 0, y);
+            String line = String.format(
+                "%-" + (int)(CONTENT_WIDTH * 0.2) + "d %-" + (int)(CONTENT_WIDTH * 0.6) + "s %" + (int)(CONTENT_WIDTH * 0.2) + ".0f",
+                quantite, nomProduit, totalLigne
+            );
+            g2d.drawString(line, (int) MARGIN_LEFT, y);
             y += LINE_HEIGHT;
         }
 
         // --- 6. Total ---
-        g2d.drawString("-------------------------------------------", 0, y);
+        g2d.drawString("-------------------------------------------", (int) MARGIN_LEFT, y);
         y += LINE_HEIGHT;
         g2d.setFont(fontBold);
-        g2d.drawString(String.format("%-28s %10.0f", "TOTAL (CFA) :", montantTotal), 0, y);
-        y += SECTION_SPACING + 5; // Espace supplémentaire après le total
+        g2d.drawString(
+            String.format(
+                "%-" + (int)(CONTENT_WIDTH * 0.8) + "s %" + (int)(CONTENT_WIDTH * 0.2) + ".0f",
+                "TOTAL (CFA) :", montantTotal
+            ),
+            (int) MARGIN_LEFT,
+            y
+        );
+        y += SECTION_SPACING + 5;
 
         // --- 7. Mode de paiement ---
         g2d.setFont(fontNormal);
-        g2d.drawString("Mode de paiement: " + modePaiement, 0, y);
-        y += SECTION_SPACING + 5; // Espace supplémentaire après le mode de paiement
+        g2d.drawString("Mode de paiement: " + modePaiement, (int) MARGIN_LEFT, y);
+        y += SECTION_SPACING + 5;
 
         // --- 8. Message personnalisé ---
         g2d.setFont(fontHeader);
-        centerString(g2d, "KAY PLAY GAMING ROOM", (int) RECEIPT_WIDTH_POINTS, y);
+        centerString(g2d, "KAY PLAY GAMING ROOM", y);
         y += LINE_HEIGHT;
         g2d.setFont(fontNormal);
-        centerString(g2d, "Votre passion pour les jeux prend vie !", (int) RECEIPT_WIDTH_POINTS, y);
+        centerString(g2d, "Votre passion pour les jeux prend vie !", y);
         y += SECTION_SPACING;
 
         // --- 9. Réseaux sociaux ---
         g2d.setFont(fontBold);
-        centerString(g2d, "Suivez-nous sur", (int) RECEIPT_WIDTH_POINTS, y);
+        centerString(g2d, "Suivez-nous sur", y);
         y += LINE_HEIGHT;
         if (socialMediaImage != null) {
-            int smWidth = 100;
+            int smWidth = (int) CONTENT_WIDTH;
             int smHeight = 20;
-            int xSm = (int) ((RECEIPT_WIDTH_POINTS - smWidth) / 2);
+            int xSm = (int) MARGIN_LEFT;
             g2d.drawImage(socialMediaImage, xSm, y, smWidth, smHeight, null);
             y += smHeight + SECTION_SPACING;
         }
 
-        // --- 10. Image Canal (si disponible) ---
-        if (canalImage != null) {
-            int imgWidth = 100;
-            int imgHeight = (int) (canalImage.getHeight(null) * (double) imgWidth / canalImage.getWidth(null));
-            int xImg = (int) ((RECEIPT_WIDTH_POINTS - imgWidth) / 2);
-            g2d.drawImage(canalImage, xImg, y, imgWidth, imgHeight, null);
-            y += imgHeight + SECTION_SPACING;
-        }
-
-        // --- 11. QR Code ---
+        // --- 10. QR Code ---
         if (qrCodeImage != null) {
             int qrWidth = 70;
             int qrHeight = (int) (qrCodeImage.getHeight(null) * (double) qrWidth / qrCodeImage.getWidth(null));
-            int xQr = (int) ((RECEIPT_WIDTH_POINTS - qrWidth) / 2);
+            int xQr = (int) ((CONTENT_WIDTH - qrWidth) / 2) + (int) MARGIN_LEFT;
             g2d.drawImage(qrCodeImage, xQr, y, qrWidth, qrHeight, null);
             y += qrHeight + SECTION_SPACING;
         }
 
-        // --- 12. Mentions légales ---
+        // --- 11. Mentions légales ---
         g2d.setFont(fontItalic);
-        centerString(g2d, "Ticket non remboursable", (int) RECEIPT_WIDTH_POINTS, y);
+        centerString(g2d, "Ticket non remboursable", y);
         y += LINE_HEIGHT;
-        centerString(g2d, "À conserver pour toute réclamation", (int) RECEIPT_WIDTH_POINTS, y);
+        centerString(g2d, "À conserver pour toute réclamation", y);
 
         return PAGE_EXISTS;
     }
 
-    private void centerString(Graphics2D g2d, String text, int pageWidth, int yPos) {
+    private void centerString(Graphics2D g2d, String text, int yPos) {
         FontMetrics fm = g2d.getFontMetrics();
         int textWidth = fm.stringWidth(text);
-        int x = (pageWidth - textWidth) / 2;
+        int x = (int) (MARGIN_LEFT + (CONTENT_WIDTH - textWidth) / 2);
         g2d.drawString(text, x, yPos);
     }
 

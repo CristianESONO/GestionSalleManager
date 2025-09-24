@@ -123,6 +123,19 @@ public class FinanceController {
         calculateTotals();
     }
 
+    // Méthode pour identifier le type d'opération basée sur les détails
+    private boolean isReservationPayment(Payment payment) {
+        // Si detailReservations n'est pas null et contient des données, c'est une réservation
+        return payment.getDetailReservations() != null && 
+            !payment.getDetailReservations().trim().isEmpty();
+    }
+
+    private boolean isVenteProduitPayment(Payment payment) {
+        // Si detailsProduits n'est pas null et contient des données, c'est une vente de produit
+        return payment.getDetailsProduits() != null && 
+            !payment.getDetailsProduits().trim().isEmpty();
+    }
+
     private void configureColumns() {
         numeroTicketVenteColumn.prefWidthProperty().bind(ventesTable.widthProperty().multiply(0.20));
         clientVenteColumn.prefWidthProperty().bind(ventesTable.widthProperty().multiply(0.20));
@@ -139,8 +152,14 @@ public class FinanceController {
         });
         clientVenteColumn.setCellValueFactory(cellData -> {
             if (cellData.getValue() instanceof Payment) {
-                // Toujours afficher "Inconnu" pour les ventes de produits
-                return new SimpleStringProperty("Inconnu");
+                Payment payment = (Payment) cellData.getValue();
+                if (isReservationPayment(payment)) {
+                    // Pour les réservations : afficher le vrai nom du client
+                    return new SimpleStringProperty(payment.getClient() != null ? payment.getClient().getName() : "N/A");
+                } else {
+                    // Pour les ventes de produits : afficher "Inconnu"
+                    return new SimpleStringProperty("Inconnu");
+                }
             } else if (cellData.getValue() instanceof Reservation) {
                 Reservation reservation = (Reservation) cellData.getValue();
                 return new SimpleStringProperty(reservation.getClient() != null ? reservation.getClient().getName() : "N/A");
@@ -158,8 +177,11 @@ public class FinanceController {
         });
         modePaiementVenteColumn.setCellValueFactory(cellData -> {
             if (cellData.getValue() instanceof Payment) {
-                return new SimpleStringProperty(((Payment) cellData.getValue()).getModePaiement());
+                Payment payment = (Payment) cellData.getValue();
+                // Toujours afficher le mode de paiement réel
+                return new SimpleStringProperty(payment.getModePaiement());
             } else if (cellData.getValue() instanceof Reservation) {
+                // Pour les réservations affichées directement
                 return new SimpleStringProperty("Réservation");
             }
             return new SimpleStringProperty("");
@@ -323,33 +345,32 @@ public class FinanceController {
         }
     }
 
-    // Modifie loadVentes() pour séparer les deux types :
-private void loadVentes() {
+   private void loadVentes() {
     if (isAdmin) {
         LocalDate today = LocalDate.now();
         User currentUser = Fabrique.getService().getCurrentUser();
+        
+        // Récupérer seulement les PAIEMENTS (pas les réservations)
         List<Payment> paiements = Fabrique.getService().getPaymentsByUser(currentUser);
-        List<Reservation> reservations = Fabrique.getService().findReservationsByUser(currentUser);
-
         List<Payment> dailyPayments = paiements.stream()
             .filter(p -> p.getDateHeure().toInstant().atZone(ZoneId.systemDefault()).toLocalDate().isEqual(today))
             .collect(Collectors.toList());
 
-        List<Reservation> dailyReservations = reservations.stream()
-            .filter(r -> r.getReservationDate().toLocalDate().isEqual(today))
-            .collect(Collectors.toList());
+        // NE PAS charger les réservations pour éviter la duplication
+        // List<Reservation> dailyReservations = ... // COMMENTEZ ou SUPPRIMEZ cette partie
 
         ventesProduitsList.setAll(dailyPayments);
-        reservationsList.setAll(dailyReservations);
-
-        // Pour l'affichage dans le TableView, tu peux garder ventesList si tu veux tout afficher ensemble,
-        // ou créer deux TableView distincts.
+        
+        // Utiliser seulement les paiements dans ventesList
         ventesList.clear();
         ventesList.addAll(dailyPayments);
-        ventesList.addAll(dailyReservations);
+        // ventesList.addAll(dailyReservations); // SUPPRIMEZ cette ligne
 
         ventesPagination.setPageCount((int) Math.ceil(ventesList.size() / (double) ITEMS_PER_PAGE));
         updateVentesPagination(0);
+        
+        // Mettre à jour les totaux
+        calculateTotals();
     }
 }
 
@@ -519,16 +540,22 @@ private void loadVentes() {
 
     private void calculateTotals() {
         if (isAdmin) {
-            double totalSales = ventesList.stream()
+            double totalVentesProduits = ventesList.stream()
                 .filter(item -> item instanceof Payment)
-                .mapToDouble(item -> ((Payment) item).getMontantTotal())
+                .map(item -> (Payment) item)
+                .filter(payment -> isVenteProduitPayment(payment)) // Uniquement les ventes produits
+                .mapToDouble(Payment::getMontantTotal)
                 .sum();
-            double totalReservationsAmount = ventesList.stream()
-                .filter(item -> item instanceof Reservation)
-                .mapToDouble(item -> ((Reservation) item).getTotalPrice())
+            
+            double totalReservations = ventesList.stream()
+                .filter(item -> item instanceof Payment)
+                .map(item -> (Payment) item)
+                .filter(payment -> isReservationPayment(payment)) // Uniquement les réservations
+                .mapToDouble(Payment::getMontantTotal)
                 .sum();
-            totalVentesLabel.setText(String.format("Total Ventes Produits (jour) : %.2f F", totalSales));
-            totalReservationsLabel.setText(String.format("Total Réservations (jour) : %.2f F", totalReservationsAmount));
+                
+            totalVentesLabel.setText(String.format("Total Ventes Produits (jour) : %.2f F", totalVentesProduits));
+            totalReservationsLabel.setText(String.format("Total Réservations (jour) : %.2f F", totalReservations));
         }
     }
 
