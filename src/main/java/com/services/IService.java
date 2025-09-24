@@ -23,7 +23,7 @@ public interface IService {
     List<GameSession> findGameSessionsByClientId(int clientId);
     boolean existsGameSessionById(int id); // Ajouté pour cohérence avec le dépôt JPA
     void terminateSessionAndReservation(GameSession session) throws Exception;
-    void extendGameSession(GameSession session, int additionalMinutes, String connectedUserName) throws Exception;
+    void extendGameSession(GameSession session, int additionalMinutes, String connectedUserName,String modePaiement) throws Exception;
     void resumeGameSession(GameSession session) throws Exception;
     void pauseGameSession(GameSession session) throws Exception;
 

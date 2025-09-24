@@ -115,7 +115,7 @@
                             </effect>
                         </ComboBox>
 
-                        <Label fx:id="amountLabel" style="-fx-font-size: 20px; -fx-text-fill: #2ecc71; -fx-font-weight: bold;" text="Montant : 0.00 FCFA" />
+                        <Label fx:id="amountLabel" style="-fx-font-size: 15px; -fx-text-fill: #2ecc71; -fx-font-weight: bold;" text="Montant : 0.00 FCFA" />
                     </children>
                 </VBox>
 

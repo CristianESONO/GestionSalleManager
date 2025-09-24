@@ -1015,78 +1015,107 @@ public class Service implements IService {
     }
 
 
-   @Override
-    @Transactional
-    public void extendGameSession(GameSession session, int additionalMinutes, String connectedUserName) throws Exception {
-        Objects.requireNonNull(session, "La session ne peut pas être null.");
-        if (additionalMinutes <= 0) {
-            throw new IllegalArgumentException("Le nombre de minutes supplémentaires doit être positif.");
-        }
-
-        // Déclare et initialise le mode de paiement par défaut
-        String modePaiement = "En Espèce";
-
-        // 1. Charge la session avec toutes ses relations
-        GameSession managedSession = gameSessionRepository.findGameSessionByIdWithRelations(session.getId());
-        if (managedSession == null) {
-            throw new Exception("Session introuvable avec l'ID : " + session.getId());
-        }
-        // 2. Vérifie que la réservation est chargée
-        Reservation reservation = managedSession.getReservation();
-        if (reservation == null) {
-            throw new Exception("Aucune réservation associée à cette session.");
-        }
-        // 3. Vérifie que le jeu est chargé
-        Game game = reservation.getGame();
-        if (game == null) {
-            throw new Exception("Aucun jeu associé à cette réservation.");
-        }
-        // 4. Calcule le prix supplémentaire
-        double additionalPrice = calculateExtensionPrice(additionalMinutes, reservation);
-        // 5. Met à jour la durée de la session et de la réservation
-        Duration extraDuration = Duration.ofMinutes(additionalMinutes);
-        managedSession.addExtraTime(extraDuration);
-        // 6. Met à jour le prix total de la réservation en ajoutant uniquement le prix supplémentaire
-        double originalAmount = reservation.getTotalPrice();
-        reservation.setDuration(reservation.getDuration().plus(extraDuration));
-        reservation.setTotalPrice(originalAmount + additionalPrice);
-        // 7. Met à jour les points de fidélité
-        updateLoyaltyPoints(reservation, additionalMinutes);
-        // 8. Met à jour les points de parrainage
-        updateParrainPoints(reservation, additionalMinutes);
-        // 9. Sauvegarde les modifications
-        gameSessionRepository.updateGameSession(managedSession);
-        reservationRepository.update(reservation);
-        // 9.5. Crée un paiement pour la prolongation
-        String detailReservations = String.format(
-            "Prolongation de %d minutes pour la réservation %s (Poste %d) - Jeu: %s",
-            additionalMinutes,
-            reservation.getNumeroTicket(),
-            reservation.getPoste().getId(),
-            game.getName()
-        );
-        Payment payment = new Payment(
-            "EXT-" + reservation.getNumeroTicket(),
-            new Date(),
-            additionalPrice,
-            modePaiement, // Utilise la variable locale
-            reservation.getClient(),
-            "",
-            detailReservations,
-            currentUser
-        );
-        paymentRepository.addPayment(payment);
-        // 10. Imprime le ticket avec le mode de paiement
-        ReservationReceiptPrinter printer = new ReservationReceiptPrinter(
-            reservation,
-            connectedUserName,
-            true,
-            additionalMinutes,
-            originalAmount,
-            modePaiement // Utilise la variable locale
-        );
-        printer.printReceipt();
+ @Override
+@Transactional
+public void extendGameSession(GameSession session, int additionalMinutes, String connectedUserName, String modePaiement) throws Exception {
+    // Validation des paramètres
+    Objects.requireNonNull(session, "La session ne peut pas être null.");
+    if (additionalMinutes < 15) {
+        throw new IllegalArgumentException("La durée minimale de prolongation est de 15 minutes.");
     }
+    if (modePaiement == null || modePaiement.trim().isEmpty()) {
+        throw new IllegalArgumentException("Le mode de paiement ne peut pas être vide.");
+    }
+
+    // 1. Charge la session avec toutes ses relations
+    GameSession managedSession = gameSessionRepository.findGameSessionByIdWithRelations(session.getId());
+    if (managedSession == null) {
+        throw new Exception("Session introuvable avec l'ID : " + session.getId());
+    }
+
+    // 2. Vérifie que la réservation est chargée
+    Reservation reservation = managedSession.getReservation();
+    if (reservation == null) {
+        throw new Exception("Aucune réservation associée à cette session.");
+    }
+
+    // 3. Vérifie que le jeu est chargé
+    Game game = reservation.getGame();
+    if (game == null) {
+        throw new Exception("Aucun jeu associé à cette réservation.");
+    }
+
+    // 4. Vérifie que le client est chargé
+    Client client = reservation.getClient();
+    if (client == null) {
+        throw new Exception("Aucun client associé à cette réservation.");
+    }
+
+    // 5. Calcule le prix supplémentaire
+    double additionalPrice = calculateExtensionPrice(additionalMinutes, reservation);
+
+    // 6. Stocke le prix original pour le ticket
+    double originalAmount = reservation.getTotalPrice();
+
+    // 7. Met à jour la durée de la session et de la réservation
+    Duration extraDuration = Duration.ofMinutes(additionalMinutes);
+    managedSession.addExtraTime(extraDuration);
+
+    // 8. Met à jour le prix total de la réservation en ajoutant uniquement le prix supplémentaire
+    reservation.setDuration(reservation.getDuration().plus(extraDuration));
+    reservation.setTotalPrice(originalAmount + additionalPrice);
+
+    // 9. Met à jour les points de fidélité
+    updateLoyaltyPoints(reservation, additionalMinutes);
+
+    // 10. Met à jour les points de parrainage
+    updateParrainPoints(reservation, additionalMinutes);
+
+    // 11. Récupère l'utilisateur connecté
+    User currentUser = getCurrentUser();
+    if (currentUser == null) {
+        throw new Exception("Aucun utilisateur connecté trouvé.");
+    }
+
+    // 12. Sauvegarde les modifications
+    gameSessionRepository.updateGameSession(managedSession);
+    reservationRepository.update(reservation);
+
+    // 13. Crée un paiement pour la prolongation
+    String detailReservations = String.format(
+        "Prolongation de %d minutes pour la réservation %s (Poste %d) - Jeu: %s",
+        additionalMinutes,
+        reservation.getNumeroTicket(),
+        reservation.getPoste().getId(),
+        game.getName()
+    );
+
+    Payment payment = new Payment(
+        "EXT-" + reservation.getNumeroTicket(),
+        new Date(),
+        additionalPrice,
+        modePaiement, // Utilise le mode de paiement sélectionné
+        client,
+        "",
+        detailReservations,
+        currentUser
+    );
+
+    paymentRepository.addPayment(payment);
+
+    // 14. Imprime le ticket avec le mode de paiement
+    ReservationReceiptPrinter printer = new ReservationReceiptPrinter(
+        reservation,
+        connectedUserName,
+        true, // Indique que c'est une prolongation
+        additionalMinutes,
+        originalAmount,
+        modePaiement // Utilise le mode de paiement sélectionné
+    );
+    printer.printReceipt();
+}
+
+
 
 private double calculateExtensionPrice(int additionalMinutes, Reservation reservation) {
     double additionalPrice = 0.0;

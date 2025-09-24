@@ -25,11 +25,14 @@ import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.effect.DropShadow;
+import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.paint.Color;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.util.Callback;
+import javafx.util.Pair;
+import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 
 import java.io.IOException;
@@ -74,6 +77,7 @@ public class ReservationController implements Initializable {
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
+        SessionEndDialogController.setReservationController(this);
         setupReservationTable();
         loadReservations();
         setupActiveSessionsTable();
@@ -402,53 +406,138 @@ public class ReservationController implements Initializable {
         });
     }
 
-    private void promptForExtension(GameSession session) {
-        TextInputDialog dialog = new TextInputDialog("30");
-        dialog.setTitle("Prolonger la durée");
-        dialog.setHeaderText("Prolonger la session pour le poste " + session.getPoste().getName());
-        dialog.setContentText("Ajouter des minutes supplémentaires (ex: 15 pour 15 minutes, ou 1.5 pour 1h30) :");
-        dialog.showAndWait().ifPresent(durationStr -> {
-            try {
-                String cleanedInput = durationStr.trim().replace(",", ".");
-                double value = Double.parseDouble(cleanedInput);
-                if (value <= 0) {
-                    ControllerUtils.showErrorAlert("Erreur de durée", "Veuillez saisir un nombre positif.");
-                    return;
-                }
-                int additionalMinutes = cleanedInput.contains(".") ? (int) Math.round(value * 60) : (int) value;
-                if (additionalMinutes <= 0) {
-                    ControllerUtils.showErrorAlert("Erreur de durée", "La durée doit être supérieure à zéro.");
-                    return;
-                }
+    private List<String> getAvailablePaymentMethods() {
+        // Récupération des moyens de paiement depuis la base de données ou une liste prédéfinie
+        List<String> paymentMethods = new ArrayList<>();
+        paymentMethods.add("En Espèce");
+        paymentMethods.add("Wave");
+        paymentMethods.add("Orange Money");
+        paymentMethods.add("Free Money");
+        paymentMethods.add("Wizall Money");
+        paymentMethods.add("Carte Bancaire");
 
-                // Appelle la méthode du service qui gère tout
-                Fabrique.getService().extendGameSession(session, additionalMinutes, connectedUserName);
-
-                Platform.runLater(() -> {
-                    loadActiveSessions();
-                    loadReservations();
-                });
-            } catch (NumberFormatException e) {
-                ControllerUtils.showErrorAlert("Erreur de saisie", "Veuillez saisir un nombre valide (ex: 30 ou 1.5).");
-            } catch (Exception e) {
-                ControllerUtils.showErrorAlert("Erreur", "Échec de la prolongation : " + e.getMessage());
-            }
-        });
+        return paymentMethods;
     }
+
+
+   private void promptForExtension(GameSession session) {
+    // Création du dialogue personnalisé
+    Dialog<Pair<Integer, String>> dialog = new Dialog<>();
+    dialog.setTitle("Prolonger la durée");
+    dialog.setHeaderText("Prolonger la session pour le poste " + session.getPoste().getName());
+
+    // Configuration des boutons
+    ButtonType validerButtonType = new ButtonType("Valider", ButtonBar.ButtonData.OK_DONE);
+    dialog.getDialogPane().getButtonTypes().addAll(validerButtonType, ButtonType.CANCEL);
+
+    // Création du contenu du dialogue
+    GridPane grid = new GridPane();
+    grid.setHgap(10);
+    grid.setVgap(10);
+    grid.setPadding(new Insets(20, 150, 10, 10));
+
+    // ComboBox pour les heures (0 à 24)
+    ComboBox<Integer> hoursComboBox = new ComboBox<>();
+    for (int i = 0; i <= 24; i++) {
+        hoursComboBox.getItems().add(i);
+    }
+    hoursComboBox.getSelectionModel().select(0); // Sélectionne 0 par défaut
+
+    // ComboBox pour les minutes (15, 30, 45)
+    ComboBox<Integer> minutesComboBox = new ComboBox<>();
+    minutesComboBox.getItems().addAll(15, 30, 45);
+    minutesComboBox.getSelectionModel().select(0); // Sélectionne 15 par défaut
+
+    // ComboBox pour les moyens de paiement
+    ComboBox<String> paymentMethodComboBox = new ComboBox<>();
+    List<String> paymentMethods = getAvailablePaymentMethods();
+    paymentMethodComboBox.getItems().addAll(paymentMethods);
+    paymentMethodComboBox.getSelectionModel().selectFirst(); // Sélectionne le premier élément par défaut
+
+    // Ajout des éléments au grid
+    grid.add(new Label("Heures:"), 0, 0);
+    grid.add(hoursComboBox, 1, 0);
+    grid.add(new Label("Minutes:"), 0, 1);
+    grid.add(minutesComboBox, 1, 1);
+    grid.add(new Label("Moyen de paiement:"), 0, 2);
+    grid.add(paymentMethodComboBox, 1, 2);
+
+    dialog.getDialogPane().setContent(grid);
+
+    // Conversion du résultat
+    dialog.setResultConverter(dialogButton -> {
+        if (dialogButton == validerButtonType) {
+            try {
+                int hours = hoursComboBox.getSelectionModel().getSelectedItem();
+                int minutes = minutesComboBox.getSelectionModel().getSelectedItem();
+                int additionalMinutes = hours * 60 + minutes;
+
+                if (additionalMinutes <= 0) {
+                    ControllerUtils.showErrorAlert("Erreur de durée", "Veuillez sélectionner une durée valide.");
+                    return null;
+                }
+
+                String selectedPaymentMethod = paymentMethodComboBox.getSelectionModel().getSelectedItem();
+                if (selectedPaymentMethod == null || selectedPaymentMethod.isEmpty()) {
+                    ControllerUtils.showErrorAlert("Erreur", "Veuillez sélectionner un moyen de paiement.");
+                    return null;
+                }
+
+                return new Pair<>(additionalMinutes, selectedPaymentMethod);
+            } catch (Exception e) {
+                ControllerUtils.showErrorAlert("Erreur de saisie", "Veuillez sélectionner une durée et un moyen de paiement valides.");
+                return null;
+            }
+        }
+        return null;
+    });
+
+    // Affichage du dialogue
+    Optional<Pair<Integer, String>> result = dialog.showAndWait();
+
+    // Traitement du résultat
+    result.ifPresent(pair -> {
+        try {
+            int additionalMinutes = pair.getKey();
+            String selectedPaymentMethod = pair.getValue();
+            // Appelle la méthode du service qui gère tout
+            Fabrique.getService().extendGameSession(session, additionalMinutes, connectedUserName, selectedPaymentMethod);
+            Platform.runLater(() -> {
+                loadActiveSessions();
+                loadReservations();
+            });
+        } catch (Exception e) {
+            ControllerUtils.showErrorAlert("Erreur", "Échec de la prolongation : " + e.getMessage());
+        }
+    });
+}
+
 
 
 
     private void terminateGameSession(GameSession session) {
-        if (session == null || "Terminée".equalsIgnoreCase(session.getStatus())) {
-            ControllerUtils.showInfoAlert("Info", "Cette session est déjà terminée.");
+        if (session == null) {
+            ControllerUtils.showErrorAlert("Erreur", "Aucune session sélectionnée.");
             return;
         }
+
         Alert confirmAlert = new Alert(Alert.AlertType.CONFIRMATION, "Terminer la session ?", ButtonType.YES, ButtonType.NO);
         confirmAlert.showAndWait().ifPresent(response -> {
             if (response == ButtonType.YES) {
                 try {
-                    Fabrique.getService().terminateSessionAndReservation(session);
-                    ControllerUtils.showInfoAlert("Succès", "Session terminée.");
+                    // Mettre à jour le statut de la session
+                    session.setStatus("Terminée");
+                    session.setEndTime(LocalDateTime.now());
+                    Fabrique.getService().updateGameSession(session);
+
+                    // Mettre à jour le statut de la réservation associée
+                    Reservation reservation = session.getReservation();
+                    if (reservation != null) {
+                        reservation.setStatus("Terminée");
+                        Fabrique.getService().updateReservation(reservation);
+                    }
+
+                    ControllerUtils.showInfoAlert("Succès", "Session terminée avec succès.");
                     loadActiveSessions();
                     loadReservations();
                 } catch (Exception e) {
@@ -458,6 +547,7 @@ public class ReservationController implements Initializable {
         });
     }
 
+
     private void updateReservationStatusForSession(GameSession session) throws Exception {
         Reservation reservation = session.getReservation();
         if (reservation != null) {
@@ -466,49 +556,56 @@ public class ReservationController implements Initializable {
         }
     }
 
-    public void checkExpiredSessions() {
-        List<GameSession> activeSessions = Fabrique.getService().getAllGameSessions()
-                .stream()
-                .filter(s -> "Active".equalsIgnoreCase(s.getStatus()) && !s.isPaused())
-                .collect(Collectors.toList());
+    private void checkExpiredSessions() {
+    List<GameSession> activeSessions = Fabrique.getService().getAllGameSessions()
+            .stream()
+            .filter(s -> "Active".equalsIgnoreCase(s.getStatus()) && !s.isPaused())
+            .collect(Collectors.toList());
 
-        boolean sessionsUpdated = false;
-
-        for (GameSession session : activeSessions) {
-            if (session.getStartTime() != null && session.getPaidDuration() != null) {
-                LocalDateTime endTime = session.getStartTime().plus(session.getPaidDuration());
-                if (LocalDateTime.now().isAfter(endTime)) {
-                    try {
-                        session.setStatus("Terminée");
-                        session.setEndTime(endTime);
-                        Fabrique.getService().updateGameSession(session);
-
-                        Reservation reservation = session.getReservation();
-                        if (reservation != null) {
-                            reservation.setStatus("Terminée");
-                            Fabrique.getService().updateReservation(reservation);
-                        }
-
-                        if (!notifiedSessions.contains(session.getId())) {
-                            notifiedSessions.add(session.getId());
-                            Platform.runLater(() -> ControllerUtils.showInfoAlert("Session terminée", "La session sur le poste " + session.getPoste().getName() + " a expiré."));
-                        }
-
-                        sessionsUpdated = true;
-                    } catch (Exception e) {
-                        System.err.println("Erreur lors de la mise à jour de la session " + session.getId() + ": " + e.getMessage());
+    boolean sessionsUpdated = false;
+    for (GameSession session : activeSessions) {
+        if (session.getStartTime() != null && session.getPaidDuration() != null) {
+            LocalDateTime endTime = session.getStartTime().plus(session.getPaidDuration());
+            if (LocalDateTime.now().isAfter(endTime)) {
+                try {
+                    // Ne pas marquer comme "Terminée" ici, mais ouvrir le dialogue
+                    if (!notifiedSessions.contains(session.getId())) {
+                        notifiedSessions.add(session.getId());
+                        Platform.runLater(() -> openSessionEndDialog(session));
                     }
+                    sessionsUpdated = true;
+                } catch (Exception e) {
+                    System.err.println("Erreur lors de la notification de la session " + session.getId() + ": " + e.getMessage());
                 }
             }
         }
-
-        if (sessionsUpdated) {
-            Platform.runLater(() -> {
-                loadActiveSessions();
-                loadReservations();
-            });
-        }
     }
+    if (sessionsUpdated) {
+        Platform.runLater(this::loadActiveSessions);
+    }
+}
+
+private void openSessionEndDialog(GameSession session) {
+    try {
+        FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/views/SessionEndDialog.fxml"));
+        Scene scene = new Scene(loader.load());
+        Stage stage = new Stage();
+        SessionEndDialogController controller = loader.getController();
+        controller.setSession(session);
+        controller.setConnectedUserName(connectedUserName); // Passe le nom de l'utilisateur connecté
+        stage.setScene(scene);
+        stage.initModality(Modality.APPLICATION_MODAL);
+        stage.showAndWait();
+
+        loadActiveSessions();
+        loadReservations();
+    } catch (IOException e) {
+        ControllerUtils.showErrorAlert("Erreur", "Erreur lors de l'ouverture de la fenêtre de prolongation.");
+    }
+}
+
+
+
 
 
     @FXML

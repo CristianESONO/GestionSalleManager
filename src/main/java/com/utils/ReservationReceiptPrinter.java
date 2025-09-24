@@ -34,18 +34,16 @@ public class ReservationReceiptPrinter implements Printable {
     private int additionalMinutes;
     private double originalAmount;
     private static final double RECEIPT_WIDTH_POINTS = 220;
-    private static final double RECEIPT_HEIGHT_POINTS = 72 * 25; // Augmenté pour plus de contenu
+    private static final double RECEIPT_HEIGHT_POINTS = 72 * 30; // Augmenté pour plus de contenu
     private static final int LINE_HEIGHT = 10;
-    private static final int SECTION_SPACING = 6;
+    private static final int SECTION_SPACING = 10; // Augmenté pour plus d'espacement
     private Image logoImage;
     private Image socialMediaImage;
     private Image canalImage;
     private Image qrCodeImage;
     private String modePaiement;
 
-
     public ReservationReceiptPrinter(Reservation reservation, String userName, String modePaiement) {
-
         this(reservation, userName, false, 0, 0, modePaiement);
     }
 
@@ -64,7 +62,6 @@ public class ReservationReceiptPrinter implements Printable {
             e.printStackTrace();
         }
     }
-
 
     private void loadImages() throws Exception {
         InputStream logoStream = getClass().getResourceAsStream("/com/img/ticket.jpg");
@@ -90,7 +87,6 @@ public class ReservationReceiptPrinter implements Printable {
         if (pageIndex > 0) {
             return NO_SUCH_PAGE;
         }
-
         Graphics2D g2d = (Graphics2D) graphics;
         g2d.translate(pageFormat.getImageableX(), pageFormat.getImageableY());
         g2d.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
@@ -101,7 +97,6 @@ public class ReservationReceiptPrinter implements Printable {
         Font fontHeader = new Font("Calibri", Font.BOLD, 10);
         Font fontItalic = new Font("Calibri", Font.ITALIC, 8);
         Font fontExtension = new Font("Calibri", Font.BOLD, 10);
-
         int y = 0;
 
         // --- 1. LOGO ---
@@ -120,7 +115,7 @@ public class ReservationReceiptPrinter implements Printable {
         centerString(g2d, "Tel. +221338220000", (int) RECEIPT_WIDTH_POINTS, y);
         y += LINE_HEIGHT;
         centerString(g2d, "Kayplay.gamingroom@gmail.com", (int) RECEIPT_WIDTH_POINTS, y);
-        y += SECTION_SPACING;
+        y += SECTION_SPACING + 5; // Espacement supplémentaire après l'email
 
         // --- 3. Numéro de ticket et date ---
         g2d.setFont(fontBold);
@@ -140,13 +135,13 @@ public class ReservationReceiptPrinter implements Printable {
         String reservationDate = reservation.getReservationDate().format(
             DateTimeFormatter.ofPattern("EEE dd/MM/yyyy HH:mm", Locale.FRENCH));
         centerString(g2d, reservationDate, (int) RECEIPT_WIDTH_POINTS, y);
-        y += SECTION_SPACING;
+        y += SECTION_SPACING + 5; // Espacement supplémentaire après la date
 
         // --- 4. Informations client ---
         g2d.setFont(fontBold);
         String clientName = (reservation.getClient() != null) ? reservation.getClient().getName() : "Non spécifié";
         centerString(g2d, "CLIENT : " + clientName, (int) RECEIPT_WIDTH_POINTS, y);
-        y += SECTION_SPACING;
+        y += SECTION_SPACING + 5; // Espacement supplémentaire après le client
 
         // --- 5. En-tête des colonnes ---
         g2d.setFont(fontBold);
@@ -172,7 +167,6 @@ public class ReservationReceiptPrinter implements Printable {
                 reservation.getDuration().toMinutesPart());
         }
         String total = String.format("%.0f", reservation.getTotalPrice());
-
         g2d.drawString(poste, 0, y);
         g2d.drawString(duree, 80, y);
         g2d.drawString(total, 160, y);
@@ -195,7 +189,7 @@ public class ReservationReceiptPrinter implements Printable {
         // --- 7. Mode de paiement ---
         g2d.setFont(fontNormal);
         centerString(g2d, "Mode paiement: " + modePaiement, (int) RECEIPT_WIDTH_POINTS, y);
-        y += SECTION_SPACING;
+        y += SECTION_SPACING + 5; // Espacement supplémentaire après le mode de paiement
 
         // --- 8. Liste des jeux ---
         g2d.setFont(fontBold);
@@ -207,7 +201,6 @@ public class ReservationReceiptPrinter implements Printable {
         g2d.setFont(fontNormal);
         List<Game> gamesOnPoste = (reservation.getPoste() != null) ?
             reservation.getPoste().getGames() : new ArrayList<>();
-
         if (gamesOnPoste.isEmpty()) {
             centerString(g2d, "Aucun jeu disponible", (int) RECEIPT_WIDTH_POINTS, y);
             y += LINE_HEIGHT;
@@ -302,7 +295,6 @@ public class ReservationReceiptPrinter implements Printable {
                 break;
             }
         }
-
         if (selectedPrintService != null) {
             try {
                 job.setPrintService(selectedPrintService);

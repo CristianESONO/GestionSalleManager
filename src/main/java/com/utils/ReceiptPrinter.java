@@ -16,9 +16,9 @@ public class ReceiptPrinter implements Printable {
     private String numeroTicket;
     private String userName;
     private static final double RECEIPT_WIDTH_POINTS = 220;
-    private static final double RECEIPT_HEIGHT_POINTS = 72 * 20; // Ajusté pour le contenu
-    private static final int LINE_HEIGHT = 10;
-    private static final int SECTION_SPACING = 6;
+    private static final double RECEIPT_HEIGHT_POINTS = 72 * 25; // Ajusté pour le contenu
+    private static final int LINE_HEIGHT = 12;
+    private static final int SECTION_SPACING = 10;
     private Image logoImage;
     private Image socialMediaImage;
     private Image canalImage;
@@ -63,7 +63,6 @@ public class ReceiptPrinter implements Printable {
         if (pageIndex > 0) {
             return NO_SUCH_PAGE;
         }
-
         Graphics2D g2d = (Graphics2D) graphics;
         g2d.translate(pageFormat.getImageableX(), pageFormat.getImageableY());
         g2d.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
@@ -73,7 +72,6 @@ public class ReceiptPrinter implements Printable {
         Font fontBold = new Font("Calibri", Font.BOLD, 9);
         Font fontHeader = new Font("Calibri", Font.BOLD, 10);
         Font fontItalic = new Font("Calibri", Font.ITALIC, 8);
-
         int y = 0;
 
         // --- 1. LOGO ---
@@ -92,7 +90,7 @@ public class ReceiptPrinter implements Printable {
         centerString(g2d, "Tel. +221 33 813 47 20 / 77 112 85 14", (int) RECEIPT_WIDTH_POINTS, y);
         y += LINE_HEIGHT;
         centerString(g2d, "Kayplay.gamingroom@gmail.com", (int) RECEIPT_WIDTH_POINTS, y);
-        y += SECTION_SPACING;
+        y += SECTION_SPACING + 5; // Espace supplémentaire après l'email
 
         // --- 3. Numéro de ticket et date ---
         g2d.setFont(fontBold);
@@ -104,11 +102,11 @@ public class ReceiptPrinter implements Printable {
         y += SECTION_SPACING;
 
         // --- 4. En-tête du tableau ---
-        g2d.drawString("---------------------------------", 0, y);
+        g2d.drawString("-------------------------------------------", 0, y);
         y += LINE_HEIGHT;
-        g2d.drawString(String.format("%-5s %-15s %8s", "Qté", "Articles", "CFA"), 0, y);
+        g2d.drawString(String.format("%-8s %-20s %10s", "Qté", "Articles", "CFA"), 0, y);
         y += LINE_HEIGHT;
-        g2d.drawString("---------------------------------", 0, y);
+        g2d.drawString("-------------------------------------------", 0, y);
         y += LINE_HEIGHT;
 
         // --- 5. Liste des produits ---
@@ -119,25 +117,25 @@ public class ReceiptPrinter implements Printable {
             double prixUnitaire = produit.getPrix().doubleValue();
             double totalLigne = prixUnitaire * quantite;
             String nomProduit = produit.getNom();
-            if (nomProduit.length() > 15) {
-                nomProduit = nomProduit.substring(0, 12) + "...";
+            if (nomProduit.length() > 20) {
+                nomProduit = nomProduit.substring(0, 17) + "...";
             }
-            String line = String.format("%-5d %-15s %8.0f", quantite, nomProduit, totalLigne);
+            String line = String.format("%-8d %-20s %10.0f", quantite, nomProduit, totalLigne);
             g2d.drawString(line, 0, y);
             y += LINE_HEIGHT;
         }
 
         // --- 6. Total ---
-        g2d.drawString("---------------------------------", 0, y);
+        g2d.drawString("-------------------------------------------", 0, y);
         y += LINE_HEIGHT;
         g2d.setFont(fontBold);
-        g2d.drawString(String.format("%-20s %8.0f", "TOTAL (CFA) :", montantTotal), 0, y);
-        y += SECTION_SPACING;
+        g2d.drawString(String.format("%-28s %10.0f", "TOTAL (CFA) :", montantTotal), 0, y);
+        y += SECTION_SPACING + 5; // Espace supplémentaire après le total
 
         // --- 7. Mode de paiement ---
         g2d.setFont(fontNormal);
-        g2d.drawString("Mode paiement: " + modePaiement, 0, y);
-        y += SECTION_SPACING;
+        g2d.drawString("Mode de paiement: " + modePaiement, 0, y);
+        y += SECTION_SPACING + 5; // Espace supplémentaire après le mode de paiement
 
         // --- 8. Message personnalisé ---
         g2d.setFont(fontHeader);
@@ -182,8 +180,6 @@ public class ReceiptPrinter implements Printable {
         centerString(g2d, "Ticket non remboursable", (int) RECEIPT_WIDTH_POINTS, y);
         y += LINE_HEIGHT;
         centerString(g2d, "À conserver pour toute réclamation", (int) RECEIPT_WIDTH_POINTS, y);
-        y += LINE_HEIGHT;
-        
 
         return PAGE_EXISTS;
     }
@@ -215,7 +211,6 @@ public class ReceiptPrinter implements Printable {
                 break;
             }
         }
-
         if (selectedPrintService != null) {
             try {
                 job.setPrintService(selectedPrintService);

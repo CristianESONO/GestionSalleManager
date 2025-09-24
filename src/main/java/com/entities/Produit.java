@@ -2,6 +2,7 @@ package com.entities;
 
 import javax.persistence.*;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.HashSet;
@@ -28,13 +29,14 @@ public class Produit {
 
     private String image;
 
-    @ManyToMany(fetch = FetchType.LAZY) // FetchType.LAZY est la valeur par défaut
+    @ManyToMany(fetch = FetchType.EAGER) // Chargement immédiat
     @JoinTable(
         name = "promotion_produit",
         joinColumns = @JoinColumn(name = "produit_id"),
         inverseJoinColumns = @JoinColumn(name = "promotion_id")
     )
     private Set<Promotion> promotions = new HashSet<>();
+
 
     private BigDecimal ancienPrix;
 
@@ -65,15 +67,19 @@ public class Produit {
 
     public void appliquerPromotion() {
         for (Promotion promo : promotions) {
-            if (promo.isActif()) {
+            if (promo.isValid()) {
                 this.ancienPrix = this.prix;
                 BigDecimal taux = BigDecimal.valueOf(promo.getTauxReduction());
-                BigDecimal remise = prix.multiply(taux).divide(BigDecimal.valueOf(100));
+                BigDecimal remise = prix.multiply(taux).setScale(2, RoundingMode.HALF_UP);
                 this.prix = prix.subtract(remise);
-                break; // Appliquer uniquement la première promotion active
+                break;
             }
         }
     }
+
+
+
+
 
     @Override
     public String toString() {

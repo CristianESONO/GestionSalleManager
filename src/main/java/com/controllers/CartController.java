@@ -89,12 +89,15 @@ public class CartController {
         for (Map.Entry<Produit, Integer> entry : produitsDansLePanier.entrySet()) {
             Produit produit = entry.getKey();
             int quantite = entry.getValue();
+            System.out.println("Prix du produit dans le panier : " + produit.getPrix());
             String itemText = String.format("%s x%d - %.2f FCFA", produit.getNom(), quantite, produit.getPrix().doubleValue() * quantite);
             cartItemsList.getItems().add(itemText);
         }
         updateTotalDisplay();
         updateCartCounter();
     }
+
+
 
     // Helper pour obtenir l'objet Produit à partir du texte de l'élément
     private Produit getProduitFromSelectedItemText(String itemText) {
@@ -212,8 +215,9 @@ public class CartController {
     }
 
     private void updateTotalDisplay() {
-        setPrixTotal(BigDecimal.valueOf(calculerPrixTotal()));
+        setPrixTotal(calculerPrixTotal());
     }
+
 
     // Mettre à jour le compteur global du panier (affiché dans ProduitController)
     private void updateCartCounter() {
@@ -245,7 +249,7 @@ public class CartController {
 
             PaymentController paymentController = loader.getController();
             List<Client> clients = Fabrique.getService().getAllClients();
-            double montantTotal = calculerPrixTotal();
+            double montantTotal = calculerPrixTotal().doubleValue();
             String detailsProduits = getDetailsProduits();
             paymentController.setConnectedUser(connectedUser); // À ajouter
             paymentController.initializeData(clients, montantTotal, detailsProduits, "", produitsDansLePanier);
@@ -273,15 +277,17 @@ public class CartController {
         }
     }
 
-    private double calculerPrixTotal() {
-        double prixTotal = 0;
+    private BigDecimal calculerPrixTotal() {
+        BigDecimal total = BigDecimal.ZERO;
         for (Map.Entry<Produit, Integer> entry : produitsDansLePanier.entrySet()) {
-            Produit produit = entry.getKey();
-            int quantite = entry.getValue();
-            prixTotal += produit.getPrix().doubleValue() * quantite;
+            Produit p = entry.getKey();
+            int qte = entry.getValue();
+            System.out.println("Prix du produit " + p.getNom() + " : " + p.getPrix());
+            total = total.add(p.getPrix().multiply(new BigDecimal(qte)));
         }
-        return prixTotal;
+        return total;
     }
+
 
     private String getDetailsProduits() {
         StringBuilder details = new StringBuilder();

@@ -61,7 +61,7 @@ public class PaymentController {
             return;
         }
 
-        String numeroTicket = "TICKET-" + System.currentTimeMillis();
+        String numeroTicket = "TICKET-" + String.format("%06d", (int)(System.currentTimeMillis() % 1000000));
 
         if (connectedUser == null) {
             showAlert("Erreur", "Aucun utilisateur connecté détecté.");

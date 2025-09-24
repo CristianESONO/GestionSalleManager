@@ -2,6 +2,7 @@ package com.entities;
 
 import javax.persistence.*;
 import java.time.Duration;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Objects;
@@ -134,38 +135,37 @@ public class Reservation {
      * Calcule le prix total de la réservation en fonction de la durée et de la promotion appliquée.
      * Cette méthode est le cœur de la logique de calcul.
      */
-    public double calculatePriceBasedOnDuration() {
-        if (duration == null || duration.toMinutes() <= 0) {
-            return 0.0;
-        }
+   public double calculatePriceBasedOnDuration() {
+    if (duration == null || duration.toMinutes() <= 0) {
+        return 0.0;
+    }
+    long totalMinutes = duration.toMinutes();
+    double basePrice;
+    if (totalMinutes <= 15) {
+        basePrice = 300.0;
+    } else if (totalMinutes <= 30) {
+        basePrice = 500.0;
+    } else {
+        basePrice = 500.0;
+        long minutesBeyond30 = totalMinutes - 30;
+        long numberOf15MinBlocks = (long) Math.ceil((double) minutesBeyond30 / 15);
+        basePrice += numberOf15MinBlocks * 250.0;
+    }
 
-        long totalMinutes = duration.toMinutes();
-        double basePrice;
-
-        if (totalMinutes <= 15) {
-            basePrice = 300.0;
-        } else if (totalMinutes <= 30) {
-            basePrice = 500.0;
-        } else {
-            basePrice = 500.0;
-            long minutesBeyond30 = totalMinutes - 30;
-            long numberOf15MinBlocks = (long) Math.ceil((double) minutesBeyond30 / 15);
-            basePrice += numberOf15MinBlocks * 250.0;
-        }
-
-        // **LOGIQUE CLÉ** :
-        // 1. On vérifie d'abord si une promotion a été appliquée à cette réservation.
-        // 2. Si c'est le cas, on utilise la méthode 'isValid()' de l'objet Promotion
-        //    en lui passant la date de la réservation.
-        //    Ceci garantit que le prix est calculé en fonction des conditions
-        //    de la promotion au moment de la réservation.
-        if (this.appliedPromotion != null && this.appliedPromotion.isValid(this.reservationDate.toLocalDate())) {
+    // Vérifier si une promotion de type "réservation" est appliquée et valide
+    if (this.appliedPromotion != null) {
+        LocalDate checkDate = (this.reservationDate != null) ? this.reservationDate.toLocalDate() : LocalDate.now();
+        if (this.appliedPromotion.isValid(checkDate) &&
+            this.appliedPromotion.getTypePromotion() == TypePromotion.RESERVATION) {
             return basePrice * (1 - this.appliedPromotion.getTauxReduction());
         }
-
-        // Si aucune promotion n'est appliquée ou si elle n'est pas valide, on retourne le prix de base.
-        return basePrice;
     }
+
+    // Si aucune promotion de type "réservation" n'est appliquée ou n'est pas valide, retourner le prix de base
+    return basePrice;
+}
+
+
 
     public void validateDuration() {
         if (duration == null || duration.toMinutes() < 15) {

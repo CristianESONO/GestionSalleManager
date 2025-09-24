@@ -390,15 +390,27 @@ public class ProduitController {
             return;
         }
 
-        int currentQuantityInCart = produitsDansLePanier.getOrDefault(produit, 0);
-        if (produit.getStock() > currentQuantityInCart) {
-            produitsDansLePanier.put(produit, currentQuantityInCart + 1);
+        // Recharger le produit depuis la base de données
+        Produit produitMisAJour = Fabrique.getService().findProduitById(produit.getId());
+
+        System.out.println("Prix avant promotion : " + produitMisAJour.getPrix());
+
+        // Appliquer la promotion si elle est valide
+        produitMisAJour.appliquerPromotion();
+
+        System.out.println("Prix après promotion : " + produitMisAJour.getPrix());
+
+        int currentQuantityInCart = produitsDansLePanier.getOrDefault(produitMisAJour, 0);
+        if (produitMisAJour.getStock() > currentQuantityInCart) {
+            produitsDansLePanier.put(produitMisAJour, currentQuantityInCart + 1);
             updateCartCounterDisplay();
-            ControllerUtils.showInfoAlert("Ajout au panier", "Le produit '" + produit.getNom() + "' a été ajouté au panier.");
+            ControllerUtils.showInfoAlert("Ajout au panier", "Le produit '" + produitMisAJour.getNom() + "' a été ajouté au panier.");
         } else {
             ControllerUtils.showInfoAlert("Stock insuffisant", "Il n'y a plus de stock disponible pour ce produit.");
         }
     }
+
+
 
     /**
      * Ouvre une fenêtre pour modifier un produit existant.
