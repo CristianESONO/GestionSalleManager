@@ -159,17 +159,12 @@ public class FinanceController {
         });
     }
 
-    // Méthode pour identifier le type d'opération basée sur les détails
     private boolean isReservationPayment(Payment payment) {
-        // Si detailReservations n'est pas null et contient des données, c'est une réservation
-        return payment.getDetailReservations() != null && 
-            !payment.getDetailReservations().trim().isEmpty();
+        return payment.getDetailReservations() != null && !payment.getDetailReservations().trim().isEmpty();
     }
 
     private boolean isVenteProduitPayment(Payment payment) {
-        // Si detailsProduits n'est pas null et contient des données, c'est une vente de produit
-        return payment.getDetailsProduits() != null && 
-            !payment.getDetailsProduits().trim().isEmpty();
+        return payment.getDetailsProduits() != null && !payment.getDetailsProduits().trim().isEmpty();
     }
 
     private void refreshData() {
@@ -390,34 +385,24 @@ public class FinanceController {
         }
     }
 
-   private void loadVentes() {
+private void loadVentes() {
     if (isAdmin) {
         LocalDate today = LocalDate.now();
         User currentUser = Fabrique.getService().getCurrentUser();
-        
-        // Récupérer seulement les PAIEMENTS (pas les réservations)
-        List<Payment> paiements = Fabrique.getService().getPaymentsByUser(currentUser);
-        List<Payment> dailyPayments = paiements.stream()
+        // Récupérer TOUS les paiements de l'admin connecté pour la journée
+        List<Payment> paiements = Fabrique.getService().getPaymentsByUser(currentUser)
+            .stream()
             .filter(p -> p.getDateHeure().toInstant().atZone(ZoneId.systemDefault()).toLocalDate().isEqual(today))
             .collect(Collectors.toList());
-
-        // NE PAS charger les réservations pour éviter la duplication
-        // List<Reservation> dailyReservations = ... // COMMENTEZ ou SUPPRIMEZ cette partie
-
-        ventesProduitsList.setAll(dailyPayments);
-        
-        // Utiliser seulement les paiements dans ventesList
+        // Ajouter TOUS les paiements (ventes de produits + paiements de réservations)
         ventesList.clear();
-        ventesList.addAll(dailyPayments);
-        // ventesList.addAll(dailyReservations); // SUPPRIMEZ cette ligne
-
+        ventesList.addAll(paiements);
         ventesPagination.setPageCount((int) Math.ceil(ventesList.size() / (double) ITEMS_PER_PAGE));
         updateVentesPagination(0);
-        
-        // Mettre à jour les totaux
         calculateTotals();
     }
 }
+
 
     private void loadStock() {
         if (!isAdmin) {
@@ -457,14 +442,18 @@ public class FinanceController {
                 for (Map.Entry<LocalDate, List<Object>> dateEntry : adminEntry.getValue().entrySet()) {
                     LocalDate date = dateEntry.getKey();
                     List<Object> operations = dateEntry.getValue();
+                    // Dans loadJournal, quand tu construis les listes :
                     List<Payment> payments = operations.stream()
                         .filter(op -> op instanceof Payment)
                         .map(op -> (Payment) op)
+                        .filter(p -> p.getDetailsProduits() != null && !p.getDetailsProduits().trim().isEmpty()) // Uniquement les ventes de produits
                         .collect(Collectors.toList());
+
                     List<Reservation> reservations = operations.stream()
                         .filter(op -> op instanceof Reservation)
                         .map(op -> (Reservation) op)
                         .collect(Collectors.toList());
+
                     AdminDailyReport report = new AdminDailyReport(admin, date, payments, reservations);
                     journalList.add(report);
                 }
@@ -481,34 +470,23 @@ public class FinanceController {
     }
 
     private void filterVentes(String searchText) {
-        if (!isAdmin) return;
-        List<Object> currentVentes = Fabrique.getService().getAllPayments().stream()
-            .map(p -> (Object)p)
-            .collect(Collectors.toList());
-        currentVentes.addAll(Fabrique.getService().findAllReservations().stream()
-            .map(r -> (Object)r)
-            .collect(Collectors.toList()));
-        List<Object> filteredList = currentVentes.stream()
-            .filter(item -> {
-                if (item instanceof Payment) {
-                    Payment p = (Payment) item;
-                    return p.getNumeroTicket().toLowerCase().contains(searchText.toLowerCase()) ||
-                           (p.getClient() != null && p.getClient().getName().toLowerCase().contains(searchText.toLowerCase())) ||
-                           p.getModePaiement().toLowerCase().contains(searchText.toLowerCase());
-                } else if (item instanceof Reservation) {
-                    Reservation r = (Reservation) item;
-                    return r.getNumeroTicket().toLowerCase().contains(searchText.toLowerCase()) ||
-                           (r.getClient() != null && r.getClient().getName().toLowerCase().contains(searchText.toLowerCase())) ||
-                           (r.getPoste() != null && r.getPoste().getName().toLowerCase().contains(searchText.toLowerCase()));
-                }
-                return false;
-            })
-            .collect(Collectors.toList());
-        ventesList.setAll(filteredList);
-        ventesPagination.setPageCount((int) Math.ceil(ventesList.size() / (double) ITEMS_PER_PAGE));
-        ventesPagination.setCurrentPageIndex(0);
-        updateVentesPagination(0);
-    }
+    if (!isAdmin) return;
+    List<Payment> paiements = Fabrique.getService().getAllPayments().stream()
+        .filter(p -> p.getDateHeure().toInstant().atZone(ZoneId.systemDefault()).toLocalDate().isEqual(LocalDate.now()))
+        .collect(Collectors.toList());
+    List<Object> filteredList = paiements.stream()
+        .filter(payment -> {
+            return payment.getNumeroTicket().toLowerCase().contains(searchText.toLowerCase()) ||
+                   (payment.getClient() != null && payment.getClient().getName().toLowerCase().contains(searchText.toLowerCase())) ||
+                   payment.getModePaiement().toLowerCase().contains(searchText.toLowerCase());
+        })
+        .collect(Collectors.toList());
+    ventesList.setAll(filteredList);
+    ventesPagination.setPageCount((int) Math.ceil(ventesList.size() / (double) ITEMS_PER_PAGE));
+    ventesPagination.setCurrentPageIndex(0);
+    updateVentesPagination(0);
+}
+
 
     private void filterStock(String searchText) {
         if (isAdmin) return;
@@ -588,21 +566,22 @@ public class FinanceController {
             double totalVentesProduits = ventesList.stream()
                 .filter(item -> item instanceof Payment)
                 .map(item -> (Payment) item)
-                .filter(payment -> isVenteProduitPayment(payment)) // Uniquement les ventes produits
+                .filter(payment -> isVenteProduitPayment(payment))
                 .mapToDouble(Payment::getMontantTotal)
                 .sum();
-            
+
             double totalReservations = ventesList.stream()
                 .filter(item -> item instanceof Payment)
                 .map(item -> (Payment) item)
-                .filter(payment -> isReservationPayment(payment)) // Uniquement les réservations
+                .filter(payment -> isReservationPayment(payment))
                 .mapToDouble(Payment::getMontantTotal)
                 .sum();
-                
+
             totalVentesLabel.setText(String.format("Total Ventes Produits (jour) : %.2f F", totalVentesProduits));
             totalReservationsLabel.setText(String.format("Total Réservations (jour) : %.2f F", totalReservations));
         }
     }
+
 
 @FXML
 private void generateDailyPdf() {
@@ -611,12 +590,15 @@ private void generateDailyPdf() {
 
     // Récupère les opérations du jour
     List<Payment> dailyPayments = Fabrique.getService().getAllPayments().stream()
-            .filter(p -> p.getDateHeure().toInstant().atZone(ZoneId.systemDefault()).toLocalDate().isEqual(today))
-            .collect(Collectors.toList());
+    .filter(p -> p.getDateHeure().toInstant().atZone(ZoneId.systemDefault()).toLocalDate().isEqual(today))
+    .filter(p -> p.getDetailsProduits() != null && !p.getDetailsProduits().trim().isEmpty()) // Uniquement les ventes de produits
+    .collect(Collectors.toList());
+
 
     List<Reservation> dailyReservations = Fabrique.getService().findAllReservations().stream()
-            .filter(r -> r.getReservationDate().toLocalDate().isEqual(today))
-            .collect(Collectors.toList());
+    .filter(r -> r.getReservationDate().toLocalDate().isEqual(today))
+    .collect(Collectors.toList());
+
 
     if (dailyPayments.isEmpty() && dailyReservations.isEmpty()) {
         showAlert(Alert.AlertType.INFORMATION, "Aucune Opération", "Il n'y a aucune opération pour aujourd'hui.");
@@ -737,7 +719,7 @@ private void generateDailyPdf() {
                         Payment p = (Payment) item;
                         cs.showText(p.getNumeroTicket());
                         cs.newLineAtOffset(columnWidths[0], 0);
-                        cs.showText("Inconnu");
+                        cs.showText(p.getClient() != null ? p.getClient().getName() : "N/A");
                         cs.newLineAtOffset(columnWidths[1], 0);
                         cs.showText(String.format("%.2f", p.getMontantTotal()));
                         cs.newLineAtOffset(columnWidths[2], 0);
