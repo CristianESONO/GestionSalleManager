@@ -147,7 +147,7 @@
                         </AnchorPane>
                     </content>
                 </Tab>
-                <Tab text="Clients avec Temps Restant">
+                <Tab text="Compte client">
                     <style>
                         -fx-background-color: #3498db;
                         -fx-text-fill: white;
