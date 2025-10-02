@@ -109,6 +109,15 @@ public class Service implements IService {
     }
 
     @Override
+    public List<GameSession> findPausedSessionsByClientId(int clientId) {
+        return gameSessionRepository.findGameSessionsByClientId(clientId)
+            .stream()
+            .filter(session -> "En pause".equals(session.getStatus()))
+            .collect(Collectors.toList());
+    }
+
+
+    @Override
     public User getCurrentUser() {
         return currentUser;
     }
@@ -934,61 +943,122 @@ public class Service implements IService {
         if (!"Active".equalsIgnoreCase(session.getStatus())) {
             throw new Exception("Seules les sessions actives peuvent être mises en pause.");
         }
-
-        // Calculer le temps restant
+        
+        // Calculer le temps restant ACTUEL au moment de la pause
         LocalDateTime endTime = session.getStartTime().plus(session.getPaidDuration());
         Duration remainingTime = Duration.between(LocalDateTime.now(), endTime);
-        session.setPausedRemainingTime(remainingTime);
+        
+        // Sauvegarder le temps restant exact au moment de la pause
+        session.setPausedRemainingTime(remainingTime.isNegative() ? Duration.ZERO : remainingTime);
         session.setPaused(true);
         session.setStatus("En pause");
+        
+        // Mettre à jour la session
         gameSessionRepository.updateGameSession(session);
-
+        
         // Mettre à jour la réservation associée
         Reservation reservation = session.getReservation();
         if (reservation != null) {
             reservation.setStatus("En pause");
             reservationRepository.update(reservation);
         }
-
+        
         // Libérer le poste
         Poste poste = session.getPoste();
         if (poste != null) {
-            poste.setHorsService(false); // S'assurer que le poste n'est pas marqué comme hors service
+            poste.setHorsService(false);
             posteRepository.update(poste);
         }
     }
 
 
-    @Override
-    @Transactional
-    public void resumeGameSession(GameSession session) throws Exception {
-        if (!"En pause".equalsIgnoreCase(session.getStatus())) {
-            throw new Exception("Seules les sessions en pause peuvent être reprises.");
-        }
-        // Vérifier que le poste est disponible
-        Poste poste = session.getPoste();
-        if (poste == null) {
-            throw new Exception("Aucun poste associé à cette session.");
-        }
-        // Vérifier qu'il n'y a pas déjà une session active sur ce poste
-        GameSession activeSessionOnPoste = getActiveSessionForPoste(poste);
-        if (activeSessionOnPoste != null && "Active".equalsIgnoreCase(activeSessionOnPoste.getStatus())) {
-            throw new Exception("Le poste " + poste.getName() + " est déjà occupé par une autre session.");
-        }
-        // Reprendre la session
-        LocalDateTime newEndTime = LocalDateTime.now().plus(session.getPausedRemainingTime());
-        session.setEndTime(newEndTime);
+
+
+   @Override
+@Transactional
+public void resumeGameSession(GameSession session) throws Exception {
+    if (!"En pause".equalsIgnoreCase(session.getStatus())) {
+        throw new Exception("Seules les sessions en pause peuvent être reprises.");
+    }
+    
+    // Vérifier que le poste est disponible
+    Poste poste = session.getPoste();
+    if (poste == null) {
+        throw new Exception("Aucun poste associé à cette session.");
+    }
+    
+    // Vérifier qu'il n'y a pas déjà une session active sur ce poste
+    GameSession activeSessionOnPoste = getActiveSessionForPoste(poste);
+    if (activeSessionOnPoste != null && "Active".equalsIgnoreCase(activeSessionOnPoste.getStatus())) {
+        throw new Exception("Le poste " + poste.getName() + " est déjà occupé par une autre session.");
+    }
+    
+    // Vérifier que le temps restant est valide
+    Duration remainingTime = session.getPausedRemainingTime();
+    if (remainingTime == null || remainingTime.isNegative()) {
+        throw new Exception("Le temps restant pour cette session est invalide.");
+    }
+    
+    if (remainingTime.isZero()) {
+        // Si le temps restant est zéro, terminer la session
+        session.setStatus("Terminée");
+        session.setEndTime(LocalDateTime.now());
+    } else {
+        // Reprendre la session avec le temps restant exact
+        session.setStartTime(LocalDateTime.now().minus(session.getPaidDuration().minus(remainingTime)));
         session.setPaused(false);
         session.setStatus("Active");
-        gameSessionRepository.updateGameSession(session);
-        // Mettre à jour la réservation associée
-        Reservation reservation = session.getReservation();
-        if (reservation != null) {
-            reservation.setStatus("Active");
-            reservationRepository.update(reservation);
-        }
-        // Le poste est maintenant occupé par cette session
     }
+    
+    // Mettre à jour la session
+    gameSessionRepository.updateGameSession(session);
+    
+    // Mettre à jour la réservation associée
+    Reservation reservation = session.getReservation();
+    if (reservation != null) {
+        reservation.setStatus(session.getStatus());
+        reservationRepository.update(reservation);
+    }
+    
+    // ⚠️ SUPPRIMEZ CES LIGNES ⚠️
+    // if (poste != null && "Active".equalsIgnoreCase(session.getStatus())) {
+    //     poste.setHorsService(true);
+    //     posteRepository.update(poste);
+    // }
+}
+
+@Override
+@Transactional
+public void resumePausedSessionForClient(int clientId, int posteId, int gameId) throws Exception {
+    // Récupérer les sessions en pause avec relations
+    List<GameSession> pausedSessions = gameSessionRepository.findPausedSessionsByClientIdWithRelations(clientId);
+    
+    if (pausedSessions.isEmpty()) {
+        throw new Exception("Aucune session en pause trouvée pour ce client.");
+    }
+
+    GameSession session = pausedSessions.get(0);
+    Poste poste = posteRepository.findById(posteId);
+    Game game = gameRepository.findById(gameId);
+
+    // Mettre à jour la session
+    session.setPoste(poste);
+    session.setGame(game);
+    session.setStatus("Active");
+    session.setStartTime(LocalDateTime.now());
+    session.setPaused(false);
+    session.setPausedRemainingTime(null);
+
+    // Mettre à jour la réservation
+    Reservation reservation = session.getReservation();
+    reservation.setPoste(poste);
+    reservation.setGame(game);
+
+    gameSessionRepository.updateGameSession(session);
+    reservationRepository.update(reservation);
+}
+
+
 
     @Override
     public boolean superAdminExists() {

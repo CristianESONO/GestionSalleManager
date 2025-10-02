@@ -147,143 +147,184 @@ public class PosteJeuController {
         }
     }
 
-    /**
-     * Creates a modern, styled VBox representing a single Poste card.
-     * Includes status logic and admin buttons.
-     *
-     * @param poste The Poste data to display.
-     * @return A VBox styled as a poste card.
-     * @throws Exception If there's an error retrieving game sessions.
-     */
-    private VBox createPosteCard(Poste poste) throws Exception {
-        VBox cardContent = new VBox(10);
-        cardContent.setPadding(new Insets(15));
-        cardContent.setAlignment(Pos.CENTER_LEFT);
-        cardContent.setStyle("-fx-background-color: #ffffff; -fx-background-radius: 10px; -fx-border-radius: 10px; " +
-                             "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.15), 10, 0, 0, 4);");
+   /**
+ * Creates a modern, styled VBox representing a single Poste card.
+ * Includes status logic and admin buttons.
+ *
+ * @param poste The Poste data to display.
+ * @return A VBox styled as a poste card.
+ * @throws Exception If there's an error retrieving game sessions.
+ */
+private VBox createPosteCard(Poste poste) throws Exception {
+    VBox cardContent = new VBox(10);
+    cardContent.setPadding(new Insets(15));
+    cardContent.setAlignment(Pos.CENTER_LEFT);
+    cardContent.setStyle("-fx-background-color: #ffffff; -fx-background-radius: 10px; -fx-border-radius: 10px; " +
+                         "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.15), 10, 0, 0, 4);");
 
-        cardContent.setMaxWidth(Double.MAX_VALUE);
-        cardContent.setPrefHeight(Region.USE_COMPUTED_SIZE);
+    cardContent.setMaxWidth(Double.MAX_VALUE);
+    cardContent.setPrefHeight(Region.USE_COMPUTED_SIZE);
 
-        String finalStatus;
-        String statusColorHex;
-        java.time.Duration shortestRemaining = null;
+    String finalStatus;
+    String statusColorHex;
+    java.time.Duration shortestRemaining = null;
 
-        if (poste.isHorsService()) {
-            finalStatus = "Hors service";
-            statusColorHex = "#D50000";
-        } else {
-            List<GameSession> allSessions = Fabrique.getService().getAllGameSessions();
-            List<GameSession> activeSessionsForThisPoste = allSessions.stream()
-                .filter(session -> session.getPoste() != null && session.getPoste().getId() == poste.getId() && "Active".equals(session.getStatus()))
-                .collect(Collectors.toList());
+    if (poste.isHorsService()) {
+        finalStatus = "Hors service";
+        statusColorHex = "#D50000";
+    } else {
+        List<GameSession> allSessions = Fabrique.getService().getAllGameSessions();
+        List<GameSession> sessionsForThisPoste = allSessions.stream()
+            .filter(session -> session.getPoste() != null && 
+                            session.getPoste().getId() == poste.getId() && 
+                            ("Active".equals(session.getStatus()) || "En pause".equals(session.getStatus())))
+            .collect(Collectors.toList());
 
-            boolean hasActiveSession = false;
-            for (GameSession session : activeSessionsForThisPoste) {
-                java.time.Duration remaining = session.getRemainingTime();
-                
+        boolean hasActiveSession = false;
+        boolean hasPausedSession = false;
+        
+        for (GameSession session : sessionsForThisPoste) {
+            java.time.Duration remaining = session.getRemainingTime();
+            
+            // Vérifier d'abord si c'est une session en pause
+            if ("En pause".equals(session.getStatus())) {
+                hasPausedSession = true;
                 if (remaining.isPositive()) {
-                    hasActiveSession = true;
+                    if (shortestRemaining == null || remaining.compareTo(shortestRemaining) < 0) {
+                        shortestRemaining = remaining;
+                    }
+                }
+            } 
+            // Sinon, c'est une session active
+            else if ("Active".equals(session.getStatus())) {
+                hasActiveSession = true;
+                if (remaining.isPositive()) {
                     if (shortestRemaining == null || remaining.compareTo(shortestRemaining) < 0) {
                         shortestRemaining = remaining;
                     }
 
+                    // Notification pour les sessions actives seulement
                     if (remaining.toMinutes() <= 2 && !notifiedSessionsTwoMinutes.contains(session.getId())) {
                         notifiedSessionsTwoMinutes.add(session.getId());
                         showTwoMinutesLeftNotification(poste.getName());
                     }
                 } else {
+                    // Session active expirée
                     if (!notifiedSessionsEnded.contains(session.getId())) {
                         notifiedSessionsEnded.add(session.getId());
-                        session.setStatus("Completed");
+                        session.setStatus("Terminée");
                         Fabrique.getService().updateGameSession(session);
                         openSessionEndDialog(session);
                     }
                 }
             }
-
-            if (hasActiveSession) {
-                finalStatus = "Indisponible";
-                statusColorHex = "#FFA500";
-            } else {
-                finalStatus = "Disponible";
-                statusColorHex = "#00C853";
-            }
         }
 
-        Circle statusCircle = new Circle(10);
-        statusCircle.setFill(Color.web(statusColorHex));
-        statusCircle.setStroke(Color.web("#bdc3c7"));
-        statusCircle.setStrokeWidth(1);
+        // Déterminer le statut d'affichage (priorité à "En pause")
+        if (hasPausedSession) {
+            finalStatus = "En pause";
+            statusColorHex = "#FF9800"; // Orange plus foncé pour pause
+        } else if (hasActiveSession) {
+            finalStatus = "Occupé";
+            statusColorHex = "#FFA500"; // Orange standard
+        } else {
+            finalStatus = "Disponible";
+            statusColorHex = "#00C853"; // Vert
+        }
+    }
 
-        Label posteName = new Label(poste.getName());
-        posteName.setFont(Font.font("Arial", 18));
-        posteName.setStyle("-fx-font-weight: bold; -fx-text-fill: #2c3e50;");
+    Circle statusCircle = new Circle(10);
+    statusCircle.setFill(Color.web(statusColorHex));
+    statusCircle.setStroke(Color.web("#bdc3c7"));
+    statusCircle.setStrokeWidth(1);
 
-        Label statusLabel = new Label("Statut: " + finalStatus);
-        if (shortestRemaining != null && !poste.isHorsService()) {
-            long minutes = shortestRemaining.toMinutes();
-            long seconds = shortestRemaining.toSeconds() % 60;
+    Label posteName = new Label(poste.getName());
+    posteName.setFont(Font.font("Arial", 18));
+    posteName.setStyle("-fx-font-weight: bold; -fx-text-fill: #2c3e50;");
+
+    Label statusLabel = new Label("Statut: " + finalStatus);
+    
+    // Afficher le temps restant seulement si disponible et pertinent
+    if (shortestRemaining != null && !poste.isHorsService() && 
+        ("Occupé".equals(finalStatus) || "En pause".equals(finalStatus))) {
+        
+        long minutes = shortestRemaining.toMinutes();
+        long seconds = shortestRemaining.toSeconds() % 60;
+        
+        if ("En pause".equals(finalStatus)) {
+            statusLabel.setText(String.format("Statut: %s (Temps gelé: %02d:%02d)", finalStatus, minutes, seconds));
+            statusLabel.setStyle("-fx-font-size: 13px; -fx-text-fill: #FF9800; -fx-font-weight: bold;");
+        } else {
             statusLabel.setText(String.format("Statut: %s (Reste: %02d:%02d)", finalStatus, minutes, seconds));
             statusLabel.setStyle("-fx-font-size: 13px; -fx-text-fill: #e67e22; -fx-font-weight: bold;");
+        }
+    } else {
+        // Style différent selon le statut
+        if ("En pause".equals(finalStatus)) {
+            statusLabel.setStyle("-fx-font-size: 13px; -fx-text-fill: #FF9800; -fx-font-weight: bold;");
+        } else if ("Occupé".equals(finalStatus)) {
+            statusLabel.setStyle("-fx-font-size: 13px; -fx-text-fill: #e67e22; -fx-font-weight: bold;");
+        } else if ("Hors service".equals(finalStatus)) {
+            statusLabel.setStyle("-fx-font-size: 13px; -fx-text-fill: #D50000; -fx-font-weight: bold;");
         } else {
-            statusLabel.setStyle("-fx-font-size: 13px; -fx-text-fill: #7f8c8d;");
+            statusLabel.setStyle("-fx-font-size: 13px; -fx-text-fill: #00C853; -fx-font-weight: bold;");
         }
-
-        HBox statusBox = new HBox(10, statusCircle, posteName);
-        statusBox.setAlignment(Pos.CENTER_LEFT);
-        VBox.setMargin(statusBox, new Insets(0, 0, 5, 0));
-
-        Label gamesHeader = new Label("Jeux installés:");
-        gamesHeader.setFont(Font.font("Arial", 14));
-        gamesHeader.setStyle("-fx-font-weight: bold; -fx-text-fill: #34495e;");
-
-        VBox gamesList = new VBox(5);
-        if (poste.getGames() != null && !poste.getGames().isEmpty()) {
-            for (Game jeu : poste.getGames()) {
-                Label gameLabel = new Label("• " + jeu.getName());
-                gameLabel.setFont(Font.font("Arial", 12));
-                gameLabel.setStyle("-fx-text-fill: #34495e;");
-                gamesList.getChildren().add(gameLabel);
-            }
-        } else {
-            Label noGamesLabel = new Label("Aucun jeu associé.");
-            noGamesLabel.setFont(Font.font("Arial", 12));
-            noGamesLabel.setStyle("-fx-text-fill: #95a5a6; -fx-font-style: italic;");
-            gamesList.getChildren().add(noGamesLabel);
-        }
-
-        ScrollPane scrollJeux = new ScrollPane(gamesList);
-        scrollJeux.setFitToWidth(true);
-        scrollJeux.setPrefHeight(Region.USE_COMPUTED_SIZE);
-        scrollJeux.setMaxHeight(80);
-        scrollJeux.setStyle("-fx-background-color: transparent; -fx-border-color: #ecf0f1; -fx-border-radius: 5px;");
-
-        cardContent.getChildren().addAll(statusBox, statusLabel, gamesHeader, scrollJeux);
-
-        if (this.isSuperAdmin) {
-            HBox adminButtons = new HBox(10);
-            adminButtons.setAlignment(Pos.CENTER_RIGHT);
-            VBox.setMargin(adminButtons, new Insets(10, 0, 0, 0));
-
-            Button btnModifier = new Button("Modifier");
-            btnModifier.getStyleClass().add("card-button-modify");
-            btnModifier.setOnAction(e -> modifierPoste(poste));
-            btnModifier.setStyle("-fx-background-color: #95a5a6; -fx-text-fill: white; -fx-font-size: 12px; " +
-                                 "-fx-padding: 8px 15px; -fx-background-radius: 5px; -fx-cursor: hand;");
-
-            Button btnSupprimer = new Button("Supprimer");
-            btnSupprimer.getStyleClass().add("card-button-delete");
-            btnSupprimer.setOnAction(e -> supprimerPoste(poste));
-            btnSupprimer.setStyle("-fx-background-color: #e74c3c; -fx-text-fill: white; -fx-font-size: 12px; " +
-                                  "-fx-padding: 8px 15px; -fx-background-radius: 5px; -fx-cursor: hand;");
-            
-            adminButtons.getChildren().addAll(btnModifier, btnSupprimer);
-            cardContent.getChildren().add(adminButtons);
-        }
-
-        return cardContent;
     }
+
+    HBox statusBox = new HBox(10, statusCircle, posteName);
+    statusBox.setAlignment(Pos.CENTER_LEFT);
+    VBox.setMargin(statusBox, new Insets(0, 0, 5, 0));
+
+    Label gamesHeader = new Label("Jeux installés:");
+    gamesHeader.setFont(Font.font("Arial", 14));
+    gamesHeader.setStyle("-fx-font-weight: bold; -fx-text-fill: #34495e;");
+
+    VBox gamesList = new VBox(5);
+    if (poste.getGames() != null && !poste.getGames().isEmpty()) {
+        for (Game jeu : poste.getGames()) {
+            Label gameLabel = new Label("• " + jeu.getName());
+            gameLabel.setFont(Font.font("Arial", 12));
+            gameLabel.setStyle("-fx-text-fill: #34495e;");
+            gamesList.getChildren().add(gameLabel);
+        }
+    } else {
+        Label noGamesLabel = new Label("Aucun jeu associé.");
+        noGamesLabel.setFont(Font.font("Arial", 12));
+        noGamesLabel.setStyle("-fx-text-fill: #95a5a6; -fx-font-style: italic;");
+        gamesList.getChildren().add(noGamesLabel);
+    }
+
+    ScrollPane scrollJeux = new ScrollPane(gamesList);
+    scrollJeux.setFitToWidth(true);
+    scrollJeux.setPrefHeight(Region.USE_COMPUTED_SIZE);
+    scrollJeux.setMaxHeight(80);
+    scrollJeux.setStyle("-fx-background-color: transparent; -fx-border-color: #ecf0f1; -fx-border-radius: 5px;");
+
+    cardContent.getChildren().addAll(statusBox, statusLabel, gamesHeader, scrollJeux);
+
+    if (this.isSuperAdmin) {
+        HBox adminButtons = new HBox(10);
+        adminButtons.setAlignment(Pos.CENTER_RIGHT);
+        VBox.setMargin(adminButtons, new Insets(10, 0, 0, 0));
+
+        Button btnModifier = new Button("Modifier");
+        btnModifier.getStyleClass().add("card-button-modify");
+        btnModifier.setOnAction(e -> modifierPoste(poste));
+        btnModifier.setStyle("-fx-background-color: #95a5a6; -fx-text-fill: white; -fx-font-size: 12px; " +
+                             "-fx-padding: 8px 15px; -fx-background-radius: 5px; -fx-cursor: hand;");
+
+        Button btnSupprimer = new Button("Supprimer");
+        btnSupprimer.getStyleClass().add("card-button-delete");
+        btnSupprimer.setOnAction(e -> supprimerPoste(poste));
+        btnSupprimer.setStyle("-fx-background-color: #e74c3c; -fx-text-fill: white; -fx-font-size: 12px; " +
+                              "-fx-padding: 8px 15px; -fx-background-radius: 5px; -fx-cursor: hand;");
+        
+        adminButtons.getChildren().addAll(btnModifier, btnSupprimer);
+        cardContent.getChildren().add(adminButtons);
+    }
+
+    return cardContent;
+}
 
     private void showTwoMinutesLeftNotification(String posteName) {
         Platform.runLater(() -> {

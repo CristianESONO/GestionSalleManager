@@ -41,8 +41,10 @@ public class ClientRepositoryJpa implements IClientRepository {
         EntityManager em = JpaUtil.getEntityManager();
         List<Client> clients = null;
         try {
-            // JPQL pour récupérer tous les clients (qui sont des sous-types de User avec DiscriminatorValue "CLIENT")
-            clients = em.createQuery("SELECT c FROM Client c", Client.class).getResultList();
+            // Charge les clients ET leurs réservations en une seule requête
+            clients = em.createQuery(
+                "SELECT DISTINCT c FROM Client c LEFT JOIN FETCH c.reservations", Client.class)
+                .getResultList();
         } catch (Exception e) {
             System.err.println("Erreur lors de la récupération de tous les clients : " + e.getMessage());
             e.printStackTrace();
@@ -51,6 +53,7 @@ public class ClientRepositoryJpa implements IClientRepository {
         }
         return clients;
     }
+
 
     @Override
     public Client findById(int id) {

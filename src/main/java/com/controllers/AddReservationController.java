@@ -3,6 +3,7 @@ package com.controllers;
 import com.core.Fabrique;
 import com.entities.Client;
 import com.entities.Game;
+import com.entities.GameSession;
 import com.entities.Parrain;
 import com.entities.Payment;
 import com.entities.Poste;
@@ -95,15 +96,15 @@ public class AddReservationController {
             addressField.setVisible(false);
 
             // Ajouter un listener pour la case à cocher "Client temporaire"
-           temporaryClientCheckBox.selectedProperty().addListener((obs, oldVal, newVal) -> {
+            temporaryClientCheckBox.selectedProperty().addListener((obs, oldVal, newVal) -> {
                 if (newVal) {
                     // Désactiver les champs si "Client temporaire" est coché
                     nameField.setDisable(true);
                     addressField.setDisable(true);
                     nameField.clear();
                     addressField.clear();
-                    phoneField.setDisable(true); // Désactiver le champ téléphone
-                    phoneField.clear(); // Vider le champ téléphone
+                    phoneField.setDisable(true);
+                    phoneField.clear();
                     // Désactiver le champ parrain
                     parrainComboBox.setDisable(true);
                     parrainComboBox.setValue(null);
@@ -111,13 +112,11 @@ public class AddReservationController {
                     // Réactiver les champs si "Client temporaire" est décoché
                     nameField.setDisable(false);
                     addressField.setDisable(false);
-                    phoneField.setDisable(false); // Réactiver le champ téléphone
+                    phoneField.setDisable(false);
                     // Réactiver le champ parrain
                     parrainComboBox.setDisable(false);
                 }
             });
-
-
             calculateAndSetAmount();
         } catch (Exception e) {
             e.printStackTrace();
@@ -145,6 +144,25 @@ public class AddReservationController {
             if (filteredValue.length() > 9) filteredValue = filteredValue.substring(0, 9);
             if (!filteredValue.equals(newValue)) phoneField.setText(filteredValue);
         });
+    }
+
+    public void setClientInfo(Client client) {
+        if (client != null) {
+            phoneField.setText(client.getPhone());
+            nameField.setText(client.getName());
+            addressField.setText(client.getAddress() != null ? client.getAddress() : "");
+
+            // Rendre les champs visibles et désactivés
+            nameField.setVisible(true);
+            addressField.setVisible(true);
+            nameField.setDisable(true);
+            addressField.setDisable(true);
+            phoneField.setDisable(true);
+
+            // Désactiver la case "Client temporaire"
+            temporaryClientCheckBox.setSelected(false);
+            temporaryClientCheckBox.setDisable(true);
+        }
     }
 
     private void setupHoursAndMinutesComboBoxes() {
@@ -234,7 +252,6 @@ public class AddReservationController {
             ControllerUtils.showErrorAlert("Numéro invalide", "Veuillez entrer un numéro de téléphone valide (9 chiffres).");
             return;
         }
-
         Client client = Fabrique.getService().findByTel(clientPhone);
         if (client != null) {
             // Client trouvé : afficher et remplir les champs (désactivés)
@@ -260,119 +277,177 @@ public class AddReservationController {
         }
     }
 
-   @FXML
-private void addReservation(ActionEvent event) {
-    try {
-        String clientPhone = phoneField.getText().trim();
-        Poste poste = posteComboBox.getValue();
-        Game game = gameComboBox.getValue();
-        Duration duration = getSelectedDuration();
-        String modePaiement = modePaiementComboBox.getSelectionModel().getSelectedItem();
-        // Validation des champs obligatoires (sauf le numéro de téléphone pour les clients temporaires)
-        if (!temporaryClientCheckBox.isSelected() && (clientPhone.isEmpty() || clientPhone.length() < 9)) {
-            ControllerUtils.showErrorAlert("Numéro invalide", "Veuillez entrer un numéro de téléphone valide (9 chiffres).");
-            return;
-        }
-        if (poste == null || game == null || duration.toMinutes() < 15 || modePaiement == null) {
-            ControllerUtils.showErrorAlert("Champs manquants", "Veuillez remplir tous les champs obligatoires.");
-            return;
-        }
-        
-        if (connectedUser == null) {
-            connectedUser = Fabrique.getService().getCurrentUser();
-            if (connectedUser == null) {
-                ControllerUtils.showErrorAlert("Erreur d'authentification", "Aucun utilisateur connecté détecté.");
-                return;
-            }
-        }
-        Client client;
-        if (temporaryClientCheckBox.isSelected()) {
-            // Créer un client temporaire (sans informations)
-            client = new Client();
-            client.setName("Client temporaire");
-            client.setPhone(null);
-            client.setLoyaltyPoints(0); // Pas de points de fidélité
-            client.setRegistrationDate(new Date());
-            Fabrique.getService().addClient(client); // Enregistrer le client temporaire
-        } else {
-            // Vérifier si les champs sont remplis pour un nouveau client
-            String clientName = nameField.getText().trim();
-            if (clientName.isEmpty() && !temporaryClientCheckBox.isSelected()) {
-                ControllerUtils.showErrorAlert("Nom manquant", "Veuillez entrer le nom du client.");
-                return;
-            }
-            // Rechercher ou créer un client permanent
-            client = Fabrique.getService().findByTel(clientPhone);
-            if (client == null) {
-                // Nouveau client permanent
-                client = new Client();
-                client.setName(clientName);
-                client.setPhone(clientPhone);
-                client.setAddress(addressField.getText().trim().isEmpty() ? null : addressField.getText().trim());
-                client.setLoyaltyPoints(0);
-                client.setRegistrationDate(new Date());
-                Fabrique.getService().addClient(client);
-                ControllerUtils.showInfoAlert("Nouveau client", String.format("Le client '%s' a été ajouté avec succès.", client.getName()));
-            } else {
-                // Mettre à jour le client existant
-                client.setName(clientName);
-                client.setAddress(addressField.getText().trim().isEmpty() ? client.getAddress() : addressField.getText().trim());
-                Fabrique.getService().updateClient(client);
-            }
-        }
-        Reservation reservation = new Reservation();
-        reservation.setNumeroTicket(Reservation.generateRandomTicketNumber());
-        reservation.setClient(client);
-        reservation.setPoste(poste);
-        reservation.setGame(game);
-        reservation.setDuration(duration);
-        reservation.setReservationDate(LocalDateTime.now());
-        reservation.setTotalPrice(calculatedAmount);
-        reservation.setStatus("En attente");
-        reservation.setCreatedBy(connectedUser);
-
-        // Gestion du code de parrainage : ne pas attribuer de code si le client est temporaire
-        if (!temporaryClientCheckBox.isSelected() && parrainComboBox.getValue() != null) {
-            reservation.setCodeParrainage(parrainComboBox.getValue().getCodeParrainage());
-        } else {
-            reservation.setCodeParrainage(null); // Aucun code de parrainage pour un client temporaire
+    private Duration getRemainingTimeForClient(Client client) {
+        if (client == null) {
+            return Duration.ZERO;
         }
 
-        Optional<Promotion> activePromo = Fabrique.getService().getBestActivePromotionForToday();
-        activePromo.ifPresent(promo -> {
-            if (promo.getTypePromotion() == TypePromotion.RESERVATION) {
-                reservation.setAppliedPromotion(promo);
-            }
-        });
-        Fabrique.getService().insertReservation(reservation);
-        String detailReservations = String.format("Réservation pour %s (Poste %d) - Durée: %d minutes", game.getName(), poste.getId(), duration.toMinutes());
-        Payment payment = new Payment(reservation.getNumeroTicket(), new Date(), calculatedAmount, modePaiement, client, "", detailReservations, connectedUser);
-        Fabrique.getService().addPayment(payment);
-        if (!temporaryClientCheckBox.isSelected()) {
-            int pointsEarned = (int) (duration.toMinutes() / 15);
-            if (pointsEarned > 0) {
-                Client freshClient = Fabrique.getService().findByTel(clientPhone);
-                freshClient.setLoyaltyPoints(freshClient.getLoyaltyPoints() + pointsEarned);
-                Fabrique.getService().updateClient(freshClient);
-                ControllerUtils.showInfoAlert("Points de fidélité ajoutés",
-                    String.format("Le client '%s' a gagné %d points de fidélité. Total actuel : %d points.",
-                        freshClient.getName(), pointsEarned, freshClient.getLoyaltyPoints()));
+        List<GameSession> sessions = Fabrique.getService().findGameSessionsByClientId(client.getId());
+        Duration totalRemainingTime = Duration.ZERO;
+
+        for (GameSession session : sessions) {
+            if ("En pause".equals(session.getStatus())) {
+                Duration remainingTime = session.getPausedRemainingTime();
+                if (remainingTime != null && !remainingTime.isNegative() && !remainingTime.isZero()) {
+                    totalRemainingTime = totalRemainingTime.plus(remainingTime);
+                }
             }
         }
-        ControllerUtils.showInfoAlert("Réservation ajoutée", "Réservation et paiement enregistrés avec succès!");
-        ReservationReceiptPrinter printer = new ReservationReceiptPrinter(reservation, connectedUserName, modePaiement);
-        printer.printReceipt();
-        if (parentController != null) {
-            parentController.loadReservations();
-            parentController.loadActiveSessions();
-        }
-        Stage stage = (Stage) ((Button) event.getSource()).getScene().getWindow();
-        stage.close();
-    } catch (Exception e) {
-        e.printStackTrace();
-        ControllerUtils.showErrorAlert("Erreur", "Erreur lors de l'ajout de la réservation: " + e.getMessage());
+
+        return totalRemainingTime;
     }
-}
+
+
+    @FXML
+    private void addReservation(ActionEvent event) {
+        try {
+            String clientPhone = phoneField.getText().trim();
+            Poste poste = posteComboBox.getValue();
+            Game game = gameComboBox.getValue();
+            Duration duration = getSelectedDuration();
+            String modePaiement = modePaiementComboBox.getSelectionModel().getSelectedItem();
+
+            // Validation des champs obligatoires (sauf le numéro de téléphone pour les clients temporaires)
+            if (!temporaryClientCheckBox.isSelected() && (clientPhone.isEmpty() || clientPhone.length() < 9)) {
+                ControllerUtils.showErrorAlert("Numéro invalide", "Veuillez entrer un numéro de téléphone valide (9 chiffres).");
+                return;
+            }
+            if (poste == null || game == null || duration.toMinutes() < 15 || modePaiement == null) {
+                ControllerUtils.showErrorAlert("Champs manquants", "Veuillez remplir tous les champs obligatoires.");
+                return;
+            }
+            if (connectedUser == null) {
+                connectedUser = Fabrique.getService().getCurrentUser();
+                if (connectedUser == null) {
+                    ControllerUtils.showErrorAlert("Erreur d'authentification", "Aucun utilisateur connecté détecté.");
+                    return;
+                }
+            }
+
+            final Client[] clientHolder = new Client[1];
+
+            if (temporaryClientCheckBox.isSelected()) {
+                // Créer un client temporaire
+                clientHolder[0] = new Client();
+                clientHolder[0].setName("Client temporaire");
+                clientHolder[0].setPhone(null);
+                clientHolder[0].setLoyaltyPoints(0);
+                clientHolder[0].setRegistrationDate(new Date());
+                Fabrique.getService().addClient(clientHolder[0]);
+            } else {
+                // Vérifier si les champs sont remplis pour un nouveau client
+                String clientName = nameField.getText().trim();
+                if (clientName.isEmpty() && !temporaryClientCheckBox.isSelected()) {
+                    ControllerUtils.showErrorAlert("Nom manquant", "Veuillez entrer le nom du client.");
+                    return;
+                }
+                // Rechercher ou créer un client permanent
+                clientPhone = phoneField.getText().trim();
+                clientHolder[0] = Fabrique.getService().findByTel(clientPhone);
+                if (clientHolder[0] == null) {
+                    // Nouveau client permanent
+                    clientHolder[0] = new Client();
+                    clientHolder[0].setName(clientName);
+                    clientHolder[0].setPhone(clientPhone);
+                    clientHolder[0].setAddress(addressField.getText().trim().isEmpty() ? null : addressField.getText().trim());
+                    clientHolder[0].setLoyaltyPoints(0);
+                    clientHolder[0].setRegistrationDate(new Date());
+                    Fabrique.getService().addClient(clientHolder[0]);
+                    ControllerUtils.showInfoAlert("Nouveau client", String.format("Le client '%s' a été ajouté avec succès.", clientHolder[0].getName()));
+                } else {
+                    // Mettre à jour le client existant
+                    clientHolder[0].setName(clientName);
+                    clientHolder[0].setAddress(addressField.getText().trim().isEmpty() ? clientHolder[0].getAddress() : addressField.getText().trim());
+                    Fabrique.getService().updateClient(clientHolder[0]);
+                }
+            }
+
+            final Client client = clientHolder[0];
+
+            // Récupérer le temps restant pour le client
+            Duration remainingTime = getRemainingTimeForClient(client);
+
+            // Mettre à jour les anciennes sessions en pause pour ce client
+            List<GameSession> pausedSessions = Fabrique.getService().getAllGameSessions().stream()
+                .filter(session -> "En pause".equals(session.getStatus()) && session.getClient().getId() == client.getId())
+                .collect(Collectors.toList());
+
+            for (GameSession session : pausedSessions) {
+                session.setPausedRemainingTime(Duration.ZERO);
+                session.setStatus("Terminée");
+                Fabrique.getService().updateGameSession(session);
+
+                // Mettre à jour la réservation associée
+                Reservation associatedReservation = session.getReservation();
+                if (associatedReservation != null) {
+                    associatedReservation.setStatus("Terminée");
+                    Fabrique.getService().updateReservation(associatedReservation);
+                }
+            }
+
+            // Ajouter le temps restant au temps sélectionné
+            Duration selectedDuration = getSelectedDuration();
+            Duration totalDuration = selectedDuration.plus(remainingTime);
+
+            Reservation reservation = new Reservation();
+            reservation.setNumeroTicket(Reservation.generateRandomTicketNumber());
+            reservation.setClient(client);
+            reservation.setPoste(poste);
+            reservation.setGame(game);
+            reservation.setDuration(totalDuration);
+            reservation.setReservationDate(LocalDateTime.now());
+            reservation.setTotalPrice(calculatedAmount);
+            reservation.setStatus("En attente");
+            reservation.setCreatedBy(connectedUser);
+
+            // Gestion du code de parrainage : ne pas attribuer de code si le client est temporaire
+            if (!temporaryClientCheckBox.isSelected() && parrainComboBox.getValue() != null) {
+                reservation.setCodeParrainage(parrainComboBox.getValue().getCodeParrainage());
+            } else {
+                reservation.setCodeParrainage(null);
+            }
+
+            Optional<Promotion> activePromo = Fabrique.getService().getBestActivePromotionForToday();
+            activePromo.ifPresent(promo -> {
+                if (promo.getTypePromotion() == TypePromotion.RESERVATION) {
+                    reservation.setAppliedPromotion(promo);
+                }
+            });
+
+            Fabrique.getService().insertReservation(reservation);
+            String detailReservations = String.format("Réservation pour %s (Poste %d) - Durée: %d minutes", game.getName(), poste.getId(), duration.toMinutes());
+            Payment payment = new Payment(reservation.getNumeroTicket(), new Date(), calculatedAmount, modePaiement, client, "", detailReservations, connectedUser);
+            Fabrique.getService().addPayment(payment);
+
+            if (!temporaryClientCheckBox.isSelected()) {
+                int pointsEarned = (int) (duration.toMinutes() / 15);
+                if (pointsEarned > 0) {
+                    Client freshClient = Fabrique.getService().findByTel(clientPhone);
+                    freshClient.setLoyaltyPoints(freshClient.getLoyaltyPoints() + pointsEarned);
+                    Fabrique.getService().updateClient(freshClient);
+                    ControllerUtils.showInfoAlert("Points de fidélité ajoutés",
+                        String.format("Le client '%s' a gagné %d points de fidélité. Total actuel : %d points.",
+                            freshClient.getName(), pointsEarned, freshClient.getLoyaltyPoints()));
+                }
+            }
+
+            ControllerUtils.showInfoAlert("Réservation ajoutée", "Réservation et paiement enregistrés avec succès!");
+            ReservationReceiptPrinter printer = new ReservationReceiptPrinter(reservation, connectedUserName, modePaiement);
+            printer.printReceipt();
+
+            if (parentController != null) {
+                parentController.loadReservations();
+                parentController.loadActiveSessions();
+            }
+
+            Stage stage = (Stage) ((Button) event.getSource()).getScene().getWindow();
+            stage.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+            ControllerUtils.showErrorAlert("Erreur", "Erreur lors de l'ajout de la réservation: " + e.getMessage());
+        }
+    }
+
 
     @FXML
     private void cancel(ActionEvent event) {

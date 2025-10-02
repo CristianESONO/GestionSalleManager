@@ -74,6 +74,15 @@ public class ReservationController implements Initializable {
     private String connectedUserName;
     private User connectedUser;
     private Set<Integer> notifiedSessions = new HashSet<>();
+    private static ReservationController instance;
+
+    public ReservationController() {
+        instance = this;
+    }
+
+    public static ReservationController getInstance() {
+        return instance;
+    }
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
@@ -87,6 +96,11 @@ public class ReservationController implements Initializable {
         sessionChecker.setCycleCount(Animation.INDEFINITE);
         sessionChecker.play();
     }
+
+    private UserController getUserControllerInstance() {
+        return UserController.getInstance();
+    }
+
 
     public void setConnectedUserName(String userName) {
         this.connectedUserName = userName;
@@ -515,37 +529,50 @@ public class ReservationController implements Initializable {
 
 
 
-    private void terminateGameSession(GameSession session) {
-        if (session == null) {
-            ControllerUtils.showErrorAlert("Erreur", "Aucune session sélectionnée.");
-            return;
-        }
+  private void terminateGameSession(GameSession session) {
+    if (session == null) {
+        ControllerUtils.showErrorAlert("Erreur", "Aucune session sélectionnée.");
+        return;
+    }
+    Alert confirmAlert = new Alert(Alert.AlertType.CONFIRMATION, "Terminer la session ?", ButtonType.YES, ButtonType.NO);
+    confirmAlert.showAndWait().ifPresent(response -> {
+        if (response == ButtonType.YES) {
+            try {
+                LocalDateTime endTime = session.getStartTime().plus(session.getPaidDuration());
+                Duration remainingTime = Duration.between(LocalDateTime.now(), endTime);
 
-        Alert confirmAlert = new Alert(Alert.AlertType.CONFIRMATION, "Terminer la session ?", ButtonType.YES, ButtonType.NO);
-        confirmAlert.showAndWait().ifPresent(response -> {
-            if (response == ButtonType.YES) {
-                try {
-                    // Mettre à jour le statut de la session
+                if (remainingTime != null && !remainingTime.isZero() && !remainingTime.isNegative()) {
+                    // Si le temps n'est pas écoulé, mettre en pause
+                    session.setStatus("En pause");
+                    session.setPausedRemainingTime(remainingTime);
+                    session.setPaused(true);
+                } else {
+                    // Si le temps est écoulé, terminer la session
                     session.setStatus("Terminée");
                     session.setEndTime(LocalDateTime.now());
-                    Fabrique.getService().updateGameSession(session);
-
-                    // Mettre à jour le statut de la réservation associée
-                    Reservation reservation = session.getReservation();
-                    if (reservation != null) {
-                        reservation.setStatus("Terminée");
-                        Fabrique.getService().updateReservation(reservation);
-                    }
-
-                    ControllerUtils.showInfoAlert("Succès", "Session terminée avec succès.");
-                    loadActiveSessions();
-                    loadReservations();
-                } catch (Exception e) {
-                    ControllerUtils.showErrorAlert("Erreur", "Échec de la mise à jour: " + e.getMessage());
                 }
+
+                Fabrique.getService().updateGameSession(session);
+                Reservation reservation = session.getReservation();
+                if (reservation != null) {
+                    reservation.setStatus(session.getStatus());
+                    Fabrique.getService().updateReservation(reservation);
+                }
+                ControllerUtils.showInfoAlert("Succès", "Session " + session.getStatus().toLowerCase() + " avec succès.");
+                loadActiveSessions();
+                loadReservations();
+                UserController userController = getUserControllerInstance();
+                if (userController != null) {
+                    userController.loadClientsWithRemainingTime();
+                }
+            } catch (Exception e) {
+                ControllerUtils.showErrorAlert("Erreur", "Échec de la mise à jour: " + e.getMessage());
             }
-        });
-    }
+        }
+    });
+}
+
+
 
 
     private void updateReservationStatusForSession(GameSession session) throws Exception {
@@ -557,33 +584,35 @@ public class ReservationController implements Initializable {
     }
 
     private void checkExpiredSessions() {
-    List<GameSession> activeSessions = Fabrique.getService().getAllGameSessions()
-            .stream()
-            .filter(s -> "Active".equalsIgnoreCase(s.getStatus()) && !s.isPaused())
-            .collect(Collectors.toList());
-
-    boolean sessionsUpdated = false;
-    for (GameSession session : activeSessions) {
-        if (session.getStartTime() != null && session.getPaidDuration() != null) {
-            LocalDateTime endTime = session.getStartTime().plus(session.getPaidDuration());
-            if (LocalDateTime.now().isAfter(endTime)) {
-                try {
-                    // Ne pas marquer comme "Terminée" ici, mais ouvrir le dialogue
-                    if (!notifiedSessions.contains(session.getId())) {
-                        notifiedSessions.add(session.getId());
-                        Platform.runLater(() -> openSessionEndDialog(session));
+        List<GameSession> activeSessions = Fabrique.getService().getAllGameSessions()
+                .stream()
+                .filter(s -> "Active".equalsIgnoreCase(s.getStatus())) // SEULEMENT les sessions actives, pas les pauses
+                .collect(Collectors.toList());
+        
+        boolean sessionsUpdated = false;
+        for (GameSession session : activeSessions) {
+            if (session.getStartTime() != null && session.getPaidDuration() != null) {
+                LocalDateTime endTime = session.getStartTime().plus(session.getPaidDuration());
+                if (LocalDateTime.now().isAfter(endTime)) {
+                    try {
+                        if (!notifiedSessions.contains(session.getId())) {
+                            notifiedSessions.add(session.getId());
+                            Platform.runLater(() -> openSessionEndDialog(session));
+                        }
+                        sessionsUpdated = true;
+                    } catch (Exception e) {
+                        System.err.println("Erreur lors de la notification de la session " + session.getId() + ": " + e.getMessage());
                     }
-                    sessionsUpdated = true;
-                } catch (Exception e) {
-                    System.err.println("Erreur lors de la notification de la session " + session.getId() + ": " + e.getMessage());
                 }
             }
         }
+        if (sessionsUpdated) {
+            Platform.runLater(this::loadActiveSessions);
+        }
     }
-    if (sessionsUpdated) {
-        Platform.runLater(this::loadActiveSessions);
-    }
-}
+
+
+
 
 private void openSessionEndDialog(GameSession session) {
     try {

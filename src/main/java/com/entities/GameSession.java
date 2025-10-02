@@ -100,23 +100,28 @@ public class GameSession {
         isPaused = paused;
     }
 
-    // Ce getter calcule le temps restant dynamiquement.
-    // Le champ 'remainingTime' étant @Transient, il n'est pas persisté.
-    @Transient // Répété pour clarté, car le champ est déjà marqué ainsi
+   @Transient
     public Duration getRemainingTime() {
+        // Si la session est en pause, retourner le temps restant sauvegardé
+        if ("En pause".equalsIgnoreCase(this.status)) {
+            return pausedRemainingTime != null ? pausedRemainingTime : Duration.ZERO;
+        }
+        
+        // Si la session est terminée, retourner zéro
+        if ("Terminée".equalsIgnoreCase(this.status) && this.endTime != null) {
+            return Duration.ZERO;
+        }
+        
+        // Pour les sessions actives, calculer normalement
         if (startTime == null || paidDuration == null) {
             return Duration.ZERO;
         }
-
-        if ("Completed".equalsIgnoreCase(this.status) && this.endTime != null) {
-            return Duration.ZERO;
-        }
-
+        
         Duration elapsed = Duration.between(startTime, LocalDateTime.now());
         Duration remaining = paidDuration.minus(elapsed);
-
         return remaining.isNegative() ? Duration.ZERO : remaining;
     }
+
 
     // Le setter pour remainingTime est conservé si vous avez une logique qui le définit,
     // mais il n'aura pas d'impact sur la persistance en DB grâce à @Transient.

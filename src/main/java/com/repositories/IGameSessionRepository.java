@@ -13,6 +13,7 @@ public interface IGameSessionRepository {
     boolean existsById(int id);
     boolean reduceRemainingTime(int gameSessionId, Duration timeElapsed) throws Exception;
     List<GameSession> findGameSessionsByClientId(int clientId);
+    List<GameSession> findPausedSessionsByClientIdWithRelations(int clientId);
     // Dans com.repositories.IGameSessionRepository.java
     GameSession findActiveSessionForPoste(int posteId);
     GameSession findGameSessionByIdWithRelations(int id);

@@ -19,8 +19,8 @@ public class ReceiptPrinter implements Printable {
     private static final double RECEIPT_HEIGHT_POINTS = 72 * 25;
     private static final int LINE_HEIGHT = 12;
     private static final int SECTION_SPACING = 10;
-    private static final double MARGIN_LEFT = 10;
-    private static final double MARGIN_RIGHT = 10;
+    private static final double MARGIN_LEFT = 15;
+    private static final double MARGIN_RIGHT = 15;
     private static final double CONTENT_WIDTH = RECEIPT_WIDTH_POINTS - MARGIN_LEFT - MARGIN_RIGHT;
     private Image logoImage;
     private Image socialMediaImage;
@@ -75,9 +75,10 @@ public class ReceiptPrinter implements Printable {
 
         // --- 1. LOGO ---
         if (logoImage != null) {
-            int logoWidth = (int) CONTENT_WIDTH;
+            // Réduction de la taille du logo
+            int logoWidth = (int) (CONTENT_WIDTH * 0.6); // 60% de la largeur
             int logoHeight = (int) (logoImage.getHeight(null) * (double) logoWidth / logoImage.getWidth(null));
-            int xLogo = (int) MARGIN_LEFT;
+            int xLogo = (int) (MARGIN_LEFT + (CONTENT_WIDTH - logoWidth) / 2);
             g2d.drawImage(logoImage, xLogo, y, logoWidth, logoHeight, null);
             y += logoHeight + SECTION_SPACING;
         }
@@ -101,18 +102,16 @@ public class ReceiptPrinter implements Printable {
         y += SECTION_SPACING;
 
         // --- 4. En-tête du tableau ---
-        g2d.drawString("-------------------------------------------", (int) MARGIN_LEFT, y);
+        String separator = "--------------------------------------------";
+        g2d.drawString(separator, (int) MARGIN_LEFT, y);
         y += LINE_HEIGHT;
-        g2d.drawString(
-            String.format(
-                "%-" + (int)(CONTENT_WIDTH * 0.2) + "s %-" + (int)(CONTENT_WIDTH * 0.6) + "s %" + (int)(CONTENT_WIDTH * 0.2) + "s",
-                "Qté", "Articles", "CFA"
-            ),
-            (int) MARGIN_LEFT,
-            y
-        );
+        
+        // En-tête avec meilleure répartition des colonnes
+        String header = String.format("%-8s %-20s %8s", "Qté", "Articles", "CFA");
+        g2d.drawString(header, (int) MARGIN_LEFT, y);
         y += LINE_HEIGHT;
-        g2d.drawString("-------------------------------------------", (int) MARGIN_LEFT, y);
+        
+        g2d.drawString(separator, (int) MARGIN_LEFT, y);
         y += LINE_HEIGHT;
 
         // --- 5. Liste des produits ---
@@ -123,29 +122,24 @@ public class ReceiptPrinter implements Printable {
             double prixUnitaire = produit.getPrix().doubleValue();
             double totalLigne = prixUnitaire * quantite;
             String nomProduit = produit.getNom();
+            
+            // Tronquer le nom du produit si trop long
             if (nomProduit.length() > 20) {
                 nomProduit = nomProduit.substring(0, 17) + "...";
             }
-            String line = String.format(
-                "%-" + (int)(CONTENT_WIDTH * 0.2) + "d %-" + (int)(CONTENT_WIDTH * 0.6) + "s %" + (int)(CONTENT_WIDTH * 0.2) + ".0f",
-                quantite, nomProduit, totalLigne
-            );
+            
+            // Format avec espacement optimisé
+            String line = String.format("%-8d %-20s %8.0f", quantite, nomProduit, totalLigne);
             g2d.drawString(line, (int) MARGIN_LEFT, y);
             y += LINE_HEIGHT;
         }
 
         // --- 6. Total ---
-        g2d.drawString("-------------------------------------------", (int) MARGIN_LEFT, y);
+        g2d.drawString(separator, (int) MARGIN_LEFT, y);
         y += LINE_HEIGHT;
         g2d.setFont(fontBold);
-        g2d.drawString(
-            String.format(
-                "%-" + (int)(CONTENT_WIDTH * 0.8) + "s %" + (int)(CONTENT_WIDTH * 0.2) + ".0f",
-                "TOTAL (CFA) :", montantTotal
-            ),
-            (int) MARGIN_LEFT,
-            y
-        );
+        String totalLine = String.format("%-28s %8.0f", "TOTAL (CFA) :", montantTotal);
+        g2d.drawString(totalLine, (int) MARGIN_LEFT, y);
         y += SECTION_SPACING + 5;
 
         // --- 7. Mode de paiement ---
@@ -166,18 +160,19 @@ public class ReceiptPrinter implements Printable {
         centerString(g2d, "Suivez-nous sur", y);
         y += LINE_HEIGHT;
         if (socialMediaImage != null) {
-            int smWidth = (int) CONTENT_WIDTH;
-            int smHeight = 20;
-            int xSm = (int) MARGIN_LEFT;
+            // Réduction de la taille de l'image des réseaux sociaux
+            int smWidth = (int) (CONTENT_WIDTH * 0.7); // 70% de la largeur
+            int smHeight = 25; // Hauteur fixe
+            int xSm = (int) (MARGIN_LEFT + (CONTENT_WIDTH - smWidth) / 2);
             g2d.drawImage(socialMediaImage, xSm, y, smWidth, smHeight, null);
             y += smHeight + SECTION_SPACING;
         }
 
         // --- 10. QR Code ---
         if (qrCodeImage != null) {
-            int qrWidth = 70;
-            int qrHeight = (int) (qrCodeImage.getHeight(null) * (double) qrWidth / qrCodeImage.getWidth(null));
-            int xQr = (int) ((CONTENT_WIDTH - qrWidth) / 2) + (int) MARGIN_LEFT;
+            int qrWidth = 60; // Légèrement réduit
+            int qrHeight = 60; // Carré
+            int xQr = (int) (MARGIN_LEFT + (CONTENT_WIDTH - qrWidth) / 2);
             g2d.drawImage(qrCodeImage, xQr, y, qrWidth, qrHeight, null);
             y += qrHeight + SECTION_SPACING;
         }

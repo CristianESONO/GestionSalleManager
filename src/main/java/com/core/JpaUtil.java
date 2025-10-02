@@ -20,7 +20,8 @@ public class JpaUtil {
 
         
         // --- MODE PRODUCTION --- (désactivé)
-         String appDataPath = System.getenv("APPDATA"); // Chemin vers AppData\Roaming
+       
+        String appDataPath = System.getenv("APPDATA"); // Chemin vers AppData\Roaming
         if (appDataPath != null) {
             Path dbDir = Paths.get(appDataPath, "GestionSalles");
             try {
@@ -36,11 +37,11 @@ public class JpaUtil {
         } else {
             DB_FILE_PATH = fileName; // Repli sur le répertoire courant si APPDATA n'est pas défini
         }
-      
+        
 
         // --- MODE DEVELOPPEMENT ---
-       /* DB_FILE_PATH = "C:\\Users\\HP\\Desktop\\GestionSalle\\demo\\gestionsalles.sqlite";
-        System.out.println("Mode DEV : base de données dans " + DB_FILE_PATH);  */
+        //DB_FILE_PATH = "C:\\Users\\HP\\Desktop\\GestionSalle\\demo\\gestionsalles.sqlite";
+        System.out.println("Mode DEV : base de données dans " + DB_FILE_PATH);
 
         try {
             Class.forName("org.sqlite.JDBC");

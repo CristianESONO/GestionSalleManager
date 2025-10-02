@@ -6,7 +6,9 @@ import com.entities.Client;
 import com.entities.Parrain;
 import com.entities.Role;
 import com.entities.User;
-import com.entities.Reservation; // Not directly used in this controller for now, but kept for context
+import com.entities.Reservation;
+import com.entities.GameSession;
+import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
@@ -15,19 +17,18 @@ import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.layout.HBox;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.scene.Node;
-
 import java.io.IOException;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.Duration;
 import java.util.List;
 import java.util.stream.Collectors;
 
 public class UserController {
-
     // Élément FXML pour la gestion des administrateurs (Admins)
     @FXML
     private TableView<User> userTable;
@@ -58,7 +59,7 @@ public class UserController {
     @FXML
     private DatePicker filterClientDatePicker;
     @FXML
-    private Button searchClientButton, resetDateFilterButton; // searchClientButton might be redundant with text listener
+    private Button searchClientButton, resetDateFilterButton;
     @FXML
     private Pagination paginationClient;
 
@@ -77,6 +78,19 @@ public class UserController {
     private TableColumn<Parrain, String> addressParrainColumn;
     @FXML
     private TableColumn<Parrain, String> codeParrainageColumn;
+
+    // Élément FXML pour la gestion des clients avec temps restant
+    @FXML
+    private TableView<Client> remainingTimeClientsTable;
+    @FXML
+    private TableColumn<Client, String> nameRemainingClientColumn;
+    @FXML
+    private TableColumn<Client, String> phoneRemainingClientColumn;
+    @FXML
+    private TableColumn<Client, String> remainingTimeColumn;
+    @FXML
+    private TableColumn<Client, Void> actionsRemainingTimeColumn;
+
     @FXML
     private Button addParrainButton, editParrainButton, deleteParrainButton;
     @FXML
@@ -96,14 +110,26 @@ public class UserController {
     private ObservableList<Client> displayedClients = FXCollections.observableArrayList();
     private ObservableList<Parrain> displayedParrains = FXCollections.observableArrayList();
 
+    private static UserController instance;
+
+    public UserController() {
+        instance = this;
+    }
+
+    public static UserController getInstance() {
+        return instance;
+    }
+
+
     @FXML
     public void initialize() {
         // 1. Initialiser les colonnes des TableView
         setupTables();
         setupColumnResizePolicies();
+        setupRemainingTimeClientsTable();
 
         // 2. Charger toutes les données depuis la fabrique (base de données/service)
-        refreshAllData(); // Use this method to initially load and filter
+        refreshAllData();
 
         // 3. Configurer les écouteurs de texte pour les champs de recherche
         searchClientField.textProperty().addListener((obs, oldVal, newVal) -> applyFilters());
@@ -118,6 +144,9 @@ public class UserController {
 
         // 6. Configurer la pagination pour chaque TableView
         setupPagination();
+
+        // 7. Charger les clients avec temps restant
+        loadClientsWithRemainingTime();
     }
 
     /**
@@ -128,14 +157,14 @@ public class UserController {
         nameUserColumn.setCellValueFactory(new PropertyValueFactory<>("name"));
         emailUserColumn.setCellValueFactory(new PropertyValueFactory<>("email"));
         roleUserColumn.setCellValueFactory(new PropertyValueFactory<>("role"));
-        userTable.setItems(displayedUsers); // Lie le TableView à la liste des utilisateurs affichés
+        userTable.setItems(displayedUsers);
 
         // Colonnes Client
         nameClientColumn.setCellValueFactory(new PropertyValueFactory<>("name"));
         phoneClientColumn.setCellValueFactory(new PropertyValueFactory<>("phone"));
         addressClientColumn.setCellValueFactory(new PropertyValueFactory<>("address"));
         loyaltyClientColumn.setCellValueFactory(new PropertyValueFactory<>("loyaltyPoints"));
-        clientTable.setItems(displayedClients); // Lie le TableView à la liste des clients affichés
+        clientTable.setItems(displayedClients);
 
         // Colonnes Parrain
         nameParrainColumn.setCellValueFactory(new PropertyValueFactory<>("name"));
@@ -144,15 +173,93 @@ public class UserController {
         addressParrainColumn.setCellValueFactory(new PropertyValueFactory<>("address"));
         codeParrainageColumn.setCellValueFactory(new PropertyValueFactory<>("codeParrainage"));
         pointsParrainageColumn.setCellValueFactory(new PropertyValueFactory<>("parrainagePoints"));
-        parrainTable.setItems(displayedParrains); // Lie le TableView à la liste des parrains affichés
+        parrainTable.setItems(displayedParrains);
     }
 
     private void setupColumnResizePolicies() {
-        // Utilisez la politique de redimensionnement moderne
         clientTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
         userTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
         parrainTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
     }
+
+    private void setupRemainingTimeClientsTable() {
+        nameRemainingClientColumn.setCellValueFactory(new PropertyValueFactory<>("name"));
+        phoneRemainingClientColumn.setCellValueFactory(new PropertyValueFactory<>("phone"));
+
+        remainingTimeColumn.setCellValueFactory(cellData -> {
+            Client client = cellData.getValue();
+            Duration remainingTime = calculateRemainingTimeForClient(client);
+            String formattedTime = formatDuration(remainingTime);
+            return new SimpleStringProperty(formattedTime);
+        });
+
+        setupActionsRemainingTimeColumn();
+    }
+
+
+  private void setupActionsRemainingTimeColumn() {
+    actionsRemainingTimeColumn.setCellFactory(param -> new TableCell<Client, Void>() {
+        private final Button restartSessionButton = new Button("Reprendre session");
+        private final Button newReservationButton = new Button("Nouvelle réservation");
+
+        {
+            restartSessionButton.setStyle("-fx-background-color: #27ae60; -fx-text-fill: white; -fx-font-size: 12px; -fx-padding: 5px 10px; -fx-border-radius: 5px; -fx-background-radius: 5px;");
+            restartSessionButton.setOnAction(event -> {
+                Client client = getTableView().getItems().get(getIndex());
+                restartSessionWithRemainingTime(client);
+            });
+
+            newReservationButton.setStyle("-fx-background-color: #34DBDBFF; -fx-text-fill: white; -fx-font-size: 12px; -fx-padding: 5px 10px; -fx-border-radius: 5px; -fx-background-radius: 5px;");
+            newReservationButton.setOnAction(event -> {
+                Client client = getTableView().getItems().get(getIndex());
+                openAddReservationWindowForClient(client);
+            });
+        }
+
+        @Override
+        protected void updateItem(Void item, boolean empty) {
+            super.updateItem(item, empty);
+            if (empty) {
+                setGraphic(null);
+            } else {
+                Client client = getTableView().getItems().get(getIndex());
+                Duration remainingTime = calculateRemainingTimeForClient(client);
+                if (remainingTime.isZero() || remainingTime.isNegative()) {
+                    setGraphic(null);
+                } else {
+                    HBox buttons = new HBox(5, restartSessionButton, newReservationButton);
+                    setGraphic(buttons);
+                }
+            }
+        }
+    });
+}
+
+
+private void openAddReservationWindowForClient(Client client) {
+    try {
+        FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/views/AddReservationWindow.fxml"));
+        Scene scene = new Scene(loader.load());
+        Stage stage = new Stage();
+        AddReservationController addReservationController = loader.getController();
+        addReservationController.setParentController(ReservationController.getInstance());
+        addReservationController.setConnectedUser(Fabrique.getService().getCurrentUser());
+
+        // Pré-remplir les informations du client
+        if (client != null) {
+            addReservationController.setClientInfo(client);
+        }
+
+        stage.setScene(scene);
+        stage.initModality(Modality.APPLICATION_MODAL);
+        stage.showAndWait();
+    } catch (IOException e) {
+        e.printStackTrace();
+        showAlert(Alert.AlertType.ERROR, "Erreur lors de l'ouverture de la fenêtre de réservation.");
+    }
+}
+
+
 
     /**
      * Configure la pagination pour chaque TableView.
@@ -165,19 +272,12 @@ public class UserController {
 
     /**
      * Met à jour le nombre total de pages pour une pagination donnée.
-     * @param pagination L'objet Pagination à mettre à jour.
-     * @param totalItems Le nombre total d'éléments.
      */
     private void updatePaginationPageCount(Pagination pagination, int totalItems) {
         int pageCount = (int) Math.ceil((double) totalItems / PAGE_SIZE);
-        pagination.setPageCount(Math.max(1, pageCount)); // Assure au moins 1 page
+        pagination.setPageCount(Math.max(1, pageCount));
     }
 
-    /**
-     * Méthode générique pour créer une page pour la pagination.
-     * @param pageIndex L'index de la page à créer.
-     * @return Le Node (TableView) pour la page.
-     */
     private Node createPageUser(int pageIndex) {
         userTable.setItems(getUsersPage(pageIndex));
         return userTable;
@@ -193,60 +293,37 @@ public class UserController {
         return parrainTable;
     }
 
-    /**
-     * Récupère une sous-liste d'utilisateurs pour la pagination.
-     * @param pageIndex L'index de la page.
-     * @return Une ObservableList d'utilisateurs pour la page.
-     */
     private ObservableList<User> getUsersPage(int pageIndex) {
         int fromIndex = pageIndex * PAGE_SIZE;
         int toIndex = Math.min(fromIndex + PAGE_SIZE, displayedUsers.size());
         return FXCollections.observableArrayList(displayedUsers.subList(fromIndex, toIndex));
     }
 
-    /**
-     * Récupère une sous-liste de clients pour la pagination.
-     * @param pageIndex L'index de la page.
-     * @return Une ObservableList de clients pour la page.
-     */
     private ObservableList<Client> getClientsPage(int pageIndex) {
         int fromIndex = pageIndex * PAGE_SIZE;
         int toIndex = Math.min(fromIndex + PAGE_SIZE, displayedClients.size());
         return FXCollections.observableArrayList(displayedClients.subList(fromIndex, toIndex));
     }
 
-    /**
-     * Récupère une sous-liste de parrains pour la pagination.
-     * @param pageIndex L'index de la page.
-     * @return Une ObservableList de parrains pour la page.
-     */
     private ObservableList<Parrain> getParrainsPage(int pageIndex) {
         int fromIndex = pageIndex * PAGE_SIZE;
         int toIndex = Math.min(fromIndex + PAGE_SIZE, displayedParrains.size());
         return FXCollections.observableArrayList(displayedParrains.subList(fromIndex, toIndex));
     }
 
-
-
     /**
      * Méthode principale pour appliquer tous les filtres à toutes les sections.
-     * Cette méthode est appelée par les écouteurs des champs de recherche et du DatePicker.
      */
     @FXML
     private void applyFilters() {
         // Filtrer les clients
         String clientQuery = searchClientField.getText() == null ? "" : searchClientField.getText().toLowerCase();
         LocalDate reservationDateFilter = filterClientDatePicker.getValue();
-
         List<Client> filteredClientsList = allClients.stream()
                 .filter(client -> {
                     boolean matchesName = client.getName().toLowerCase().contains(clientQuery);
                     boolean matchesReservationDate = true;
-
                     if (reservationDateFilter != null) {
-                        // For clients, we check if ANY of their reservations match the date
-                        // It's assumed Client.getReservations() loads associated reservations.
-                        // If not, you might need to query the service for reservations by client.
                         matchesReservationDate = client.getReservations().stream()
                                 .anyMatch(reservation -> {
                                     if (reservation.getReservationDate() != null) {
@@ -256,14 +333,8 @@ public class UserController {
                                     return false;
                                 });
                     }
-
-                    // *** CRITICAL UPDATE HERE ***
-                    // We need to call the service to get the actual total play time,
-                    // as the Client entity itself won't have this populated automatically
-                    // from GameSession data without an explicit fetch or calculation.
                     Duration totalPlayTime = Fabrique.getService().getTotalPlayTime(client.getId());
                     boolean hasEnoughPlayTime = totalPlayTime != null && totalPlayTime.toHours() >= 50;
-
                     return matchesName && matchesReservationDate && hasEnoughPlayTime;
                 })
                 .collect(Collectors.toList());
@@ -276,7 +347,7 @@ public class UserController {
         String adminQuery = searchAdminField.getText() == null ? "" : searchAdminField.getText().toLowerCase();
         List<User> filteredUsersList = allUsers.stream()
                 .filter(user -> user.getName().toLowerCase().contains(adminQuery))
-                .filter(user -> user.getRole().equals(Role.Admin)) // <-- Ajoutez cette ligne
+                .filter(user -> user.getRole().equals(Role.Admin))
                 .collect(Collectors.toList());
         displayedUsers.setAll(filteredUsersList);
         updatePaginationPageCount(paginationAdmin, displayedUsers.size());
@@ -296,14 +367,11 @@ public class UserController {
                 })
                 .collect(Collectors.toList());
         displayedParrains.setAll(filteredParrainsList);
-        // Important: Appliquer le tri par points de parrainage après le filtrage
         displayedParrains.sort((p1, p2) -> Integer.compare(p2.getParrainagePoints(), p1.getParrainagePoints()));
         updatePaginationPageCount(paginationParrain, displayedParrains.size());
         paginationParrain.setCurrentPageIndex(0);
         parrainTable.setItems(getParrainsPage(0));
     }
-
-
 
     /**
      * Réinitialise le filtre de date pour les clients.
@@ -316,20 +384,13 @@ public class UserController {
 
     /**
      * Recharge toutes les listes de données depuis le service et réapplique les filtres.
-     * Utile après une opération d'ajout, modification ou suppression.
      */
-    private void refreshAllData() {
+    public void refreshAllData() {
         allUsers.setAll(Fabrique.getService().findAllUsers());
         allClients.setAll(Fabrique.getService().getAllClients());
         allParrains.setAll(Fabrique.getService().getAllParrains());
-        applyFilters(); // Apply filters and refresh tables with new data
+        applyFilters();
     }
-
-    // You can keep a specific refresh for clients if needed, but refreshAllData is more comprehensive.
-    // private void refreshClients() {
-    //     allClients.setAll(Fabrique.getService().getAllClients());
-    //     applyFilters();
-    // }
 
     /**
      * Gère l'affichage/masquage des boutons en fonction du rôle de l'utilisateur connecté.
@@ -339,21 +400,17 @@ public class UserController {
         boolean isSuperAdmin = currentUser != null && currentUser.getRole().equals(Role.SuperAdmin);
         boolean isAdmin = currentUser != null && currentUser.getRole().equals(Role.Admin);
 
-        // Admin buttons
         if (addAdminButton != null) addAdminButton.setVisible(isSuperAdmin);
         if (editAdminButton != null) editAdminButton.setVisible(isSuperAdmin);
         if (deleteAdminButton != null) deleteAdminButton.setVisible(isSuperAdmin);
 
-        // Client buttons
-        if (editClientButton != null) editClientButton.setVisible(isSuperAdmin); // Seuls les SuperAdmin peuvent modifier
+        if (editClientButton != null) editClientButton.setVisible(isSuperAdmin);
         if (deleteClientButton != null) deleteClientButton.setVisible(isSuperAdmin);
 
-        // Sponsor (Parrain) buttons
         if (addParrainButton != null) addParrainButton.setVisible(isSuperAdmin || isAdmin);
-        if (editParrainButton != null) editParrainButton.setVisible(isSuperAdmin); // Seuls les SuperAdmin peuvent modifier
+        if (editParrainButton != null) editParrainButton.setVisible(isSuperAdmin);
         if (deleteParrainButton != null) deleteParrainButton.setVisible(isSuperAdmin);
     }
-
 
     private void openModalWindow(String fxmlPath, String title, Object entity) {
         try {
@@ -366,7 +423,6 @@ public class UserController {
             String viewName = fxmlPath.substring(fxmlPath.lastIndexOf("/") + 1, fxmlPath.lastIndexOf("."));
             WindowManager.closeWindowsForView(viewName);
             WindowManager.register(viewName, stage);
-
             if (entity != null) {
                 Object controller = loader.getController();
                 if (controller instanceof EditUserController) {
@@ -377,13 +433,10 @@ public class UserController {
                     ((EditParrainController) controller).setParrainToEdit((Parrain) entity);
                 }
             }
-
             stage.sizeToScene();
             stage.setResizable(false);
             stage.centerOnScreen();
-
-            stage.setOnHidden(event -> refreshAllData()); // Refresh all data when modal closes
-
+            stage.setOnHidden(event -> refreshAllData());
             stage.show();
         } catch (IOException e) {
             e.printStackTrace();
@@ -416,55 +469,41 @@ public class UserController {
 
     @FXML
     private void openAddClientWindow() {
-        // Permission check might be needed here based on your design
         openModalWindow("/com/views/AddClientWindow.fxml", "Ajouter un client", null);
     }
 
-   @FXML
+    @FXML
     private void openEditClientWindow() {
-        // 1. Vérifie d'abord si l'utilisateur est un SuperAdmin
         if (ConnexionController.user == null || !ConnexionController.user.getRole().equals(Role.SuperAdmin)) {
             showAlert(AlertType.WARNING, "Accès refusé : Vous n'avez pas les permissions nécessaires pour modifier un client.");
-            return; // Arrête l'exécution si l'utilisateur n'a pas les droits
+            return;
         }
-
-        // 2. Vérifie qu'un client est sélectionné
         Client selectedClient = clientTable.getSelectionModel().getSelectedItem();
         if (selectedClient == null) {
             showAlert(AlertType.WARNING, "Veuillez sélectionner un client à modifier.");
             return;
         }
-
-        // 3. Ouvre la fenêtre de modification
         openModalWindow("/com/views/EditClientWindow.fxml", "Modifier un client", selectedClient);
     }
 
-
     @FXML
     private void openAddParrainWindow() {
-        // Permission check might be needed here
         openModalWindow("/com/views/AddParrainWindow.fxml", "Ajouter un parrain", null);
     }
 
     @FXML
     private void openEditParrainWindow() {
-        // 1. Vérifie les permissions
         if (ConnexionController.user == null || !ConnexionController.user.getRole().equals(Role.SuperAdmin)) {
             showAlert(AlertType.WARNING, "Accès refusé : Vous n'avez pas les permissions nécessaires pour modifier un parrain.");
             return;
         }
-
-        // 2. Vérifie la sélection
         Parrain selectedParrain = parrainTable.getSelectionModel().getSelectedItem();
         if (selectedParrain == null) {
             showAlert(AlertType.WARNING, "Veuillez sélectionner un parrain à modifier.");
             return;
         }
-
-        // 3. Ouvre la fenêtre
         openModalWindow("/com/views/EditParrainWindow.fxml", "Modifier un parrain", selectedParrain);
     }
-
 
     @FXML
     private void deleteUser() {
@@ -493,7 +532,7 @@ public class UserController {
 
     @FXML
     private void deleteClient() {
-        if (ConnexionController.user != null && ConnexionController.user.getRole().equals(Role.SuperAdmin)) { // Only SuperAdmin can delete
+        if (ConnexionController.user != null && ConnexionController.user.getRole().equals(Role.SuperAdmin)) {
             Client selectedClient = clientTable.getSelectionModel().getSelectedItem();
             if (selectedClient == null) {
                 showAlert(AlertType.WARNING, "Veuillez sélectionner un client à supprimer.");
@@ -518,7 +557,7 @@ public class UserController {
 
     @FXML
     private void deleteParrain() {
-        if (ConnexionController.user != null && ConnexionController.user.getRole().equals(Role.SuperAdmin)) { // Only SuperAdmin can delete
+        if (ConnexionController.user != null && ConnexionController.user.getRole().equals(Role.SuperAdmin)) {
             Parrain selectedParrain = parrainTable.getSelectionModel().getSelectedItem();
             if (selectedParrain == null) {
                 showAlert(AlertType.WARNING, "Veuillez sélectionner un parrain à supprimer.");
@@ -544,4 +583,77 @@ public class UserController {
     private void showAlert(AlertType type, String message) {
         new Alert(type, message).show();
     }
+
+   private Duration calculateRemainingTimeForClient(Client client) {
+        List<GameSession> sessions = Fabrique.getService().findGameSessionsByClientId(client.getId());
+        Duration totalRemainingTime = Duration.ZERO;
+        for (GameSession session : sessions) {
+            if ("En pause".equals(session.getStatus())) {
+                Duration remainingTime = session.getPausedRemainingTime();
+                if (remainingTime != null && !remainingTime.isNegative() && !remainingTime.isZero()) {
+                    totalRemainingTime = totalRemainingTime.plus(remainingTime);
+                }
+            }
+        }
+        return totalRemainingTime;
+    }
+
+
+
+    // Méthode pour formater la durée en "Xh Ymin"
+    private String formatDuration(Duration duration) {
+        if (duration == null || duration.isZero() || duration.isNegative()) {
+            return "0h 0min";
+        }
+        long hours = duration.toHours();
+        long minutes = duration.toMinutes() % 60;
+        return String.format("%dh %dmin", hours, minutes);
+    }
+
+    public void loadClientsWithRemainingTime() {
+    List<Client> allClients = Fabrique.getService().getAllClients();
+    List<Client> filteredClients = allClients.stream()
+        .filter(client ->
+            client.getPhone() != null &&
+            !client.getPhone().trim().isEmpty() &&
+            client.getReservations() != null &&
+            !client.getReservations().isEmpty()
+        )
+        .collect(Collectors.toList());
+
+    // Affiche tous les clients filtrés, même ceux sans temps restant
+    remainingTimeClientsTable.setItems(FXCollections.observableArrayList(filteredClients));
+}
+
+
+
+
+    // Redémarrer une session avec le temps restant
+   private void restartSessionWithRemainingTime(Client client) {
+    Duration remainingTime = calculateRemainingTimeForClient(client);
+    if (remainingTime.isZero() || remainingTime.isNegative()) {
+        showAlert(AlertType.INFORMATION, "Ce client n'a pas de temps restant.");
+        return;
+    }
+
+    try {
+        FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/views/ChoosePosteAndGame.fxml"));
+        Scene scene = new Scene(loader.load());
+        Stage stage = new Stage();
+        stage.setTitle("Reprendre une session");
+        stage.setScene(scene);
+        stage.initModality(Modality.APPLICATION_MODAL);
+
+        ChoosePosteAndGameController controller = loader.getController();
+        controller.setClient(client);
+        controller.setRemainingTime(remainingTime);
+        controller.setParentController(this);
+
+        stage.showAndWait();
+    } catch (IOException e) {
+        e.printStackTrace();
+        showAlert(AlertType.ERROR, "Impossible d'ouvrir la fenêtre de sélection de poste et de jeu.");
+    }
+}
+
 }

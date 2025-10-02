@@ -145,5 +145,7 @@ public interface IService {
     Optional<Promotion> getBestActivePromotionForToday();
     Promotion getPromotionByIdWithProduits(int id);
     List<Promotion> getValidReservationsPromotionsForDate(LocalDate date);
+    List<GameSession> findPausedSessionsByClientId(int clientId);
+    void resumePausedSessionForClient(int clientId, int posteId, int gameId) throws Exception;
     
 }
