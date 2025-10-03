@@ -1,15 +1,14 @@
-package com.repositories.bd; // Vous pouvez le placer dans com.repositories.bd si vous préférez
+package com.repositories.bd;
 
 import com.core.JpaUtil;
 import com.entities.GameSession;
+import com.entities.Poste;
 import com.repositories.IGameSessionRepository;
 
 import javax.persistence.EntityManager;
 import javax.persistence.EntityTransaction;
 import javax.persistence.NoResultException;
-import javax.persistence.Query;
 import javax.persistence.TypedQuery;
-
 import java.time.Duration;
 import java.util.List;
 
@@ -20,9 +19,6 @@ public class GameSessionRepositoryJpa implements IGameSessionRepository {
         EntityManager em = JpaUtil.getEntityManager();
         List<GameSession> gameSessions = null;
         try {
-            // JPQL pour récupérer toutes les sessions de jeu.
-            // Utilisez LEFT JOIN FETCH pour charger les entités Client, Game, Poste, Reservation
-            // car elles sont LAZY par défaut et vous pourriez avoir besoin d'y accéder.
             gameSessions = em.createQuery(
                 "SELECT gs FROM GameSession gs " +
                 "LEFT JOIN FETCH gs.client " +
@@ -46,11 +42,11 @@ public class GameSessionRepositoryJpa implements IGameSessionRepository {
             return em.createQuery(
                 "SELECT gs FROM GameSession gs " +
                 "LEFT JOIN FETCH gs.reservation r " +
-                "LEFT JOIN FETCH r.client c " +  // Charge le client
-                "LEFT JOIN FETCH r.appliedPromotion ap " +  // Charge la promotion appliquée
-                "LEFT JOIN FETCH r.game g " +  // Charge le jeu
-                "LEFT JOIN FETCH r.poste p " +  // Charge le poste
-                "LEFT JOIN FETCH p.games pg " +  // Charge les jeux du poste (si nécessaire)
+                "LEFT JOIN FETCH r.client c " +
+                "LEFT JOIN FETCH r.appliedPromotion ap " +
+                "LEFT JOIN FETCH r.game g " +
+                "LEFT JOIN FETCH r.poste p " +
+                "LEFT JOIN FETCH p.games pg " +
                 "WHERE gs.id = :id", GameSession.class)
                 .setParameter("id", id)
                 .getSingleResult();
@@ -61,12 +57,7 @@ public class GameSessionRepositoryJpa implements IGameSessionRepository {
         }
     }
 
-
-
-
-
-
-   @Override
+    @Override
     public GameSession addGameSession(GameSession gameSession) throws Exception {
         EntityManager em = JpaUtil.getEntityManager();
         EntityTransaction transaction = null;
@@ -78,7 +69,6 @@ public class GameSessionRepositoryJpa implements IGameSessionRepository {
                 transaction = em.getTransaction();
                 transaction.begin();
                 
-                // Assurez-vous que les entités liées sont managées
                 if (gameSession.getPoste() != null && !em.contains(gameSession.getPoste())) {
                     gameSession.setPoste(em.merge(gameSession.getPoste()));
                 }
@@ -87,7 +77,7 @@ public class GameSessionRepositoryJpa implements IGameSessionRepository {
                 }
                 
                 em.persist(gameSession);
-                em.flush(); // Force l'exécution immédiate
+                em.flush();
                 transaction.commit();
                 
                 System.out.println("Session ajoutée. ID: " + gameSession.getId());
@@ -110,7 +100,7 @@ public class GameSessionRepositoryJpa implements IGameSessionRepository {
                     
                     if (retryCount < maxRetries) {
                         try {
-                            Thread.sleep(100 * retryCount); // Délai progressif
+                            Thread.sleep(100 * retryCount);
                         } catch (InterruptedException ie) {
                             Thread.currentThread().interrupt();
                         }
@@ -128,7 +118,7 @@ public class GameSessionRepositoryJpa implements IGameSessionRepository {
         }
         return null;
     }
-    // Dans com.repositories.jpa.GameSessionRepositoryJpa.java
+
     @Override
     public GameSession findActiveSessionForPoste(int posteId) {
         EntityManager em = JpaUtil.getEntityManager();
@@ -139,7 +129,6 @@ public class GameSessionRepositoryJpa implements IGameSessionRepository {
             query.setParameter("posteId", posteId);
             session = query.getSingleResult();
         } catch (NoResultException e) {
-            // Aucune session active trouvée pour ce poste
             session = null;
         } catch (Exception e) {
             System.err.println("Erreur lors de la recherche de la session active pour le poste : " + e.getMessage());
@@ -151,15 +140,31 @@ public class GameSessionRepositoryJpa implements IGameSessionRepository {
     }
 
     @Override
+    public List<GameSession> findPausedSessionsByPoste(Poste poste) {
+        EntityManager em = JpaUtil.getEntityManager();
+        List<GameSession> sessions = null;
+        try {
+            TypedQuery<GameSession> query = em.createQuery(
+                "SELECT gs FROM GameSession gs WHERE gs.poste = :poste AND gs.status = 'En pause'", GameSession.class);
+            query.setParameter("poste", poste);
+            sessions = query.getResultList();
+        } catch (Exception e) {
+            System.err.println("Erreur lors de la recherche des sessions en pause par poste : " + e.getMessage());
+            e.printStackTrace();
+            sessions = List.of(); // Retourne une liste vide en cas d'erreur
+        } finally {
+            em.close();
+        }
+        return sessions;
+    }
+
+    @Override
     public GameSession getGameSessionById(int id) {
         EntityManager em = JpaUtil.getEntityManager();
         GameSession gameSession = null;
         try {
-            // Utilise find() pour récupérer une session de jeu par son ID.
-            // Force le chargement des entités liées si nécessaire.
             gameSession = em.find(GameSession.class, id);
             if (gameSession != null) {
-                // Accéder aux getters pour déclencher le chargement LAZY si nécessaire
                 if (gameSession.getClient() != null) gameSession.getClient().getId();
                 if (gameSession.getGame() != null) gameSession.getGame().getId();
                 if (gameSession.getPoste() != null) gameSession.getPoste().getId();
@@ -181,7 +186,7 @@ public class GameSessionRepositoryJpa implements IGameSessionRepository {
         try {
             transaction = em.getTransaction();
             transaction.begin();
-            em.merge(gameSession); // Met à jour l'entité (ou l'attache si elle est détachée)
+            em.merge(gameSession);
             transaction.commit();
             System.out.println("Session de jeu mise à jour avec succès. ID: " + gameSession.getId());
             return true;
@@ -204,9 +209,9 @@ public class GameSessionRepositoryJpa implements IGameSessionRepository {
         try {
             transaction = em.getTransaction();
             transaction.begin();
-            GameSession gameSession = em.find(GameSession.class, id); // Trouve l'entité par ID
+            GameSession gameSession = em.find(GameSession.class, id);
             if (gameSession != null) {
-                em.remove(gameSession); // Supprime l'entité
+                em.remove(gameSession);
             }
             transaction.commit();
             System.out.println("Session de jeu supprimée avec succès. ID: " + id);
@@ -227,7 +232,6 @@ public class GameSessionRepositoryJpa implements IGameSessionRepository {
     public boolean existsById(int id) {
         EntityManager em = JpaUtil.getEntityManager();
         try {
-            // Utilise find() pour vérifier l'existence par ID
             GameSession gameSession = em.find(GameSession.class, id);
             return gameSession != null;
         } catch (Exception e) {
@@ -248,41 +252,33 @@ public class GameSessionRepositoryJpa implements IGameSessionRepository {
             transaction.begin();
             GameSession gameSession = em.find(GameSession.class, gameSessionId);
             if (gameSession != null) {
-                // Réduire la paidDuration. Note: remainingTime est @Transient et calculé.
-                // Vous devez ajuster la durée payée pour refléter le temps écoulé.
-                // Ou si vous avez une logique de "temps restant" persistant, mettez à jour ce champ.
-                // Pour l'instant, je vais modifier paidDuration pour simuler une réduction.
-                // Si votre logique de temps restant est plus complexe, adaptez ici.
-
                 Duration currentPaidDuration = gameSession.getPaidDuration();
                 if (currentPaidDuration != null && currentPaidDuration.compareTo(timeElapsed) >= 0) {
                     gameSession.setPaidDuration(currentPaidDuration.minus(timeElapsed));
-                    // Si la session devient terminée après cette réduction
                     if (gameSession.getPaidDuration().isZero() || gameSession.getPaidDuration().isNegative()) {
                         gameSession.setStatus("Completed");
-                        gameSession.setEndTime(gameSession.getStartTime().plus(currentPaidDuration)); // Définir endTime basée sur la durée initiale
+                        gameSession.setEndTime(gameSession.getStartTime().plus(currentPaidDuration));
                     }
-                    em.merge(gameSession); // Fusionne les changements
+                    em.merge(gameSession);
                     transaction.commit();
                     System.out.println("Temps restant de la session " + gameSessionId + " réduit avec succès.");
                     return true;
                 } else if (currentPaidDuration != null && currentPaidDuration.compareTo(Duration.ZERO) > 0) {
-                    // Si le temps écoulé est plus grand que la durée payée restante, mettez à zéro.
                     gameSession.setPaidDuration(Duration.ZERO);
                     gameSession.setStatus("Completed");
-                    gameSession.setEndTime(gameSession.getStartTime().plus(currentPaidDuration)); // endTime est quand la durée payée est épuisée
+                    gameSession.setEndTime(gameSession.getStartTime().plus(currentPaidDuration));
                     em.merge(gameSession);
                     transaction.commit();
                     System.out.println("Session " + gameSessionId + " terminée car temps écoulé supérieur à la durée payée.");
                     return true;
                 } else {
                     System.out.println("Session " + gameSessionId + " déjà terminée ou durée payée nulle.");
-                    transaction.rollback(); // Annule la transaction si rien n'est modifié
+                    transaction.rollback();
                     return false;
                 }
             } else {
                 System.err.println("Session de jeu non trouvée pour la réduction du temps avec ID: " + gameSessionId);
-                transaction.rollback(); // Annule la transaction si l'entité n'est pas trouvée
+                transaction.rollback();
                 return false;
             }
         } catch (Exception e) {
@@ -302,8 +298,6 @@ public class GameSessionRepositoryJpa implements IGameSessionRepository {
         EntityManager em = JpaUtil.getEntityManager();
         List<GameSession> gameSessions = null;
         try {
-            // JPQL pour récupérer les sessions de jeu d'un client par son ID
-            // LEFT JOIN FETCH pour les entités liées si vous en avez besoin.
             TypedQuery<GameSession> query = em.createQuery(
                 "SELECT gs FROM GameSession gs LEFT JOIN FETCH gs.client WHERE gs.client.id = :clientId", GameSession.class);
             query.setParameter("clientId", clientId);
@@ -322,7 +316,6 @@ public class GameSessionRepositoryJpa implements IGameSessionRepository {
         EntityManager em = JpaUtil.getEntityManager();
         List<GameSession> gameSessions = null;
         try {
-            // JPQL pour récupérer les sessions en pause avec TOUTES les relations nécessaires
             TypedQuery<GameSession> query = em.createQuery(
                 "SELECT gs FROM GameSession gs " +
                 "LEFT JOIN FETCH gs.client " +

@@ -98,17 +98,29 @@ public class UserController {
     @FXML
     private Pagination paginationParrain;
 
+    // AJOUT: Éléments FXML pour la pagination et recherche des comptes client
+    @FXML
+    private TextField searchRemainingTimeField;
+    @FXML
+    private Pagination paginationRemainingTime;
+
     private static final int PAGE_SIZE = 25;
 
     // Listes de toutes les données (non filtrées)
     private ObservableList<User> allUsers = FXCollections.observableArrayList();
     private ObservableList<Client> allClients = FXCollections.observableArrayList();
     private ObservableList<Parrain> allParrains = FXCollections.observableArrayList();
+    
+    // AJOUT: Liste pour les comptes client avec temps restant
+    private ObservableList<Client> allRemainingTimeClients = FXCollections.observableArrayList();
 
     // Listes des données actuellement affichées (filtrées et paginées)
     private ObservableList<User> displayedUsers = FXCollections.observableArrayList();
     private ObservableList<Client> displayedClients = FXCollections.observableArrayList();
     private ObservableList<Parrain> displayedParrains = FXCollections.observableArrayList();
+    
+    // AJOUT: Liste pour les comptes client affichés
+    private ObservableList<Client> displayedRemainingTimeClients = FXCollections.observableArrayList();
 
     private static UserController instance;
 
@@ -119,7 +131,6 @@ public class UserController {
     public static UserController getInstance() {
         return instance;
     }
-
 
     @FXML
     public void initialize() {
@@ -135,6 +146,9 @@ public class UserController {
         searchClientField.textProperty().addListener((obs, oldVal, newVal) -> applyFilters());
         searchAdminField.textProperty().addListener((obs, oldVal, newVal) -> applyFilters());
         searchParrainField.textProperty().addListener((obs, oldVal, newVal) -> applyFilters());
+        
+        // AJOUT: Écouteur pour la recherche des comptes client
+        searchRemainingTimeField.textProperty().addListener((obs, oldVal, newVal) -> applyFilters());
 
         // 4. Configurer l'écouteur pour le DatePicker des clients
         filterClientDatePicker.valueProperty().addListener((obs, oldDate, newDate) -> applyFilters());
@@ -180,6 +194,9 @@ public class UserController {
         clientTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
         userTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
         parrainTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
+        
+        // AJOUT: Politique de redimensionnement pour la table des comptes client
+        remainingTimeClientsTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
     }
 
     private void setupRemainingTimeClientsTable() {
@@ -196,70 +213,66 @@ public class UserController {
         setupActionsRemainingTimeColumn();
     }
 
+    private void setupActionsRemainingTimeColumn() {
+        actionsRemainingTimeColumn.setCellFactory(param -> new TableCell<Client, Void>() {
+            private final Button restartSessionButton = new Button("Reprendre session");
+            private final Button newReservationButton = new Button("Nouvelle réservation");
 
-  private void setupActionsRemainingTimeColumn() {
-    actionsRemainingTimeColumn.setCellFactory(param -> new TableCell<Client, Void>() {
-        private final Button restartSessionButton = new Button("Reprendre session");
-        private final Button newReservationButton = new Button("Nouvelle réservation");
+            {
+                restartSessionButton.setStyle("-fx-background-color: #27ae60; -fx-text-fill: white; -fx-font-size: 12px; -fx-padding: 5px 10px; -fx-border-radius: 5px; -fx-background-radius: 5px;");
+                restartSessionButton.setOnAction(event -> {
+                    Client client = getTableView().getItems().get(getIndex());
+                    restartSessionWithRemainingTime(client);
+                });
 
-        {
-            restartSessionButton.setStyle("-fx-background-color: #27ae60; -fx-text-fill: white; -fx-font-size: 12px; -fx-padding: 5px 10px; -fx-border-radius: 5px; -fx-background-radius: 5px;");
-            restartSessionButton.setOnAction(event -> {
-                Client client = getTableView().getItems().get(getIndex());
-                restartSessionWithRemainingTime(client);
-            });
+                newReservationButton.setStyle("-fx-background-color: #34DBDBFF; -fx-text-fill: white; -fx-font-size: 12px; -fx-padding: 5px 10px; -fx-border-radius: 5px; -fx-background-radius: 5px;");
+                newReservationButton.setOnAction(event -> {
+                    Client client = getTableView().getItems().get(getIndex());
+                    openAddReservationWindowForClient(client);
+                });
+            }
 
-            newReservationButton.setStyle("-fx-background-color: #34DBDBFF; -fx-text-fill: white; -fx-font-size: 12px; -fx-padding: 5px 10px; -fx-border-radius: 5px; -fx-background-radius: 5px;");
-            newReservationButton.setOnAction(event -> {
-                Client client = getTableView().getItems().get(getIndex());
-                openAddReservationWindowForClient(client);
-            });
-        }
-
-        @Override
-        protected void updateItem(Void item, boolean empty) {
-            super.updateItem(item, empty);
-            if (empty) {
-                setGraphic(null);
-            } else {
-                Client client = getTableView().getItems().get(getIndex());
-                Duration remainingTime = calculateRemainingTimeForClient(client);
-                if (remainingTime.isZero() || remainingTime.isNegative()) {
+            @Override
+            protected void updateItem(Void item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty) {
                     setGraphic(null);
                 } else {
-                    HBox buttons = new HBox(5, restartSessionButton, newReservationButton);
-                    setGraphic(buttons);
+                    Client client = getTableView().getItems().get(getIndex());
+                    Duration remainingTime = calculateRemainingTimeForClient(client);
+                    if (remainingTime.isZero() || remainingTime.isNegative()) {
+                        setGraphic(null);
+                    } else {
+                        HBox buttons = new HBox(5, restartSessionButton, newReservationButton);
+                        setGraphic(buttons);
+                    }
                 }
             }
-        }
-    });
-}
-
-
-private void openAddReservationWindowForClient(Client client) {
-    try {
-        FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/views/AddReservationWindow.fxml"));
-        Scene scene = new Scene(loader.load());
-        Stage stage = new Stage();
-        AddReservationController addReservationController = loader.getController();
-        addReservationController.setParentController(ReservationController.getInstance());
-        addReservationController.setConnectedUser(Fabrique.getService().getCurrentUser());
-
-        // Pré-remplir les informations du client
-        if (client != null) {
-            addReservationController.setClientInfo(client);
-        }
-
-        stage.setScene(scene);
-        stage.initModality(Modality.APPLICATION_MODAL);
-        stage.showAndWait();
-    } catch (IOException e) {
-        e.printStackTrace();
-        showAlert(Alert.AlertType.ERROR, "Erreur lors de l'ouverture de la fenêtre de réservation.");
+        });
     }
-}
 
+    private void openAddReservationWindowForClient(Client client) {
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/views/AddReservationWindow.fxml"));
+            Scene scene = new Scene(loader.load());
+            Stage stage = new Stage();
+            AddReservationController addReservationController = loader.getController();
+            addReservationController.setParentController(ReservationController.getInstance());
+            addReservationController.setConnectedUser(Fabrique.getService().getCurrentUser());
 
+            // Pré-remplir les informations du client
+            if (client != null) {
+                addReservationController.setClientInfo(client);
+            }
+
+            stage.setScene(scene);
+            stage.initModality(Modality.APPLICATION_MODAL);
+            stage.showAndWait();
+        } catch (IOException e) {
+            e.printStackTrace();
+            showAlert(Alert.AlertType.ERROR, "Erreur lors de l'ouverture de la fenêtre de réservation.");
+        }
+    }
 
     /**
      * Configure la pagination pour chaque TableView.
@@ -268,6 +281,7 @@ private void openAddReservationWindowForClient(Client client) {
         paginationClient.setPageFactory(this::createPageClient);
         paginationAdmin.setPageFactory(this::createPageUser);
         paginationParrain.setPageFactory(this::createPageParrain);
+        paginationRemainingTime.setPageFactory(this::createPageRemainingTime);
     }
 
     /**
@@ -293,6 +307,12 @@ private void openAddReservationWindowForClient(Client client) {
         return parrainTable;
     }
 
+    // AJOUT: Méthode de pagination pour les comptes client
+    private Node createPageRemainingTime(int pageIndex) {
+        remainingTimeClientsTable.setItems(getRemainingTimeClientsPage(pageIndex));
+        return remainingTimeClientsTable;
+    }
+
     private ObservableList<User> getUsersPage(int pageIndex) {
         int fromIndex = pageIndex * PAGE_SIZE;
         int toIndex = Math.min(fromIndex + PAGE_SIZE, displayedUsers.size());
@@ -309,6 +329,13 @@ private void openAddReservationWindowForClient(Client client) {
         int fromIndex = pageIndex * PAGE_SIZE;
         int toIndex = Math.min(fromIndex + PAGE_SIZE, displayedParrains.size());
         return FXCollections.observableArrayList(displayedParrains.subList(fromIndex, toIndex));
+    }
+
+    // AJOUT: Méthode de pagination pour les comptes client
+    private ObservableList<Client> getRemainingTimeClientsPage(int pageIndex) {
+        int fromIndex = pageIndex * PAGE_SIZE;
+        int toIndex = Math.min(fromIndex + PAGE_SIZE, displayedRemainingTimeClients.size());
+        return FXCollections.observableArrayList(displayedRemainingTimeClients.subList(fromIndex, toIndex));
     }
 
     /**
@@ -371,6 +398,20 @@ private void openAddReservationWindowForClient(Client client) {
         updatePaginationPageCount(paginationParrain, displayedParrains.size());
         paginationParrain.setCurrentPageIndex(0);
         parrainTable.setItems(getParrainsPage(0));
+
+        // AJOUT: Filtrer les comptes client avec temps restant
+        String remainingTimeQuery = searchRemainingTimeField.getText() == null ? "" : searchRemainingTimeField.getText().toLowerCase();
+        List<Client> filteredRemainingTimeClientsList = allRemainingTimeClients.stream()
+                .filter(client -> {
+                    boolean matchesName = client.getName().toLowerCase().contains(remainingTimeQuery);
+                    boolean matchesPhone = client.getPhone() != null && client.getPhone().toLowerCase().contains(remainingTimeQuery);
+                    return matchesName || matchesPhone;
+                })
+                .collect(Collectors.toList());
+        displayedRemainingTimeClients.setAll(filteredRemainingTimeClientsList);
+        updatePaginationPageCount(paginationRemainingTime, displayedRemainingTimeClients.size());
+        paginationRemainingTime.setCurrentPageIndex(0);
+        remainingTimeClientsTable.setItems(getRemainingTimeClientsPage(0));
     }
 
     /**
@@ -389,6 +430,19 @@ private void openAddReservationWindowForClient(Client client) {
         allUsers.setAll(Fabrique.getService().findAllUsers());
         allClients.setAll(Fabrique.getService().getAllClients());
         allParrains.setAll(Fabrique.getService().getAllParrains());
+        
+        // AJOUT: Charger les clients avec temps restant
+        List<Client> allClientsData = Fabrique.getService().getAllClients();
+        List<Client> remainingTimeClients = allClientsData.stream()
+            .filter(client ->
+                client.getPhone() != null &&
+                !client.getPhone().trim().isEmpty() &&
+                client.getReservations() != null &&
+                !client.getReservations().isEmpty()
+            )
+            .collect(Collectors.toList());
+        allRemainingTimeClients.setAll(remainingTimeClients);
+        
         applyFilters();
     }
 
@@ -584,7 +638,7 @@ private void openAddReservationWindowForClient(Client client) {
         new Alert(type, message).show();
     }
 
-   private Duration calculateRemainingTimeForClient(Client client) {
+    private Duration calculateRemainingTimeForClient(Client client) {
         List<GameSession> sessions = Fabrique.getService().findGameSessionsByClientId(client.getId());
         Duration totalRemainingTime = Duration.ZERO;
         for (GameSession session : sessions) {
@@ -598,8 +652,6 @@ private void openAddReservationWindowForClient(Client client) {
         return totalRemainingTime;
     }
 
-
-
     // Méthode pour formater la durée en "Xh Ymin"
     private String formatDuration(Duration duration) {
         if (duration == null || duration.isZero() || duration.isNegative()) {
@@ -611,49 +663,35 @@ private void openAddReservationWindowForClient(Client client) {
     }
 
     public void loadClientsWithRemainingTime() {
-    List<Client> allClients = Fabrique.getService().getAllClients();
-    List<Client> filteredClients = allClients.stream()
-        .filter(client ->
-            client.getPhone() != null &&
-            !client.getPhone().trim().isEmpty() &&
-            client.getReservations() != null &&
-            !client.getReservations().isEmpty()
-        )
-        .collect(Collectors.toList());
-
-    // Affiche tous les clients filtrés, même ceux sans temps restant
-    remainingTimeClientsTable.setItems(FXCollections.observableArrayList(filteredClients));
-}
-
-
-
+        // Cette méthode est maintenant gérée par refreshAllData() et applyFilters()
+        // Le tableau affiche automatiquement les données filtrées et paginées
+    }
 
     // Redémarrer une session avec le temps restant
-   private void restartSessionWithRemainingTime(Client client) {
-    Duration remainingTime = calculateRemainingTimeForClient(client);
-    if (remainingTime.isZero() || remainingTime.isNegative()) {
-        showAlert(AlertType.INFORMATION, "Ce client n'a pas de temps restant.");
-        return;
+    private void restartSessionWithRemainingTime(Client client) {
+        Duration remainingTime = calculateRemainingTimeForClient(client);
+        if (remainingTime.isZero() || remainingTime.isNegative()) {
+            showAlert(AlertType.INFORMATION, "Ce client n'a pas de temps restant.");
+            return;
+        }
+
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/views/ChoosePosteAndGame.fxml"));
+            Scene scene = new Scene(loader.load());
+            Stage stage = new Stage();
+            stage.setTitle("Reprendre une session");
+            stage.setScene(scene);
+            stage.initModality(Modality.APPLICATION_MODAL);
+
+            ChoosePosteAndGameController controller = loader.getController();
+            controller.setClient(client);
+            controller.setRemainingTime(remainingTime);
+            controller.setParentController(this);
+
+            stage.showAndWait();
+        } catch (IOException e) {
+            e.printStackTrace();
+            showAlert(AlertType.ERROR, "Impossible d'ouvrir la fenêtre de sélection de poste et de jeu.");
+        }
     }
-
-    try {
-        FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/views/ChoosePosteAndGame.fxml"));
-        Scene scene = new Scene(loader.load());
-        Stage stage = new Stage();
-        stage.setTitle("Reprendre une session");
-        stage.setScene(scene);
-        stage.initModality(Modality.APPLICATION_MODAL);
-
-        ChoosePosteAndGameController controller = loader.getController();
-        controller.setClient(client);
-        controller.setRemainingTime(remainingTime);
-        controller.setParentController(this);
-
-        stage.showAndWait();
-    } catch (IOException e) {
-        e.printStackTrace();
-        showAlert(AlertType.ERROR, "Impossible d'ouvrir la fenêtre de sélection de poste et de jeu.");
-    }
-}
-
 }

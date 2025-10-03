@@ -75,6 +75,7 @@ public class ReservationController implements Initializable {
     private User connectedUser;
     private Set<Integer> notifiedSessions = new HashSet<>();
     private static ReservationController instance;
+    private PosteJeuController posteJeuController;
 
     public ReservationController() {
         instance = this;
@@ -82,6 +83,11 @@ public class ReservationController implements Initializable {
 
     public static ReservationController getInstance() {
         return instance;
+    }
+
+
+    public void setPosteJeuController(PosteJeuController posteJeuController) {
+        this.posteJeuController = posteJeuController;
     }
 
     @Override
@@ -141,7 +147,12 @@ public class ReservationController implements Initializable {
                 startButton.setEffect(new DropShadow(5, Color.web("#00000033")));
                 startButton.setOnAction(event -> {
                     Reservation reservation = getTableView().getItems().get(getIndex());
-                    startReservationSession(reservation);
+                    try {
+                        startReservationSession(reservation);
+                    } catch (Exception e) {
+                        // TODO Auto-generated catch block
+                        e.printStackTrace();
+                    }
                 });
                 pane.setAlignment(Pos.CENTER);
             }
@@ -243,12 +254,22 @@ public class ReservationController implements Initializable {
                                     Fabrique.getService().pauseGameSession(session);
                                     loadActiveSessions();
                                     loadReservations();
-                                    ControllerUtils.showInfoAlert("Session en pause", "La session et la réservation ont été mises en pause.");
+                                    ControllerUtils.showInfoAlert("Session en pause", "La session a été mise en pause.");
+
+                                    // Rafraîchir PosteJeuController
+                                    if (posteJeuController != null) {
+                                        try {
+                                            posteJeuController.refreshPostes();
+                                        } catch (Exception e) {
+                                            e.printStackTrace();
+                                        }
+                                    }
                                 } catch (Exception e) {
                                     ControllerUtils.showErrorAlert("Erreur", "Erreur lors de la mise en pause: " + e.getMessage());
                                 }
                             }
                         });
+
                         resumeButton.setOnAction(event -> {
                             GameSession session = getTableView().getItems().get(getIndex());
                             if (session != null && "En pause".equalsIgnoreCase(session.getStatus())) {
@@ -256,12 +277,18 @@ public class ReservationController implements Initializable {
                                     Fabrique.getService().resumeGameSession(session);
                                     loadActiveSessions();
                                     loadReservations();
-                                    ControllerUtils.showInfoAlert("Session reprise", "La session et la réservation ont été reprises.");
+                                    ControllerUtils.showInfoAlert("Session reprise", "La session a été reprise.");
+
+                                    // Rafraîchir PosteJeuController
+                                    if (posteJeuController != null) {
+                                        posteJeuController.refreshPostes();
+                                    }
                                 } catch (Exception e) {
                                     ControllerUtils.showErrorAlert("Erreur", "Erreur lors de la reprise: " + e.getMessage());
                                 }
                             }
                         });
+
                     }
                     @Override
                     protected void updateItem(Void item, boolean empty) {
@@ -271,7 +298,9 @@ public class ReservationController implements Initializable {
                         } else {
                             GameSession session = getTableView().getItems().get(getIndex());
                             if (session != null) {
-                                pauseButton.setVisible("Active".equalsIgnoreCase(session.getStatus()));
+                                Client client = session.getClient();
+                                boolean isTemporaryClient = client == null || client.getPhone() == null || client.getPhone().isEmpty();
+                                pauseButton.setVisible("Active".equalsIgnoreCase(session.getStatus()) && !isTemporaryClient);
                                 resumeButton.setVisible("En pause".equalsIgnoreCase(session.getStatus()));
                                 setGraphic(pane);
                             } else {
@@ -351,53 +380,61 @@ public class ReservationController implements Initializable {
         }
     }
 
-    private void startReservationSession(Reservation reservation) {
-        if (!"En attente".equals(reservation.getStatus())) {
-            ControllerUtils.showErrorAlert("Action impossible", "Cette réservation ne peut pas être démarrée.");
-            return;
-        }
-        Poste poste = reservation.getPoste();
-        if (poste.isHorsService()) {
-            ControllerUtils.showErrorAlert("Poste hors service", "Le poste " + poste.getName() + " est hors service.");
-            return;
-        }
-        // Vérifier qu'il n'y a pas de session ACTIVE sur ce poste
-        GameSession activeSessionOnPoste = Fabrique.getService().getActiveSessionForPoste(poste);
-        if (activeSessionOnPoste != null) {
-            ControllerUtils.showErrorAlert("Poste occupé", "Le poste " + poste.getName() + " est occupé par une autre session active.");
-            return;
-        }
-        // Vérifier qu'il n'y a pas déjà une session en pause pour cette réservation
-        GameSession pausedSession = Fabrique.getService().getAllGameSessions().stream()
-            .filter(s -> "En pause".equalsIgnoreCase(s.getStatus()) && s.getReservation().getId() == reservation.getId())
-            .findFirst()
-            .orElse(null);
-        if (pausedSession != null) {
-            ControllerUtils.showErrorAlert("Session en pause", "Une session est déjà en pause pour cette réservation. Veuillez la reprendre.");
-            return;
-        }
-        // Créer une nouvelle session
-        GameSession newSession = new GameSession();
-        newSession.setReservation(reservation);
-        newSession.setClient(reservation.getClient());
-        newSession.setPoste(poste);
-        newSession.setGame(reservation.getGame());
-        newSession.setStartTime(LocalDateTime.now());
-        newSession.setPaidDuration(reservation.getDuration());
-        newSession.setStatus("Active");
-        try {
-            Fabrique.getService().addGameSession(newSession);
-            reservation.setStatus("Active");
-            Fabrique.getService().updateReservation(reservation);
-            ControllerUtils.showInfoAlert("Session démarrée", String.format("Session pour le poste '%s' démarrée.", poste.getName()));
-            loadReservations();
-            loadActiveSessions();
-            mainTabPane.getSelectionModel().select(activeSessionsTab);
-        } catch (Exception e) {
-            ControllerUtils.showErrorAlert("Erreur", "Erreur lors du démarrage: " + e.getMessage());
-        }
+private void startReservationSession(Reservation reservation) throws Exception {
+    if (!"En attente".equals(reservation.getStatus())) {
+        ControllerUtils.showErrorAlert("Action impossible", "Cette réservation ne peut pas être démarrée.");
+        return;
+    }
+    Poste poste = reservation.getPoste();
+    if (poste.isHorsService()) {
+        ControllerUtils.showErrorAlert("Poste hors service", "Le poste " + poste.getName() + " est hors service.");
+        return;
     }
 
+    // Vérifier qu'il n'y a pas de session ACTIVE sur ce poste
+    GameSession activeSessionOnPoste = Fabrique.getService().getActiveSessionForPoste(poste);
+    if (activeSessionOnPoste != null) {
+        ControllerUtils.showErrorAlert("Poste occupé", "Le poste " + poste.getName() + " est occupé par une autre session active.");
+        return;
+    }
+
+    // ⭐⭐ SUPPRIMEZ COMPLÈTEMENT cette partie - NE PAS dissocier les sessions en pause ⭐⭐
+    // List<GameSession> pausedSessionsOnPoste = Fabrique.getService().getAllGameSessions().stream()
+    //     .filter(s -> "En pause".equalsIgnoreCase(s.getStatus()) && s.getPoste() != null && s.getPoste().getId() == poste.getId())
+    //     .collect(Collectors.toList());
+    //
+    // for (GameSession pausedSession : pausedSessionsOnPoste) {
+    //     pausedSession.setPoste(null);  // ⚠️ CAUSE L'ERREUR NOT NULL!
+    //     Fabrique.getService().updateGameSession(pausedSession);
+    // }
+
+    // Créer une nouvelle session
+    GameSession newSession = new GameSession();
+    newSession.setReservation(reservation);
+    newSession.setClient(reservation.getClient());
+    newSession.setPoste(poste);
+    newSession.setGame(reservation.getGame());
+    newSession.setStartTime(LocalDateTime.now());
+    newSession.setPaidDuration(reservation.getDuration());
+    newSession.setStatus("Active");
+
+    try {
+        Fabrique.getService().addGameSession(newSession);
+        reservation.setStatus("Active");
+        Fabrique.getService().updateReservation(reservation);
+        ControllerUtils.showInfoAlert("Session démarrée", String.format("Session pour le poste '%s' démarrée.", poste.getName()));
+        loadReservations();
+        loadActiveSessions();
+        mainTabPane.getSelectionModel().select(activeSessionsTab);
+        
+        // Rafraîchir PosteJeuController
+        if (posteJeuController != null) {
+            posteJeuController.refreshPostes();
+        }
+    } catch (Exception e) {
+        ControllerUtils.showErrorAlert("Erreur", "Erreur lors du démarrage: " + e.getMessage());
+    }
+}
 
 
     private void cancelReservation(Reservation reservation) {
@@ -529,7 +566,7 @@ public class ReservationController implements Initializable {
 
 
 
-  private void terminateGameSession(GameSession session) {
+ private void terminateGameSession(GameSession session) {
     if (session == null) {
         ControllerUtils.showErrorAlert("Erreur", "Aucune session sélectionnée.");
         return;
@@ -540,19 +577,28 @@ public class ReservationController implements Initializable {
             try {
                 LocalDateTime endTime = session.getStartTime().plus(session.getPaidDuration());
                 Duration remainingTime = Duration.between(LocalDateTime.now(), endTime);
-
-                if (remainingTime != null && !remainingTime.isZero() && !remainingTime.isNegative()) {
-                    // Si le temps n'est pas écoulé, mettre en pause
-                    session.setStatus("En pause");
-                    session.setPausedRemainingTime(remainingTime);
-                    session.setPaused(true);
-                } else {
-                    // Si le temps est écoulé, terminer la session
+                // Vérifier si le client est temporaire (sans numéro de téléphone)
+                Client client = session.getClient();
+                boolean isTemporaryClient = client == null || client.getPhone() == null || client.getPhone().isEmpty();
+                if (isTemporaryClient) {
+                    // Client temporaire : mettre le temps restant à 0 et terminer la session
                     session.setStatus("Terminée");
                     session.setEndTime(LocalDateTime.now());
+                    session.setPausedRemainingTime(Duration.ZERO);
+                } else {
+                    // Client normal : logique actuelle
+                    if (remainingTime != null && !remainingTime.isZero() && !remainingTime.isNegative()) {
+                        session.setStatus("En pause");
+                        session.setPausedRemainingTime(remainingTime);
+                        session.setPaused(true);
+                    } else {
+                        session.setStatus("Terminée");
+                        session.setEndTime(LocalDateTime.now());
+                    }
                 }
-
+                // Mettre à jour la session
                 Fabrique.getService().updateGameSession(session);
+                // Mettre à jour la réservation
                 Reservation reservation = session.getReservation();
                 if (reservation != null) {
                     reservation.setStatus(session.getStatus());
@@ -565,13 +611,21 @@ public class ReservationController implements Initializable {
                 if (userController != null) {
                     userController.loadClientsWithRemainingTime();
                 }
+
+                // Rafraîchir PosteJeuController
+                if (posteJeuController != null) {
+                    try {
+                        posteJeuController.refreshPostes();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
             } catch (Exception e) {
                 ControllerUtils.showErrorAlert("Erreur", "Échec de la mise à jour: " + e.getMessage());
             }
         }
     });
 }
-
 
 
 

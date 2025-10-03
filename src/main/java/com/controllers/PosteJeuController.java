@@ -49,9 +49,18 @@ public class PosteJeuController {
     private final int BASE_ROWS = 2;
 
     private boolean isSuperAdmin;
+    private static PosteJeuController instance;
 
     private final Set<Integer> notifiedSessionsEnded = new HashSet<>();
     private final Set<Integer> notifiedSessionsTwoMinutes = new HashSet<>();
+
+    public PosteJeuController() {
+        instance = this;
+    }
+
+    public static PosteJeuController getInstance() {
+        return instance;
+    }
 
     @FXML
     public void initialize() throws Exception {
@@ -147,7 +156,9 @@ public class PosteJeuController {
         }
     }
 
-   /**
+
+    
+/**
  * Creates a modern, styled VBox representing a single Poste card.
  * Includes status logic and admin buttons.
  *
@@ -161,7 +172,6 @@ private VBox createPosteCard(Poste poste) throws Exception {
     cardContent.setAlignment(Pos.CENTER_LEFT);
     cardContent.setStyle("-fx-background-color: #ffffff; -fx-background-radius: 10px; -fx-border-radius: 10px; " +
                          "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.15), 10, 0, 0, 4);");
-
     cardContent.setMaxWidth(Double.MAX_VALUE);
     cardContent.setPrefHeight(Region.USE_COMPUTED_SIZE);
 
@@ -174,62 +184,48 @@ private VBox createPosteCard(Poste poste) throws Exception {
         statusColorHex = "#D50000";
     } else {
         List<GameSession> allSessions = Fabrique.getService().getAllGameSessions();
-        List<GameSession> sessionsForThisPoste = allSessions.stream()
-            .filter(session -> session.getPoste() != null && 
-                            session.getPoste().getId() == poste.getId() && 
-                            ("Active".equals(session.getStatus()) || "En pause".equals(session.getStatus())))
+        
+        // Filtrer UNIQUEMENT les sessions ACTIVES sur ce poste
+        // IGNORER COMPLÈTEMENT les sessions en pause pour l'affichage du statut
+        List<GameSession> activeSessionsOnThisPoste = allSessions.stream()
+            .filter(session -> session.getPoste() != null &&
+                            session.getPoste().getId() == poste.getId() &&
+                            "Active".equals(session.getStatus())) // ← SEULEMENT "Active"
             .collect(Collectors.toList());
 
-        boolean hasActiveSession = false;
-        boolean hasPausedSession = false;
-        
-        for (GameSession session : sessionsForThisPoste) {
-            java.time.Duration remaining = session.getRemainingTime();
-            
-            // Vérifier d'abord si c'est une session en pause
-            if ("En pause".equals(session.getStatus())) {
-                hasPausedSession = true;
-                if (remaining.isPositive()) {
-                    if (shortestRemaining == null || remaining.compareTo(shortestRemaining) < 0) {
-                        shortestRemaining = remaining;
-                    }
-                }
-            } 
-            // Sinon, c'est une session active
-            else if ("Active".equals(session.getStatus())) {
-                hasActiveSession = true;
-                if (remaining.isPositive()) {
-                    if (shortestRemaining == null || remaining.compareTo(shortestRemaining) < 0) {
-                        shortestRemaining = remaining;
-                    }
+        boolean hasActiveSession = !activeSessionsOnThisPoste.isEmpty();
 
-                    // Notification pour les sessions actives seulement
-                    if (remaining.toMinutes() <= 2 && !notifiedSessionsTwoMinutes.contains(session.getId())) {
-                        notifiedSessionsTwoMinutes.add(session.getId());
-                        showTwoMinutesLeftNotification(poste.getName());
-                    }
-                } else {
-                    // Session active expirée
-                    if (!notifiedSessionsEnded.contains(session.getId())) {
-                        notifiedSessionsEnded.add(session.getId());
-                        session.setStatus("Terminée");
-                        Fabrique.getService().updateGameSession(session);
-                        openSessionEndDialog(session);
-                    }
+        // Calcul du temps restant pour les sessions ACTIVES uniquement
+        for (GameSession session : activeSessionsOnThisPoste) {
+            java.time.Duration remaining = session.getRemainingTime();
+            if (remaining != null && remaining.isPositive()) {
+                if (shortestRemaining == null || remaining.compareTo(shortestRemaining) < 0) {
+                    shortestRemaining = remaining;
+                }
+                // Notification à 2 minutes pour les sessions actives
+                if (remaining.toMinutes() <= 2 && !notifiedSessionsTwoMinutes.contains(session.getId())) {
+                    notifiedSessionsTwoMinutes.add(session.getId());
+                    showTwoMinutesLeftNotification(poste.getName());
+                }
+            } else {
+                // Session active expirée - la terminer
+                if (!notifiedSessionsEnded.contains(session.getId())) {
+                    notifiedSessionsEnded.add(session.getId());
+                    session.setStatus("Terminée");
+                    Fabrique.getService().updateGameSession(session);
+                    openSessionEndDialog(session);
                 }
             }
         }
 
-        // Déterminer le statut d'affichage (priorité à "En pause")
-        if (hasPausedSession) {
-            finalStatus = "En pause";
-            statusColorHex = "#FF9800"; // Orange plus foncé pour pause
-        } else if (hasActiveSession) {
+        // DÉTERMINATION DU STATUT - IGNORER LES SESSIONS EN PAUSE
+        if (hasActiveSession) {
             finalStatus = "Occupé";
-            statusColorHex = "#FFA500"; // Orange standard
+            statusColorHex = "#FFA500";
         } else {
+            // Le poste est "Disponible" même s'il a des sessions en pause associées
             finalStatus = "Disponible";
-            statusColorHex = "#00C853"; // Vert
+            statusColorHex = "#00C853";
         }
     }
 
@@ -237,32 +233,21 @@ private VBox createPosteCard(Poste poste) throws Exception {
     statusCircle.setFill(Color.web(statusColorHex));
     statusCircle.setStroke(Color.web("#bdc3c7"));
     statusCircle.setStrokeWidth(1);
-
     Label posteName = new Label(poste.getName());
     posteName.setFont(Font.font("Arial", 18));
     posteName.setStyle("-fx-font-weight: bold; -fx-text-fill: #2c3e50;");
-
     Label statusLabel = new Label("Statut: " + finalStatus);
-    
-    // Afficher le temps restant seulement si disponible et pertinent
-    if (shortestRemaining != null && !poste.isHorsService() && 
-        ("Occupé".equals(finalStatus) || "En pause".equals(finalStatus))) {
-        
+
+    // Gestion de l'affichage du temps restant - UNIQUEMENT pour "Occupé"
+    if (shortestRemaining != null && !poste.isHorsService() && "Occupé".equals(finalStatus)) {
         long minutes = shortestRemaining.toMinutes();
         long seconds = shortestRemaining.toSeconds() % 60;
         
-        if ("En pause".equals(finalStatus)) {
-            statusLabel.setText(String.format("Statut: %s (Temps gelé: %02d:%02d)", finalStatus, minutes, seconds));
-            statusLabel.setStyle("-fx-font-size: 13px; -fx-text-fill: #FF9800; -fx-font-weight: bold;");
-        } else {
-            statusLabel.setText(String.format("Statut: %s (Reste: %02d:%02d)", finalStatus, minutes, seconds));
-            statusLabel.setStyle("-fx-font-size: 13px; -fx-text-fill: #e67e22; -fx-font-weight: bold;");
-        }
+        statusLabel.setText(String.format("Statut: %s (Reste: %02d:%02d)", finalStatus, minutes, seconds));
+        statusLabel.setStyle("-fx-font-size: 13px; -fx-text-fill: #e67e22; -fx-font-weight: bold;");
     } else {
-        // Style différent selon le statut
-        if ("En pause".equals(finalStatus)) {
-            statusLabel.setStyle("-fx-font-size: 13px; -fx-text-fill: #FF9800; -fx-font-weight: bold;");
-        } else if ("Occupé".equals(finalStatus)) {
+        // Style selon le statut sans temps restant
+        if ("Occupé".equals(finalStatus)) {
             statusLabel.setStyle("-fx-font-size: 13px; -fx-text-fill: #e67e22; -fx-font-weight: bold;");
         } else if ("Hors service".equals(finalStatus)) {
             statusLabel.setStyle("-fx-font-size: 13px; -fx-text-fill: #D50000; -fx-font-weight: bold;");
@@ -318,7 +303,7 @@ private VBox createPosteCard(Poste poste) throws Exception {
         btnSupprimer.setOnAction(e -> supprimerPoste(poste));
         btnSupprimer.setStyle("-fx-background-color: #e74c3c; -fx-text-fill: white; -fx-font-size: 12px; " +
                               "-fx-padding: 8px 15px; -fx-background-radius: 5px; -fx-cursor: hand;");
-        
+
         adminButtons.getChildren().addAll(btnModifier, btnSupprimer);
         cardContent.getChildren().add(adminButtons);
     }

@@ -225,7 +225,16 @@ public class MainSceneController implements Initializable {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/views/" + fxmlName + ".fxml"));
             Parent view = loader.load();
-            
+
+            // Si la vue est "reservations", on passe le PosteJeuController
+            if (fxmlName.equals("reservations")) {
+                ReservationController reservationController = loader.getController();
+                PosteJeuController posteJeuController = PosteJeuController.getInstance();
+                if (posteJeuController != null) {
+                    reservationController.setPosteJeuController(posteJeuController);
+                }
+            }
+
             contentPane.getChildren().clear();
             contentPane.getChildren().add(view);
             AnchorPane.setTopAnchor(view, 0.0);
@@ -233,17 +242,14 @@ public class MainSceneController implements Initializable {
             AnchorPane.setLeftAnchor(view, 0.0);
             AnchorPane.setRightAnchor(view, 0.0);
 
-            // LOGIQUE CLÉ : Masquer le menu si c'est la page de connexion, d'inscription ou de chargement
-            if (fxmlName.equals("connexion") || fxmlName.equals("register") || fxmlName.equals("LoadingScreen")) { // <-- MODIFICATION ICI
-                setMenuVisibility(false); // Cache le menu pour ces pages
-                if (lblUserRole != null) lblUserRole.setText(""); // Efface le rôle affiché
-                AnchorPane.setLeftAnchor(contentPane, 0.0); // La vue prend toute la largeur
+            if (fxmlName.equals("connexion") || fxmlName.equals("register") || fxmlName.equals("LoadingScreen")) {
+                setMenuVisibility(false);
+                if (lblUserRole != null) lblUserRole.setText("");
+                AnchorPane.setLeftAnchor(contentPane, 0.0);
             } else {
-                // Pour les autres vues (qui nécessitent une connexion), on affiche et met à jour le menu
-                AnchorPane.setLeftAnchor(contentPane, 220.0); // La vue prend la place à droite du menu
+                AnchorPane.setLeftAnchor(contentPane, 220.0);
                 updateMenuForUser(Fabrique.getService().getCurrentUser());
             }
-
         } catch (IOException e) {
             e.printStackTrace();
             Alert alert = new Alert(AlertType.ERROR);
@@ -253,6 +259,7 @@ public class MainSceneController implements Initializable {
             alert.showAndWait();
         }
     }
+
 
     /**
      * Méthode pour changer le titre affiché dans la barre de titre personnalisée.

@@ -937,95 +937,121 @@ public class Service implements IService {
             .collect(Collectors.toList());
     }
 
-    @Override
-    @Transactional
-    public void pauseGameSession(GameSession session) throws Exception {
-        if (!"Active".equalsIgnoreCase(session.getStatus())) {
-            throw new Exception("Seules les sessions actives peuvent être mises en pause.");
-        }
-        
-        // Calculer le temps restant ACTUEL au moment de la pause
-        LocalDateTime endTime = session.getStartTime().plus(session.getPaidDuration());
-        Duration remainingTime = Duration.between(LocalDateTime.now(), endTime);
-        
-        // Sauvegarder le temps restant exact au moment de la pause
-        session.setPausedRemainingTime(remainingTime.isNegative() ? Duration.ZERO : remainingTime);
-        session.setPaused(true);
-        session.setStatus("En pause");
-        
-        // Mettre à jour la session
-        gameSessionRepository.updateGameSession(session);
-        
-        // Mettre à jour la réservation associée
-        Reservation reservation = session.getReservation();
-        if (reservation != null) {
-            reservation.setStatus("En pause");
-            reservationRepository.update(reservation);
-        }
-        
-        // Libérer le poste
-        Poste poste = session.getPoste();
-        if (poste != null) {
-            poste.setHorsService(false);
-            posteRepository.update(poste);
-        }
+@Override
+@Transactional
+public void pauseGameSession(GameSession session) throws Exception {
+    if (!"Active".equalsIgnoreCase(session.getStatus())) {
+        throw new Exception("Seules les sessions actives peuvent être mises en pause.");
     }
 
+    // Calculer le temps restant ACTUEL au moment de la pause
+    LocalDateTime endTime = session.getStartTime().plus(session.getPaidDuration());
+    Duration remainingTime = Duration.between(LocalDateTime.now(), endTime);
+
+    // Sauvegarder le temps restant exact au moment de la pause
+    session.setPausedRemainingTime(remainingTime.isNegative() ? Duration.ZERO : remainingTime);
+    session.setPaused(true);
+    session.setStatus("En pause");
+
+    // NE PAS dissocier le poste - garder l'association pour la reprise
+    // Le poste reste associé mais l'interface l'ignorera pour l'affichage "Disponible"
+    Poste posteActuel = session.getPoste();
+
+    // Mettre à jour la session (sans dissociation du poste)
+    gameSessionRepository.updateGameSession(session);
+
+    // Mettre à jour la réservation associée
+    Reservation reservation = session.getReservation();
+    if (reservation != null) {
+        reservation.setStatus("En pause");
+        reservationRepository.update(reservation);
+    }
+
+    // Logger pour débogage
+    System.out.println("Session " + session.getId() + " mise en pause sur le poste " + 
+                      (posteActuel != null ? posteActuel.getName() : "null") + 
+                      ". Poste reste associé mais sera ignoré dans l'affichage.");
+}
 
 
-
-   @Override
+@Override
 @Transactional
 public void resumeGameSession(GameSession session) throws Exception {
     if (!"En pause".equalsIgnoreCase(session.getStatus())) {
         throw new Exception("Seules les sessions en pause peuvent être reprises.");
     }
-    
-    // Vérifier que le poste est disponible
-    Poste poste = session.getPoste();
-    if (poste == null) {
-        throw new Exception("Aucun poste associé à cette session.");
+
+    // IMPORTANT: La session en pause n'a plus de poste associé après la pause
+    // On doit donc récupérer le poste depuis la réservation
+    Poste poste = null;
+    Reservation reservation = session.getReservation();
+    if (reservation != null) {
+        poste = reservation.getPoste();
     }
-    
-    // Vérifier qu'il n'y a pas déjà une session active sur ce poste
+
+    if (poste == null) {
+        throw new Exception("Aucun poste défini pour reprendre cette session. " +
+                           "Utilisez resumePausedSessionForClient pour assigner un nouveau poste.");
+    }
+
+    // Vérifier que le poste est disponible (pas de session active)
     GameSession activeSessionOnPoste = getActiveSessionForPoste(poste);
     if (activeSessionOnPoste != null && "Active".equalsIgnoreCase(activeSessionOnPoste.getStatus())) {
-        throw new Exception("Le poste " + poste.getName() + " est déjà occupé par une autre session.");
+        throw new Exception("Le poste " + poste.getName() + " est déjà occupé par une autre session active.");
     }
-    
+
+    // Vérifier qu'il n'y a pas de session en pause encore associée à ce poste
+    List<GameSession> pausedSessionsOnPoste = gameSessionRepository.findPausedSessionsByPoste(poste);
+    if (!pausedSessionsOnPoste.isEmpty()) {
+        // Dissocier les sessions en pause de ce poste (nettoyage de sécurité)
+       for (GameSession pausedSession : pausedSessionsOnPoste) {
+            if (pausedSession.getId() != session.getId()) {  // Utilisez != au lieu de !equals()
+                pausedSession.setPoste(null);
+                gameSessionRepository.updateGameSession(pausedSession);
+                System.out.println("Session en pause " + pausedSession.getId() + " dissociée du poste " + poste.getName());
+            }
+        }
+    }
+
     // Vérifier que le temps restant est valide
     Duration remainingTime = session.getPausedRemainingTime();
     if (remainingTime == null || remainingTime.isNegative()) {
         throw new Exception("Le temps restant pour cette session est invalide.");
     }
-    
+
+    // Réassocier la session au poste original
+    session.setPoste(poste);
+
     if (remainingTime.isZero()) {
         // Si le temps restant est zéro, terminer la session
         session.setStatus("Terminée");
         session.setEndTime(LocalDateTime.now());
+        session.setPaused(false);
+        session.setPausedRemainingTime(null);
     } else {
         // Reprendre la session avec le temps restant exact
-        session.setStartTime(LocalDateTime.now().minus(session.getPaidDuration().minus(remainingTime)));
+        // Calculer le nouveau startTime pour que le temps restant soit respecté
+        LocalDateTime newStartTime = LocalDateTime.now().minus(session.getPaidDuration().minus(remainingTime));
+        session.setStartTime(newStartTime);
         session.setPaused(false);
         session.setStatus("Active");
+        session.setPausedRemainingTime(null); // Réinitialiser après reprise
     }
-    
+
     // Mettre à jour la session
     gameSessionRepository.updateGameSession(session);
-    
+
     // Mettre à jour la réservation associée
-    Reservation reservation = session.getReservation();
     if (reservation != null) {
         reservation.setStatus(session.getStatus());
         reservationRepository.update(reservation);
     }
-    
-    // ⚠️ SUPPRIMEZ CES LIGNES ⚠️
-    // if (poste != null && "Active".equalsIgnoreCase(session.getStatus())) {
-    //     poste.setHorsService(true);
-    //     posteRepository.update(poste);
-    // }
+
+    System.out.println("Session " + session.getId() + " reprise sur le poste " + poste.getName() + 
+                      " avec " + remainingTime.toMinutes() + " minutes restantes.");
 }
+
+
 
 @Override
 @Transactional
