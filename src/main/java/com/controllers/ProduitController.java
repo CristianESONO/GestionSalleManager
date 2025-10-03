@@ -35,6 +35,8 @@ import javafx.stage.StageStyle; // Pour le style de la fenêtre du panier
 import java.io.File; // Import pour gérer les fichiers locaux
 import java.io.IOException;
 import java.net.MalformedURLException; // Import pour gérer les URL mal formées
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.sql.SQLException;
 import java.math.BigDecimal; // Pour les prix
 import java.time.LocalDate; // Pour les dates de péremption
@@ -231,13 +233,22 @@ public class ProduitController {
         try {
             String imagePath = produit.getImage();
             if (imagePath != null && !imagePath.isEmpty()) {
-                File file = new File(imagePath);
+                // CORRECTION : RECONSTRUIRE LE CHEMIN ABSOLU VERS AppData
+                String appDataPath = System.getenv("APPDATA");
+                Path absoluteImagePath = Paths.get(appDataPath, "GestionSalles", imagePath);
+                File file = absoluteImagePath.toFile();
+                
+                System.out.println("DEBUG - Chemin image relatif: " + imagePath);
+                System.out.println("DEBUG - Chemin image absolu: " + absoluteImagePath);
+                System.out.println("DEBUG - Fichier existe: " + file.exists());
+                
                 if (file.exists()) {
-                    // CHARGEMENT CORRECT DE L'IMAGE À PARTIR D'UN CHEMIN ABSOLU
-                    Image image = new Image(file.toURI().toURL().toExternalForm(), PRODUCT_IMAGE_WIDTH, PRODUCT_IMAGE_HEIGHT, false, true); // Taille fixe
+                    // CHARGEMENT CORRECT DE L'IMAGE À PARTIR DU CHEMIN ABSOLU
+                    Image image = new Image(file.toURI().toURL().toExternalForm(), PRODUCT_IMAGE_WIDTH, PRODUCT_IMAGE_HEIGHT, false, true);
                     imageView.setImage(image);
+                    System.out.println("DEBUG - Image chargée avec succès pour: " + produit.getNom());
                 } else {
-                    System.err.println("Failed to load image for product " + produit.getNom() + ": File does not exist at " + imagePath + ". Using placeholder.");
+                    System.err.println("Failed to load image for product " + produit.getNom() + ": File does not exist at " + absoluteImagePath + ". Using placeholder.");
                     // Fallback vers une image de remplacement si le fichier n'existe pas, avec taille fixe
                     imageView.setImage(new Image(getClass().getResourceAsStream("/com/img/placeholder.png"), PRODUCT_IMAGE_WIDTH, PRODUCT_IMAGE_HEIGHT, false, true));
                 }
@@ -246,7 +257,7 @@ public class ProduitController {
                 imageView.setImage(new Image(getClass().getResourceAsStream("/com/img/placeholder.png"), PRODUCT_IMAGE_WIDTH, PRODUCT_IMAGE_HEIGHT, false, true));
             }
         } catch (MalformedURLException e) {
-            System.err.println("Failed to load image for product " + produit.getNom() + ": Invalid URL for " + produit.getImage() + ". Using placeholder. Error: " + e.getMessage());
+            System.err.println("Failed to load image for product " + produit.getNom() + ": Invalid URL. Using placeholder. Error: " + e.getMessage());
             imageView.setImage(new Image(getClass().getResourceAsStream("/com/img/placeholder.png"), PRODUCT_IMAGE_WIDTH, PRODUCT_IMAGE_HEIGHT, false, true));
         } catch (Exception e) {
             System.err.println("Failed to load image for product " + produit.getNom() + ": Error loading image. Using placeholder. Error: " + e.getMessage());
