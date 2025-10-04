@@ -44,7 +44,7 @@
                 <URL value="@styles.css" />
             </stylesheets>
             <tabs>
-                <Tab fx:id="clientsTab" text="Clients Fidels">
+                <Tab fx:id="clientsTab" text="Clients Fidèles">
                     <style>
                         -fx-background-color: #3498db;
                         -fx-text-fill: white;

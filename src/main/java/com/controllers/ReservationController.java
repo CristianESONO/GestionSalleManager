@@ -140,48 +140,56 @@ public class ReservationController implements Initializable {
         });
         statusColumn.setCellValueFactory(cellData -> new SimpleStringProperty(cellData.getValue().getStatus()));
        actionColumn.setCellFactory(param -> new TableCell<>() {
-            private final Button startButton = new Button("Démarrer");
-            private final HBox pane = new HBox(5);
-            {
-                startButton.setStyle("-fx-background-color: #2ecc71; -fx-text-fill: white; -fx-font-size: 11px; -fx-padding: 5px 8px; -fx-border-radius: 3px; -fx-background-radius: 3px; -fx-cursor: hand;");
-                startButton.setEffect(new DropShadow(5, Color.web("#00000033")));
-                startButton.setOnAction(event -> {
-                    Reservation reservation = getTableView().getItems().get(getIndex());
-                    try {
-                        startReservationSession(reservation);
-                    } catch (Exception e) {
-                        // TODO Auto-generated catch block
-                        e.printStackTrace();
-                    }
-                });
-                pane.setAlignment(Pos.CENTER);
-            }
-            @Override
-            protected void updateItem(Void item, boolean empty) {
-                super.updateItem(item, empty);
-                if (empty) {
-                    setGraphic(null);
-                } else {
-                    Reservation reservation = getTableView().getItems().get(getIndex());
-                    pane.getChildren().clear();
-                    // Afficher le bouton "Démarrer" SI ET SEULEMENT si la réservation est "En attente"
-                    if ("En attente".equals(reservation.getStatus())) {
-                        Poste poste = reservation.getPoste();
-                        GameSession activeSessionOnPoste = Fabrique.getService().getActiveSessionForPoste(poste);
-                        // Le bouton est actif si le poste n'est pas hors service et n'a pas de session ACTIVE
-                        if (!poste.isHorsService() && activeSessionOnPoste == null) {
-                            startButton.setDisable(false);
-                            pane.getChildren().addAll(startButton);
-                        } else {
-                            startButton.setDisable(true);
-                        }
-                        setGraphic(pane);
+        private final Button startButton = new Button("Démarrer");
+        private final HBox pane = new HBox(5);
+        {
+            startButton.setStyle("-fx-background-color: #2ecc71; -fx-text-fill: white; -fx-font-size: 11px; -fx-padding: 5px 8px; -fx-border-radius: 3px; -fx-background-radius: 3px; -fx-cursor: hand;");
+            startButton.setEffect(new DropShadow(5, Color.web("#00000033")));
+            startButton.setOnAction(event -> {
+                Reservation reservation = getTableView().getItems().get(getIndex());
+                try {
+                    startReservationSession(reservation);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            });
+            pane.setAlignment(Pos.CENTER);
+        }
+        @Override
+        protected void updateItem(Void item, boolean empty) {
+            super.updateItem(item, empty);
+            if (empty) {
+                setGraphic(null);
+            } else {
+                Reservation reservation = getTableView().getItems().get(getIndex());
+                pane.getChildren().clear();
+                // Afficher le bouton "Démarrer" SI ET SEULEMENT si la réservation est "En attente"
+                if ("En attente".equals(reservation.getStatus())) {
+                    Poste poste = reservation.getPoste();
+                    GameSession activeSessionOnPoste = Fabrique.getService().getActiveSessionForPoste(poste);
+
+                    // Vérifier si le client a déjà une session active ou en pause
+                    Client client = reservation.getClient();
+                    List<GameSession> clientSessions = Fabrique.getService().getAllGameSessions().stream()
+                        .filter(s -> s.getClient() != null && s.getClient().getId() == client.getId())
+                        .filter(s -> "Active".equalsIgnoreCase(s.getStatus()) || "En pause".equalsIgnoreCase(s.getStatus()))
+                        .collect(Collectors.toList());
+
+                    // Le bouton est actif si le poste n'est pas hors service, n'a pas de session ACTIVE et que le client n'a pas de session active/en pause
+                    if (!poste.isHorsService() && activeSessionOnPoste == null && clientSessions.isEmpty()) {
+                        startButton.setDisable(false);
+                        pane.getChildren().addAll(startButton);
                     } else {
-                        setGraphic(null);
+                        startButton.setDisable(true);
                     }
+                    setGraphic(pane);
+                } else {
+                    setGraphic(null);
                 }
             }
-        });
+        }
+    });
+
 
     }
 
@@ -381,10 +389,12 @@ public class ReservationController implements Initializable {
     }
 
 private void startReservationSession(Reservation reservation) throws Exception {
+    // Vérifier que la réservation est bien "En attente"
     if (!"En attente".equals(reservation.getStatus())) {
         ControllerUtils.showErrorAlert("Action impossible", "Cette réservation ne peut pas être démarrée.");
         return;
     }
+
     Poste poste = reservation.getPoste();
     if (poste.isHorsService()) {
         ControllerUtils.showErrorAlert("Poste hors service", "Le poste " + poste.getName() + " est hors service.");
@@ -398,15 +408,23 @@ private void startReservationSession(Reservation reservation) throws Exception {
         return;
     }
 
-    // ⭐⭐ SUPPRIMEZ COMPLÈTEMENT cette partie - NE PAS dissocier les sessions en pause ⭐⭐
-    // List<GameSession> pausedSessionsOnPoste = Fabrique.getService().getAllGameSessions().stream()
-    //     .filter(s -> "En pause".equalsIgnoreCase(s.getStatus()) && s.getPoste() != null && s.getPoste().getId() == poste.getId())
-    //     .collect(Collectors.toList());
-    //
-    // for (GameSession pausedSession : pausedSessionsOnPoste) {
-    //     pausedSession.setPoste(null);  // ⚠️ CAUSE L'ERREUR NOT NULL!
-    //     Fabrique.getService().updateGameSession(pausedSession);
-    // }
+    // Vérifier si le client a déjà une session ACTIVE ou EN PAUSE sur un autre poste
+    Client client = reservation.getClient();
+    List<GameSession> clientSessions = Fabrique.getService().getAllGameSessions().stream()
+        .filter(s -> s.getClient() != null && s.getClient().getId() == client.getId())
+        .filter(s -> "Active".equalsIgnoreCase(s.getStatus()) || "En pause".equalsIgnoreCase(s.getStatus()))
+        .collect(Collectors.toList());
+
+    if (!clientSessions.isEmpty()) {
+        String status = clientSessions.get(0).getStatus();
+        String posteName = clientSessions.get(0).getPoste().getName();
+        ControllerUtils.showErrorAlert(
+            "Client occupé",
+            "Ce client a déjà une session " + status.toLowerCase() + " sur le poste " + posteName + ". " +
+            "Veuillez terminer ou reprendre cette session avant d'en démarrer une nouvelle."
+        );
+        return;
+    }
 
     // Créer une nouvelle session
     GameSession newSession = new GameSession();
@@ -426,7 +444,7 @@ private void startReservationSession(Reservation reservation) throws Exception {
         loadReservations();
         loadActiveSessions();
         mainTabPane.getSelectionModel().select(activeSessionsTab);
-        
+
         // Rafraîchir PosteJeuController
         if (posteJeuController != null) {
             posteJeuController.refreshPostes();

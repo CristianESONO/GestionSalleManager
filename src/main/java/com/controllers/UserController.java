@@ -639,18 +639,32 @@ public class UserController {
     }
 
     private Duration calculateRemainingTimeForClient(Client client) {
-        List<GameSession> sessions = Fabrique.getService().findGameSessionsByClientId(client.getId());
-        Duration totalRemainingTime = Duration.ZERO;
-        for (GameSession session : sessions) {
-            if ("En pause".equals(session.getStatus())) {
-                Duration remainingTime = session.getPausedRemainingTime();
-                if (remainingTime != null && !remainingTime.isNegative() && !remainingTime.isZero()) {
-                    totalRemainingTime = totalRemainingTime.plus(remainingTime);
-                }
-            }
+        if (client == null) {
+            return Duration.ZERO;
         }
-        return totalRemainingTime;
+
+        List<GameSession> sessions = Fabrique.getService().findGameSessionsByClientId(client.getId());
+
+        // Filtrer uniquement les sessions en pause avec un temps restant valide
+        List<GameSession> validPausedSessions = sessions.stream()
+            .filter(session -> "En pause".equals(session.getStatus()))
+            .filter(session -> session.getPausedRemainingTime() != null)
+            .filter(session -> !session.getPausedRemainingTime().isNegative())
+            .filter(session -> !session.getPausedRemainingTime().isZero())
+            .collect(Collectors.toList());
+
+        // Trier les sessions par date de mise en pause (la plus récente en premier)
+        validPausedSessions.sort((s1, s2) -> s2.getPausedRemainingTime().compareTo(s1.getPausedRemainingTime()));
+
+        // Retourner uniquement le temps restant de la session en pause la plus récente
+        if (!validPausedSessions.isEmpty()) {
+            return validPausedSessions.get(0).getPausedRemainingTime();
+        }
+
+        return Duration.ZERO;
     }
+
+
 
     // Méthode pour formater la durée en "Xh Ymin"
     private String formatDuration(Duration duration) {

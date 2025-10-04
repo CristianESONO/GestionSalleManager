@@ -640,10 +640,11 @@ private void generateDailyPdf() {
                 System.err.println("Erreur lors du chargement du logo: " + e.getMessage());
             }
 
-            // Titre de l'entreprise
+           // Titre de l'entreprise
             contentStream.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 16);
             String[] companyInfos = {
                 "KAY PLAY GAMING ROOM",
+                "SN DKR 2025 A 28373 NINEA 012344800", // AJOUT ICI
                 "Jaxaay, Parcelle Unité 24, BP 17000, KEUR MASSAR",
                 "Tel. +221 338134720 / 771128514",
                 "Kayplaygamingroom@gmail.com"
@@ -908,10 +909,11 @@ private void generateDailyPdf() {
             System.err.println("Erreur lors du chargement du logo: " + e.getMessage());
         }
 
-        // Titre de l'entreprise
+       // Titre de l'entreprise
         contentStream.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 16);
         String[] companyInfos = {
             "KAY PLAY GAMING ROOM",
+            "SN DKR 2025 A 28373 NINEA 012344800", // AJOUT ICI
             "Jaxaay, Parcelle Unité 24, BP 17000, KEUR MASSAR",
             "Tel. +221 338134720 / 771128514",
             "Kayplaygamingroom@gmail.com"
@@ -1168,6 +1170,7 @@ private void generateSelectedJournalPdf() {
             contentStream.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 16);
             String[] companyInfos = {
                 "KAY PLAY GAMING ROOM",
+                "SN DKR 2025 A 28373 NINEA 012344800", // AJOUT ICI
                 "Jaxaay, Parcelle Unité 24, BP 17000, KEUR MASSAR",
                 "Tel. +221 338134720 / 771128514",
                 "Kayplaygamingroom@gmail.com"

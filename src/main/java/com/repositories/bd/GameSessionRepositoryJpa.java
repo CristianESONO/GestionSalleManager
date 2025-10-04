@@ -311,28 +311,42 @@ public class GameSessionRepositoryJpa implements IGameSessionRepository {
         return gameSessions;
     }
 
-    @Override
-    public List<GameSession> findPausedSessionsByClientIdWithRelations(int clientId) {
-        EntityManager em = JpaUtil.getEntityManager();
-        List<GameSession> gameSessions = null;
-        try {
-            TypedQuery<GameSession> query = em.createQuery(
-                "SELECT gs FROM GameSession gs " +
-                "LEFT JOIN FETCH gs.client " +
-                "LEFT JOIN FETCH gs.game " +
-                "LEFT JOIN FETCH gs.poste " +
-                "LEFT JOIN FETCH gs.reservation r " +
-                "LEFT JOIN FETCH r.game " +
-                "LEFT JOIN FETCH r.poste " +
-                "WHERE gs.client.id = :clientId AND gs.status = 'En pause'", GameSession.class);
-            query.setParameter("clientId", clientId);
-            gameSessions = query.getResultList();
-        } catch (Exception e) {
-            System.err.println("Erreur lors de la recherche des sessions en pause par ID client : " + e.getMessage());
-            e.printStackTrace();
-        } finally {
-            em.close();
+   @Override
+public List<GameSession> findPausedSessionsByClientIdWithRelations(int clientId) {
+    EntityManager em = JpaUtil.getEntityManager();
+    List<GameSession> gameSessions = null;
+    try {
+        TypedQuery<GameSession> query = em.createQuery(
+            "SELECT gs FROM GameSession gs " +
+            "LEFT JOIN FETCH gs.client " +
+            "LEFT JOIN FETCH gs.game " +
+            "LEFT JOIN FETCH gs.poste " +
+            "LEFT JOIN FETCH gs.reservation r " +
+            "LEFT JOIN FETCH r.game " +
+            "LEFT JOIN FETCH r.poste " +
+            "WHERE gs.client.id = :clientId AND gs.status = 'En pause'", GameSession.class);
+        query.setParameter("clientId", clientId);
+        gameSessions = query.getResultList();
+
+        // Ajouter des logs pour vérifier les résultats
+        System.out.println("Nombre de sessions en pause trouvées pour le client " + clientId + ": " + gameSessions.size());
+        for (GameSession session : gameSessions) {
+            System.out.println("Session ID: " + session.getId());
+            System.out.println("Statut: " + session.getStatus());
+            System.out.println("Temps restant: " + (session.getPausedRemainingTime() != null ? session.getPausedRemainingTime().toMinutes() : "null") + " minutes");
+            System.out.println("Client: " + (session.getClient() != null ? session.getClient().getName() : "null"));
+            System.out.println("Jeu: " + (session.getGame() != null ? session.getGame().getName() : "null"));
+            System.out.println("Poste: " + (session.getPoste() != null ? session.getPoste().getName() : "null"));
+            System.out.println("Réservation: " + (session.getReservation() != null ? session.getReservation().getNumeroTicket() : "null"));
         }
-        return gameSessions;
+    } catch (Exception e) {
+        System.err.println("Erreur lors de la recherche des sessions en pause par ID client : " + e.getMessage());
+        e.printStackTrace();
+    } finally {
+        em.close();
     }
+    return gameSessions;
+}
+
+
 }

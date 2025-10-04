@@ -973,12 +973,24 @@ public void pauseGameSession(GameSession session) throws Exception {
                       ". Poste reste associé mais sera ignoré dans l'affichage.");
 }
 
-
 @Override
 @Transactional
 public void resumeGameSession(GameSession session) throws Exception {
     if (!"En pause".equalsIgnoreCase(session.getStatus())) {
         throw new Exception("Seules les sessions en pause peuvent être reprises.");
+    }
+
+    // Vérifier si le client a déjà une session active (autre que celle en cours de reprise)
+    Client client = session.getClient();
+    List<GameSession> clientActiveSessions = getAllGameSessions().stream()
+        .filter(s -> s.getClient() != null && s.getClient().getId() == client.getId())
+        .filter(s -> "Active".equalsIgnoreCase(s.getStatus()))
+        .filter(s -> s.getId() != session.getId()) // Exclure la session actuelle (corrigé)
+        .collect(Collectors.toList());
+
+    if (!clientActiveSessions.isEmpty()) {
+        throw new Exception("Ce client a déjà une session active sur le poste " + clientActiveSessions.get(0).getPoste().getName() + ". " +
+                           "Veuillez terminer cette session avant de reprendre une autre.");
     }
 
     // IMPORTANT: La session en pause n'a plus de poste associé après la pause
@@ -988,7 +1000,6 @@ public void resumeGameSession(GameSession session) throws Exception {
     if (reservation != null) {
         poste = reservation.getPoste();
     }
-
     if (poste == null) {
         throw new Exception("Aucun poste défini pour reprendre cette session. " +
                            "Utilisez resumePausedSessionForClient pour assigner un nouveau poste.");
@@ -1004,7 +1015,7 @@ public void resumeGameSession(GameSession session) throws Exception {
     List<GameSession> pausedSessionsOnPoste = gameSessionRepository.findPausedSessionsByPoste(poste);
     if (!pausedSessionsOnPoste.isEmpty()) {
         // Dissocier les sessions en pause de ce poste (nettoyage de sécurité)
-       for (GameSession pausedSession : pausedSessionsOnPoste) {
+        for (GameSession pausedSession : pausedSessionsOnPoste) {
             if (pausedSession.getId() != session.getId()) {  // Utilisez != au lieu de !equals()
                 pausedSession.setPoste(null);
                 gameSessionRepository.updateGameSession(pausedSession);
@@ -1021,7 +1032,6 @@ public void resumeGameSession(GameSession session) throws Exception {
 
     // Réassocier la session au poste original
     session.setPoste(poste);
-
     if (remainingTime.isZero()) {
         // Si le temps restant est zéro, terminer la session
         session.setStatus("Terminée");
@@ -1033,6 +1043,7 @@ public void resumeGameSession(GameSession session) throws Exception {
         // Calculer le nouveau startTime pour que le temps restant soit respecté
         LocalDateTime newStartTime = LocalDateTime.now().minus(session.getPaidDuration().minus(remainingTime));
         session.setStartTime(newStartTime);
+        session.setEndTime(LocalDateTime.now().plus(remainingTime));
         session.setPaused(false);
         session.setStatus("Active");
         session.setPausedRemainingTime(null); // Réinitialiser après reprise
@@ -1047,7 +1058,7 @@ public void resumeGameSession(GameSession session) throws Exception {
         reservationRepository.update(reservation);
     }
 
-    System.out.println("Session " + session.getId() + " reprise sur le poste " + poste.getName() + 
+    System.out.println("Session " + session.getId() + " reprise sur le poste " + poste.getName() +
                       " avec " + remainingTime.toMinutes() + " minutes restantes.");
 }
 
@@ -1055,10 +1066,21 @@ public void resumeGameSession(GameSession session) throws Exception {
 
 @Override
 @Transactional
-public void resumePausedSessionForClient(int clientId, int posteId, int gameId) throws Exception {
+public void resumePausedSessionForClient(int clientId, int posteId, int gameId, Duration remainingTime) throws Exception {
+    // Vérifier si le client a déjà une session active ou en pause
+    List<GameSession> clientSessions = getAllGameSessions().stream()
+        .filter(s -> s.getClient() != null && s.getClient().getId() == clientId)
+        .filter(s -> "Active".equalsIgnoreCase(s.getStatus()) || "En pause".equalsIgnoreCase(s.getStatus()))
+        .collect(Collectors.toList());
+    if (!clientSessions.isEmpty()) {
+        String status = clientSessions.get(0).getStatus();
+        String posteName = clientSessions.get(0).getPoste().getName();
+        throw new Exception("Ce client a déjà une session " + status.toLowerCase() + " sur le poste " + posteName + ". " +
+                           "Veuillez terminer ou reprendre cette session avant de démarrer une nouvelle.");
+    }
+
     // Récupérer les sessions en pause avec relations
     List<GameSession> pausedSessions = gameSessionRepository.findPausedSessionsByClientIdWithRelations(clientId);
-    
     if (pausedSessions.isEmpty()) {
         throw new Exception("Aucune session en pause trouvée pour ce client.");
     }
@@ -1067,22 +1089,44 @@ public void resumePausedSessionForClient(int clientId, int posteId, int gameId) 
     Poste poste = posteRepository.findById(posteId);
     Game game = gameRepository.findById(gameId);
 
-    // Mettre à jour la session
+    // Vérifier que le poste est disponible
+    GameSession activeSessionOnPoste = getActiveSessionForPoste(poste);
+    if (activeSessionOnPoste != null && "Active".equalsIgnoreCase(activeSessionOnPoste.getStatus())) {
+        throw new Exception("Le poste " + poste.getName() + " est déjà occupé par une autre session active.");
+    }
+
+    // Vérifier que le temps restant est valide
+    if (remainingTime == null || remainingTime.isNegative()) {
+        throw new Exception("Le temps restant pour cette session est invalide.");
+    }
+
+    // Mettre à jour la session avec le temps restant
+    session.setPaidDuration(remainingTime); // Ta correction
     session.setPoste(poste);
     session.setGame(game);
     session.setStatus("Active");
     session.setStartTime(LocalDateTime.now());
+    session.setEndTime(LocalDateTime.now().plus(remainingTime));
     session.setPaused(false);
     session.setPausedRemainingTime(null);
 
-    // Mettre à jour la réservation
-    Reservation reservation = session.getReservation();
-    reservation.setPoste(poste);
-    reservation.setGame(game);
-
+    // Mettre à jour la session
     gameSessionRepository.updateGameSession(session);
-    reservationRepository.update(reservation);
+
+    // Mettre à jour la réservation associée
+    Reservation reservation = session.getReservation();
+    if (reservation != null) {
+        reservation.setPoste(poste);
+        reservation.setGame(game);
+        reservation.setStatus("Active");
+        reservation.setDuration(remainingTime); // Ta correction
+        reservationRepository.update(reservation);
+    }
+
+    System.out.println("Session " + session.getId() + " reprise sur le poste " + poste.getName() +
+                      " avec " + remainingTime.toMinutes() + " minutes restantes.");
 }
+
 
 
 

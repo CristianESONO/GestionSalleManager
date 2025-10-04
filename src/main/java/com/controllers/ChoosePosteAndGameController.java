@@ -177,40 +177,51 @@ private void filterPostesByGame(Game selectedGame) {
         this.parentController = parentController;
     }
 
-    @FXML
-    private void validate() {
-        Game selectedGame = gameComboBox.getValue();
-        Poste selectedPoste = posteComboBox.getValue();
-
-        if (selectedGame == null || selectedPoste == null) {
-            ControllerUtils.showErrorAlert("Erreur", "Veuillez sélectionner un jeu et un poste.");
-            return;
-        }
-
-        try {
-            // Utilisez directement le service pour reprendre la session
-            Fabrique.getService().resumePausedSessionForClient(
-                client.getId(), 
-                selectedPoste.getId(), 
-                selectedGame.getId()
-            );
-
-            // Fermer la fenêtre
-            Stage stage = (Stage) gameComboBox.getScene().getWindow();
-            stage.close();
-
-            // Rafraîchir les données
-            if (parentController != null) {
-                parentController.refreshAllData();
-                parentController.loadClientsWithRemainingTime();
-            }
-
-            ControllerUtils.showInfoAlert("Succès", "Session reprise avec succès sur le poste " + selectedPoste.getName());
-        } catch (Exception e) {
-            e.printStackTrace();
-            ControllerUtils.showErrorAlert("Erreur", "Erreur lors de la reprise de la session: " + e.getMessage());
-        }
+ @FXML
+private void validate() {
+    Game selectedGame = gameComboBox.getValue();
+    Poste selectedPoste = posteComboBox.getValue();
+    if (selectedGame == null || selectedPoste == null) {
+        ControllerUtils.showErrorAlert("Erreur", "Veuillez sélectionner un jeu et un poste.");
+        return;
     }
+    try {
+        // Passer le temps restant à la méthode de reprise
+        Fabrique.getService().resumePausedSessionForClient(
+            client.getId(),
+            selectedPoste.getId(),
+            selectedGame.getId(),
+            remainingTime
+        );
+
+        // Fermer la fenêtre
+        Stage stage = (Stage) gameComboBox.getScene().getWindow();
+        stage.close();
+
+        // Rafraîchir les données
+        if (parentController != null) {
+            parentController.refreshAllData();
+            parentController.loadClientsWithRemainingTime();
+        }
+
+        ControllerUtils.showInfoAlert("Succès", "Session reprise avec succès sur le poste " + selectedPoste.getName() +
+            " avec " + formatDuration(remainingTime) + " de temps restant.");
+    } catch (Exception e) {
+        e.printStackTrace();
+        ControllerUtils.showErrorAlert("Erreur", "Erreur lors de la reprise de la session: " + e.getMessage());
+    }
+}
+
+
+// Méthode pour formater la durée
+private String formatDuration(Duration duration) {
+    if (duration == null || duration.isZero() || duration.isNegative()) {
+        return "0h 0min";
+    }
+    long hours = duration.toHours();
+    long minutes = duration.toMinutes() % 60;
+    return String.format("%dh %dmin", hours, minutes);
+}
 
     @FXML
     private void cancel() {
