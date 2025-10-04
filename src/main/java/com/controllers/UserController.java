@@ -682,30 +682,48 @@ public class UserController {
     }
 
     // Redémarrer une session avec le temps restant
-    private void restartSessionWithRemainingTime(Client client) {
+   private void restartSessionWithRemainingTime(Client client) {
+    try {
+        // 1. Vérifier temps restant valide
         Duration remainingTime = calculateRemainingTimeForClient(client);
         if (remainingTime.isZero() || remainingTime.isNegative()) {
-            showAlert(AlertType.INFORMATION, "Ce client n'a pas de temps restant.");
+            ControllerUtils.showInfoAlert("Aucun temps restant", 
+                "Ce client n'a pas de temps restant disponible.");
             return;
         }
 
-        try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/views/ChoosePosteAndGame.fxml"));
-            Scene scene = new Scene(loader.load());
-            Stage stage = new Stage();
-            stage.setTitle("Reprendre une session");
-            stage.setScene(scene);
-            stage.initModality(Modality.APPLICATION_MODAL);
+        // 2. Vérification CRITIQUE CORRIGÉE : seulement sessions ACTIVES
+        List<GameSession> activeSessions = Fabrique.getService().getAllGameSessions().stream()
+            .filter(s -> s.getClient() != null && s.getClient().getId() == client.getId())
+            .filter(s -> "Active".equalsIgnoreCase(s.getStatus()))
+            .collect(Collectors.toList());
 
-            ChoosePosteAndGameController controller = loader.getController();
-            controller.setClient(client);
-            controller.setRemainingTime(remainingTime);
-            controller.setParentController(this);
-
-            stage.showAndWait();
-        } catch (IOException e) {
-            e.printStackTrace();
-            showAlert(AlertType.ERROR, "Impossible d'ouvrir la fenêtre de sélection de poste et de jeu.");
+        if (!activeSessions.isEmpty()) {
+            GameSession activeSession = activeSessions.get(0);
+            ControllerUtils.showErrorAlert("Session active existante",
+                "Le client a déjà une session ACTIVE sur le poste " + 
+                activeSession.getPoste().getName() + 
+                ". Veuillez terminer cette session avant de reprendre le temps restant.");
+            return;
         }
+
+        // 3. OUVRIR fenêtre choix poste/jeu
+        FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/views/ChoosePosteAndGame.fxml"));
+        Scene scene = new Scene(loader.load());
+        Stage stage = new Stage();
+        
+        ChoosePosteAndGameController controller = loader.getController();
+        controller.setClient(client);
+        controller.setRemainingTime(remainingTime);
+        controller.setParentController(this);
+        
+        stage.setScene(scene);
+        stage.setTitle("Reprendre session - " + formatDuration(remainingTime) + " restantes");
+        stage.initModality(Modality.APPLICATION_MODAL);
+        stage.showAndWait();
+
+    } catch (Exception e) {
+        ControllerUtils.showErrorAlert("Erreur", "Impossible d'ouvrir la fenêtre de reprise: " + e.getMessage());
     }
+}
 }

@@ -408,20 +408,22 @@ private void startReservationSession(Reservation reservation) throws Exception {
         return;
     }
 
-    // Vérifier si le client a déjà une session ACTIVE ou EN PAUSE sur un autre poste
     Client client = reservation.getClient();
-    List<GameSession> clientSessions = Fabrique.getService().getAllGameSessions().stream()
+    
+    // CORRECTION : Vérifier seulement les sessions ACTIVES d'autres réservations
+    List<GameSession> clientActiveSessionsFromOtherReservations = Fabrique.getService().getAllGameSessions().stream()
         .filter(s -> s.getClient() != null && s.getClient().getId() == client.getId())
-        .filter(s -> "Active".equalsIgnoreCase(s.getStatus()) || "En pause".equalsIgnoreCase(s.getStatus()))
+        .filter(s -> "Active".equalsIgnoreCase(s.getStatus()))
+        .filter(s -> s.getReservation() != null && s.getReservation().getId() != reservation.getId()) // EXCLURE la réservation actuelle
         .collect(Collectors.toList());
 
-    if (!clientSessions.isEmpty()) {
-        String status = clientSessions.get(0).getStatus();
-        String posteName = clientSessions.get(0).getPoste().getName();
+    if (!clientActiveSessionsFromOtherReservations.isEmpty()) {
         ControllerUtils.showErrorAlert(
             "Client occupé",
-            "Ce client a déjà une session " + status.toLowerCase() + " sur le poste " + posteName + ". " +
-            "Veuillez terminer ou reprendre cette session avant d'en démarrer une nouvelle."
+            "Ce client a déjà une session active sur le poste " + 
+            clientActiveSessionsFromOtherReservations.get(0).getPoste().getName() + 
+            " (réservation différente). " +
+            "Veuillez terminer cette session avant d'en démarrer une nouvelle."
         );
         return;
     }
@@ -440,7 +442,10 @@ private void startReservationSession(Reservation reservation) throws Exception {
         Fabrique.getService().addGameSession(newSession);
         reservation.setStatus("Active");
         Fabrique.getService().updateReservation(reservation);
-        ControllerUtils.showInfoAlert("Session démarrée", String.format("Session pour le poste '%s' démarrée.", poste.getName()));
+
+        ControllerUtils.showInfoAlert("Session démarrée", 
+            String.format("Session pour le poste '%s' démarrée.", poste.getName()));
+
         loadReservations();
         loadActiveSessions();
         mainTabPane.getSelectionModel().select(activeSessionsTab);

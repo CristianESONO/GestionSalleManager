@@ -1067,66 +1067,122 @@ public void resumeGameSession(GameSession session) throws Exception {
 @Override
 @Transactional
 public void resumePausedSessionForClient(int clientId, int posteId, int gameId, Duration remainingTime) throws Exception {
-    // Vérifier si le client a déjà une session active ou en pause
-    List<GameSession> clientSessions = getAllGameSessions().stream()
-        .filter(s -> s.getClient() != null && s.getClient().getId() == clientId)
-        .filter(s -> "Active".equalsIgnoreCase(s.getStatus()) || "En pause".equalsIgnoreCase(s.getStatus()))
-        .collect(Collectors.toList());
-    if (!clientSessions.isEmpty()) {
-        String status = clientSessions.get(0).getStatus();
-        String posteName = clientSessions.get(0).getPoste().getName();
-        throw new Exception("Ce client a déjà une session " + status.toLowerCase() + " sur le poste " + posteName + ". " +
-                           "Veuillez terminer ou reprendre cette session avant de démarrer une nouvelle.");
+    
+    // 1. Vérifier sessions ACTIVES uniquement
+    if (hasActiveSession(clientId)) {
+        throw new Exception("Client a déjà une session active. Terminez-la d'abord.");
     }
 
-    // Récupérer les sessions en pause avec relations
+    // 2. Trouver la meilleure session en pause à reprendre
+    GameSession sessionToResume = findBestPausedSession(clientId);
+    
+    // 3. Vérifier disponibilité poste
+    Poste poste = posteRepository.findById(posteId);
+    if (isPosteOccupied(poste)) {
+        throw new Exception("Poste " + poste.getName() + " déjà occupé.");
+    }
+
+    Game game = gameRepository.findById(gameId);
+
+    // 4. Créer nouvelle session active
+    createNewActiveSession(sessionToResume, poste, game);
+    
+    // 5. Nettoyer anciennes sessions
+    closeAllPausedSessions(clientId, sessionToResume.getId());
+    
+    System.out.println("✅ Session reprise sur poste " + poste.getName());
+}
+
+private boolean hasActiveSession(int clientId) {
+    return getAllGameSessions().stream()
+        .anyMatch(s -> s.getClient() != null && 
+                      s.getClient().getId() == clientId && 
+                      "Active".equalsIgnoreCase(s.getStatus()));
+}
+
+// ✅ MÉTHODE 1: Trouver la meilleure session en pause
+private GameSession findBestPausedSession(int clientId) throws Exception {
     List<GameSession> pausedSessions = gameSessionRepository.findPausedSessionsByClientIdWithRelations(clientId);
+    
     if (pausedSessions.isEmpty()) {
         throw new Exception("Aucune session en pause trouvée pour ce client.");
     }
 
-    GameSession session = pausedSessions.get(0);
-    Poste poste = posteRepository.findById(posteId);
-    Game game = gameRepository.findById(gameId);
-
-    // Vérifier que le poste est disponible
-    GameSession activeSessionOnPoste = getActiveSessionForPoste(poste);
-    if (activeSessionOnPoste != null && "Active".equalsIgnoreCase(activeSessionOnPoste.getStatus())) {
-        throw new Exception("Le poste " + poste.getName() + " est déjà occupé par une autre session active.");
-    }
-
-    // Vérifier que le temps restant est valide
-    if (remainingTime == null || remainingTime.isNegative()) {
-        throw new Exception("Le temps restant pour cette session est invalide.");
-    }
-
-    // Mettre à jour la session avec le temps restant
-    session.setPaidDuration(remainingTime); // Ta correction
-    session.setPoste(poste);
-    session.setGame(game);
-    session.setStatus("Active");
-    session.setStartTime(LocalDateTime.now());
-    session.setEndTime(LocalDateTime.now().plus(remainingTime));
-    session.setPaused(false);
-    session.setPausedRemainingTime(null);
-
-    // Mettre à jour la session
-    gameSessionRepository.updateGameSession(session);
-
-    // Mettre à jour la réservation associée
-    Reservation reservation = session.getReservation();
-    if (reservation != null) {
-        reservation.setPoste(poste);
-        reservation.setGame(game);
-        reservation.setStatus("Active");
-        reservation.setDuration(remainingTime); // Ta correction
-        reservationRepository.update(reservation);
-    }
-
-    System.out.println("Session " + session.getId() + " reprise sur le poste " + poste.getName() +
-                      " avec " + remainingTime.toMinutes() + " minutes restantes.");
+    return pausedSessions.stream()
+        .filter(s -> s.getPausedRemainingTime() != null && 
+                    !s.getPausedRemainingTime().isNegative() && 
+                    !s.getPausedRemainingTime().isZero())
+        .max(Comparator.comparing(GameSession::getPausedRemainingTime))
+        .orElseThrow(() -> new Exception("Aucune session en pause avec du temps restant valide."));
 }
 
+// ✅ MÉTHODE 2: Vérifier si le poste est occupé
+private boolean isPosteOccupied(Poste poste) {
+    GameSession activeSession = getActiveSessionForPoste(poste);
+    return activeSession != null && "Active".equalsIgnoreCase(activeSession.getStatus());
+}
+
+// ✅ MÉTHODE 3: Créer une nouvelle session active
+private void createNewActiveSession(GameSession oldSession, Poste newPoste, Game newGame) throws Exception {
+    Duration actualRemainingTime = oldSession.getPausedRemainingTime();
+    
+    if (actualRemainingTime == null || actualRemainingTime.isNegative() || actualRemainingTime.isZero()) {
+        throw new Exception("Temps restant invalide pour la reprise.");
+    }
+
+    // Créer nouvelle session
+    GameSession newSession = new GameSession();
+    newSession.setClient(oldSession.getClient());
+    newSession.setPoste(newPoste);
+    newSession.setGame(newGame);
+    newSession.setStartTime(LocalDateTime.now());
+    newSession.setPaidDuration(actualRemainingTime);
+    newSession.setStatus("Active");
+    newSession.setReservation(oldSession.getReservation());
+
+    // Sauvegarder
+    gameSessionRepository.addGameSession(newSession);
+
+    // Mettre à jour la réservation
+    updateReservationForNewSession(oldSession.getReservation(), newPoste, newGame, actualRemainingTime);
+}
+
+// ✅ MÉTHODE 4: Mettre à jour la réservation
+private void updateReservationForNewSession(Reservation reservation, Poste newPoste, Game newGame, Duration remainingTime) {
+    if (reservation != null) {
+        reservation.setPoste(newPoste);
+        reservation.setGame(newGame);
+        reservation.setStatus("Active");
+        reservation.setDuration(remainingTime);
+        reservationRepository.update(reservation);
+    }
+}
+
+// ✅ MÉTHODE 5: Nettoyer toutes les sessions en pause
+private void closeAllPausedSessions(int clientId, int sessionToKeepId) {
+    List<GameSession> allPausedSessions = gameSessionRepository.findPausedSessionsByClientIdWithRelations(clientId);
+    
+    allPausedSessions.forEach(session -> {
+        if (session.getId() != sessionToKeepId) {
+            // Fermer les autres sessions en pause
+            session.setStatus("Terminée");
+            session.setPausedRemainingTime(Duration.ZERO);
+            session.setEndTime(LocalDateTime.now());
+            gameSessionRepository.updateGameSession(session);
+            
+            // Fermer leurs réservations associées
+            closeReservationIfNeeded(session.getReservation());
+        }
+    });
+}
+
+// ✅ MÉTHODE 6: Fermer une réservation si nécessaire
+private void closeReservationIfNeeded(Reservation reservation) {
+    if (reservation != null && !"Terminée".equals(reservation.getStatus())) {
+        reservation.setStatus("Terminée");
+        reservationRepository.update(reservation);
+    }
+}
 
 
 
