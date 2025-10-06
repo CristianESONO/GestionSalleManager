@@ -1084,14 +1084,33 @@ public void resumePausedSessionForClient(int clientId, int posteId, int gameId, 
 
     Game game = gameRepository.findById(gameId);
 
-    // 4. Créer nouvelle session active
-    createNewActiveSession(sessionToResume, poste, game);
+    // 4. CORRECTION : Utiliser le paramètre remainingTime pour validation
+    if (remainingTime == null || remainingTime.isNegative() || remainingTime.isZero()) {
+        throw new Exception("Temps restant invalide pour la reprise.");
+    }
+
+    // 5. Fermer l'ancienne session
+    closeOriginalPausedSession(sessionToResume);
     
-    // 5. Nettoyer anciennes sessions
-    closeAllPausedSessions(clientId, sessionToResume.getId());
+    // 6. CORRECTION : Passer remainingTime à la méthode
+    createNewActiveSession(sessionToResume, poste, game, remainingTime);
     
-    System.out.println("✅ Session reprise sur poste " + poste.getName());
+    System.out.println("✅ Session reprise sur poste " + poste.getName() + " avec " + remainingTime.toMinutes() + " minutes");
 }
+
+private void closeOriginalPausedSession(GameSession originalSession) {
+    originalSession.setStatus("Terminée");
+    originalSession.setPausedRemainingTime(Duration.ZERO);
+    originalSession.setEndTime(LocalDateTime.now());
+    originalSession.setPaused(false);
+    gameSessionRepository.updateGameSession(originalSession);
+    
+    // CORRECTION : NE PAS fermer la réservation ici
+    // Elle sera gérée dans createNewActiveSession si nécessaire
+    System.out.println("🗑️ Ancienne session " + originalSession.getId() + " fermée");
+}
+
+
 
 private boolean hasActiveSession(int clientId) {
     return getAllGameSessions().stream()
@@ -1122,9 +1141,11 @@ private boolean isPosteOccupied(Poste poste) {
     return activeSession != null && "Active".equalsIgnoreCase(activeSession.getStatus());
 }
 
-// ✅ MÉTHODE 3: Créer une nouvelle session active
-private void createNewActiveSession(GameSession oldSession, Poste newPoste, Game newGame) throws Exception {
-    Duration actualRemainingTime = oldSession.getPausedRemainingTime();
+// ✅ CORRECTION : Ajouter le paramètre remainingTime
+private void createNewActiveSession(GameSession oldSession, Poste newPoste, Game newGame, Duration remainingTime) throws Exception {
+    
+    // CORRECTION : Utiliser le paramètre remainingTime
+    Duration actualRemainingTime = remainingTime;
     
     if (actualRemainingTime == null || actualRemainingTime.isNegative() || actualRemainingTime.isZero()) {
         throw new Exception("Temps restant invalide pour la reprise.");
@@ -1138,13 +1159,20 @@ private void createNewActiveSession(GameSession oldSession, Poste newPoste, Game
     newSession.setStartTime(LocalDateTime.now());
     newSession.setPaidDuration(actualRemainingTime);
     newSession.setStatus("Active");
+    
+    // CORRECTION : Décider si on garde l'ancienne réservation ou pas
+    // Option A: Garder l'ancienne réservation (recommandé pour la traçabilité)
     newSession.setReservation(oldSession.getReservation());
 
     // Sauvegarder
     gameSessionRepository.addGameSession(newSession);
 
-    // Mettre à jour la réservation
-    updateReservationForNewSession(oldSession.getReservation(), newPoste, newGame, actualRemainingTime);
+    // CORRECTION : Mettre à jour la réservation UNIQUEMENT si elle existe
+    if (oldSession.getReservation() != null) {
+        updateReservationForNewSession(oldSession.getReservation(), newPoste, newGame, actualRemainingTime);
+    }
+
+    System.out.println("🆕 Nouvelle session " + newSession.getId() + " créée avec " + actualRemainingTime.toMinutes() + " minutes");
 }
 
 // ✅ MÉTHODE 4: Mettre à jour la réservation
@@ -1155,6 +1183,7 @@ private void updateReservationForNewSession(Reservation reservation, Poste newPo
         reservation.setStatus("Active");
         reservation.setDuration(remainingTime);
         reservationRepository.update(reservation);
+        System.out.println("📋 Réservation " + reservation.getNumeroTicket() + " mise à jour");
     }
 }
 

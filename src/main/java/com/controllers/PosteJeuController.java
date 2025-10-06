@@ -78,7 +78,7 @@ public class PosteJeuController {
         postes = Fabrique.getService().getPostes();
         displayPage(currentPage);
 
-        Timeline timeline = new Timeline(new KeyFrame(Duration.seconds(5), ev -> {
+        Timeline timeline = new Timeline(new KeyFrame(Duration.seconds(15), ev -> {
             Platform.runLater(() -> {
                 try {
                     displayPage(currentPage);
