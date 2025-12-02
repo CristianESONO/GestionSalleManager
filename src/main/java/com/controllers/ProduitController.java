@@ -19,6 +19,8 @@ import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.ButtonType;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.image.PixelWriter;
+import javafx.scene.image.WritableImage;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Region;
@@ -34,6 +36,7 @@ import javafx.stage.StageStyle; // Pour le style de la fenêtre du panier
 
 import java.io.File; // Import pour gérer les fichiers locaux
 import java.io.IOException;
+import java.io.InputStream; // Ajoutez cette ligne
 import java.net.MalformedURLException; // Import pour gérer les URL mal formées
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -233,41 +236,32 @@ public class ProduitController {
         try {
             String imagePath = produit.getImage();
             if (imagePath != null && !imagePath.isEmpty()) {
-                // CORRECTION : RECONSTRUIRE LE CHEMIN ABSOLU VERS AppData
-                String appDataPath = System.getenv("APPDATA");
-                Path absoluteImagePath = Paths.get(appDataPath, "GestionSalles", imagePath);
-                File file = absoluteImagePath.toFile();
+                // Essayer de charger l'image du produit
+                File imageFile = resolveImageFile(imagePath);
                 
-                System.out.println("DEBUG - Chemin image relatif: " + imagePath);
-                System.out.println("DEBUG - Chemin image absolu: " + absoluteImagePath);
-                System.out.println("DEBUG - Fichier existe: " + file.exists());
-                
-                if (file.exists()) {
-                    // CHARGEMENT CORRECT DE L'IMAGE À PARTIR DU CHEMIN ABSOLU
-                    Image image = new Image(file.toURI().toURL().toExternalForm(), PRODUCT_IMAGE_WIDTH, PRODUCT_IMAGE_HEIGHT, false, true);
+                if (imageFile != null && imageFile.exists()) {
+                    // CHARGEMENT DE L'IMAGE DU PRODUIT
+                    Image image = new Image(imageFile.toURI().toURL().toExternalForm(), 
+                                        PRODUCT_IMAGE_WIDTH, PRODUCT_IMAGE_HEIGHT, false, true);
                     imageView.setImage(image);
-                    System.out.println("DEBUG - Image chargée avec succès pour: " + produit.getNom());
                 } else {
-                    System.err.println("Failed to load image for product " + produit.getNom() + ": File does not exist at " + absoluteImagePath + ". Using placeholder.");
-                    // Fallback vers une image de remplacement si le fichier n'existe pas, avec taille fixe
-                    imageView.setImage(new Image(getClass().getResourceAsStream("/com/img/placeholder.png"), PRODUCT_IMAGE_WIDTH, PRODUCT_IMAGE_HEIGHT, false, true));
+                    // Image produit non trouvée → utiliser un placeholder
+                    createDynamicPlaceholder(imageView, produit.getNom());
                 }
             } else {
-                System.out.println("No image path provided for product " + produit.getNom() + ". Using placeholder.");
-                imageView.setImage(new Image(getClass().getResourceAsStream("/com/img/placeholder.png"), PRODUCT_IMAGE_WIDTH, PRODUCT_IMAGE_HEIGHT, false, true));
+                // Pas d'image spécifiée → utiliser un placeholder
+                createDynamicPlaceholder(imageView, produit.getNom());
             }
-        } catch (MalformedURLException e) {
-            System.err.println("Failed to load image for product " + produit.getNom() + ": Invalid URL. Using placeholder. Error: " + e.getMessage());
-            imageView.setImage(new Image(getClass().getResourceAsStream("/com/img/placeholder.png"), PRODUCT_IMAGE_WIDTH, PRODUCT_IMAGE_HEIGHT, false, true));
         } catch (Exception e) {
-            System.err.println("Failed to load image for product " + produit.getNom() + ": Error loading image. Using placeholder. Error: " + e.getMessage());
-            imageView.setImage(new Image(getClass().getResourceAsStream("/com/img/placeholder.png"), PRODUCT_IMAGE_WIDTH, PRODUCT_IMAGE_HEIGHT, false, true));
+            System.err.println("Erreur chargement image pour " + produit.getNom() + ": " + e.getMessage());
+            createDynamicPlaceholder(imageView, produit.getNom());
         }
-        // Assurez-vous que la taille est appliquée même si l'image est redimensionnée lors du chargement
+        
+        // Configuration de la taille
         imageView.setFitHeight(PRODUCT_IMAGE_HEIGHT);
         imageView.setFitWidth(PRODUCT_IMAGE_WIDTH);
-        imageView.setPreserveRatio(false); // Permet d'étirer l'image pour remplir les dimensions
-        imageView.setCache(true); // Mettre l'image en cache pour la performance
+        imageView.setPreserveRatio(true); // Garder les proportions
+        imageView.setCache(true);
         VBox.setMargin(imageView, new Insets(0, 0, 5, 0)); // Marge sous l'image
 
         // Nom du produit (utilisant Label pour un style cohérent)
@@ -390,6 +384,138 @@ public class ProduitController {
         return produitCard;
     }
 
+    // Méthode pour résoudre le fichier image
+private File resolveImageFile(String imagePath) {
+    try {
+        // 1. Si c'est un chemin absolu Windows
+        if (imagePath.contains(":\\")) {
+            return new File(imagePath);
+        }
+        
+        // 2. Si le chemin contient "src\main\resources" (anciens chemins de développement)
+        if (imagePath.contains("src\\main\\resources") || imagePath.contains("src/main/resources")) {
+            // Extraire juste le nom du fichier
+            String fileName = imagePath.substring(imagePath.lastIndexOf("\\") + 1);
+            System.out.println("DEBUG - Nom de fichier extrait: " + fileName);
+            
+            // Chercher dans APPDATA/GestionSalles/produits/
+            String appDataPath = System.getenv("APPDATA");
+            if (appDataPath != null) {
+                Path newPath = Paths.get(appDataPath, "GestionSalles", "produits", fileName);
+                File file = newPath.toFile();
+                System.out.println("DEBUG - Nouveau chemin: " + newPath + " existe: " + file.exists());
+                return file;
+            }
+        }
+        
+        // 3. Chemin relatif vers APPDATA
+        String appDataPath = System.getenv("APPDATA");
+        if (appDataPath != null) {
+            Path absolutePath = Paths.get(appDataPath, "GestionSalles", imagePath);
+            return absolutePath.toFile();
+        }
+        
+        // 4. Dernier recours
+        return new File(imagePath);
+        
+    } catch (Exception e) {
+        System.err.println("Erreur dans resolveImageFile: " + e.getMessage());
+        return null;
+    }
+}
+
+// Méthode pour créer un placeholder dynamique avec le nom du produit
+private void createDynamicPlaceholder(ImageView imageView, String productName) {
+    try {
+        // Créer une image simple
+        WritableImage placeholder = new WritableImage(PRODUCT_IMAGE_WIDTH, PRODUCT_IMAGE_HEIGHT);
+        PixelWriter pixelWriter = placeholder.getPixelWriter();
+        
+        // Couleur de fond basée sur le nom
+        int hash = Math.abs(productName.hashCode());
+        Color bgColor = Color.hsb(hash % 360, 0.2, 0.95);
+        
+        // Remplir l'arrière-plan
+        for (int y = 0; y < PRODUCT_IMAGE_HEIGHT; y++) {
+            for (int x = 0; x < PRODUCT_IMAGE_WIDTH; x++) {
+                pixelWriter.setColor(x, y, bgColor);
+            }
+        }
+        
+        // Ajouter un simple cadre
+        Color frameColor = Color.hsb((hash + 180) % 360, 0.5, 0.7);
+        drawSimpleFrame(pixelWriter, frameColor);
+        
+        imageView.setImage(placeholder);
+        
+    } catch (Exception e) {
+        // Fallback simple
+        System.err.println("Erreur création placeholder: " + e.getMessage());
+        imageView.setStyle("-fx-background-color: #f0f0f0; -fx-border-color: #d0d0d0; -fx-border-width: 1px;");
+    }
+}
+
+private void drawSimpleFrame(PixelWriter pw, Color color) {
+    int width = PRODUCT_IMAGE_WIDTH;
+    int height = PRODUCT_IMAGE_HEIGHT;
+    
+    // Simple cadre de 2 pixels
+    for (int x = 0; x < width; x++) {
+        pw.setColor(x, 0, color); // Haut
+        pw.setColor(x, 1, color);
+        pw.setColor(x, height - 1, color); // Bas
+        pw.setColor(x, height - 2, color);
+    }
+    
+    for (int y = 0; y < height; y++) {
+        pw.setColor(0, y, color); // Gauche
+        pw.setColor(1, y, color);
+        pw.setColor(width - 1, y, color); // Droite
+        pw.setColor(width - 2, y, color);
+    }
+}
+
+
+
+// Méthodes utilitaires de dessin...
+private void drawCircle(PixelWriter pw, int centerX, int centerY, int radius, Color color) {
+    for (int y = -radius; y <= radius; y++) {
+        for (int x = -radius; x <= radius; x++) {
+            if (x*x + y*y <= radius*radius) {
+                int px = centerX + x;
+                int py = centerY + y;
+                if (px >= 0 && px < PRODUCT_IMAGE_WIDTH && py >= 0 && py < PRODUCT_IMAGE_HEIGHT) {
+                    pw.setColor(px, py, color);
+                }
+            }
+        }
+    }
+}
+
+private void drawInitialPattern(PixelWriter pw, int centerX, int centerY, String initials, Color color) {
+    // Dessiner un motif simple basé sur les initiales
+    // (Par exemple, un point pour chaque lettre)
+    if (initials.length() >= 1) {
+        // Premier caractère : point à gauche
+        drawPoint(pw, centerX - 8, centerY, color);
+    }
+    if (initials.length() >= 2) {
+        // Deuxième caractère : point à droite
+        drawPoint(pw, centerX + 8, centerY, color);
+    }
+}
+
+private void drawPoint(PixelWriter pw, int x, int y, Color color) {
+    for (int dy = -2; dy <= 2; dy++) {
+        for (int dx = -2; dx <= 2; dx++) {
+            int px = x + dx;
+            int py = y + dy;
+            if (px >= 0 && px < PRODUCT_IMAGE_WIDTH && py >= 0 && py < PRODUCT_IMAGE_HEIGHT) {
+                pw.setColor(px, py, color);
+            }
+        }
+    }
+}
     /**
      * Ajoute un produit au panier, avec des vérifications de stock et de péremption.
      * @param produit Le produit à ajouter.
