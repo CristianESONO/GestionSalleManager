@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.CheckBox?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.effect.DropShadow?>
+<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.layout.ColumnConstraints?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.RowConstraints?>
+<?import javafx.scene.text.Text?>
+
+<AnchorPane prefHeight="280.0" prefWidth="480.0" styleClass="content-pane form-dialog" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.controllers.AddPosteController">
+   <children>
+      <Text fill="#0f172a" layoutX="30.0" layoutY="50.0" style="-fx-font-size: 28px; -fx-font-weight: bold;" text="Ajouter un Poste">
+         <effect>
+            <DropShadow color="#00000066" offsetX="0.0" offsetY="2.0" radius="5.0" />
+         </effect>
+      </Text>
+
+      <GridPane hgap="20" layoutX="30.0" layoutY="100.0" prefHeight="130.0" prefWidth="420.0" vgap="20">
+         <children>
+            <Text fill="#0f172a" style="-fx-font-size: 16px; -fx-font-weight: bold;" text="Nom du Poste :" GridPane.columnIndex="0" GridPane.rowIndex="0" />
+            <TextField fx:id="posteNameField" editable="false" prefHeight="35.0" prefWidth="250.0" style="-fx-background-color: #ffffff; -fx-border-color: #bdc3c7; -fx-border-radius: 5px; -fx-background-radius: 5px; -fx-font-size: 14px; -fx-padding: 8px 10px; -fx-prompt-text-fill: #7f8c8d;" GridPane.columnIndex="1" GridPane.rowIndex="0">
+               <effect>
+                  <DropShadow color="#0000001a" offsetX="0.0" offsetY="1.0" radius="3.0" />
+               </effect>
+            </TextField>
+
+            <Text fill="#0f172a" style="-fx-font-size: 16px; -fx-font-weight: bold;" text="Hors Service :" GridPane.columnIndex="0" GridPane.rowIndex="1" />
+            <CheckBox fx:id="chkHorsService" mnemonicParsing="false" style="-fx-text-fill: #e74c3c; -fx-font-size: 14px; -fx-selected-box-color: #e74c3c; -fx-box-border: #bdc3c7;" text="Mettre hors service" GridPane.columnIndex="1" GridPane.rowIndex="1">
+               <padding>
+                  <Insets left="5.0" />
+               </padding>
+            </CheckBox>
+
+            <Button fx:id="btnAjouterPoste" onAction="#addPoste" prefHeight="40.0" prefWidth="120.0" style="-fx-background-color: #2ecc71; -fx-text-fill: white; -fx-font-size: 14px; -fx-padding: 10px 20px; -fx-border-radius: 5px; -fx-background-radius: 5px; -fx-cursor: hand;" text="Ajouter" GridPane.halignment="LEFT" GridPane.rowIndex="2">
+               <effect>
+                  <DropShadow color="#00000033" offsetX="0.0" offsetY="2.0" radius="5.0" />
+               </effect>
+            </Button>
+            <Button fx:id="btnAnnuler" onAction="#cancel" prefHeight="40.0" prefWidth="120.0" style="-fx-background-color: #e74c3c; -fx-text-fill: white; -fx-font-size: 14px; -fx-padding: 10px 20px; -fx-border-radius: 5px; -fx-background-radius: 5px; -fx-cursor: hand;" text="Annuler" GridPane.columnIndex="1" GridPane.halignment="RIGHT" GridPane.rowIndex="2">
+               <effect>
+                  <DropShadow color="#00000033" offsetX="0.0" offsetY="2.0" radius="5.0" />
+               </effect>
+            </Button>
+         </children>
+         <columnConstraints>
+            <ColumnConstraints hgrow="SOMETIMES" maxWidth="150.0" minWidth="10.0" prefWidth="120.0" />
+            <ColumnConstraints hgrow="SOMETIMES" maxWidth="300.0" minWidth="10.0" prefWidth="250.0" />
+         </columnConstraints>
+         <rowConstraints>
+            <RowConstraints vgrow="SOMETIMES" />
+            <RowConstraints vgrow="SOMETIMES" />
+            <RowConstraints vgrow="SOMETIMES" />
+         </rowConstraints>
+      </GridPane>
+   </children>
+</AnchorPane>

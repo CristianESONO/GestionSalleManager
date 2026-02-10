@@ -1,0 +1,190 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import java.lang.*?>
+<?import javafx.geometry.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.effect.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.*?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.Pagination?>
+<?import javafx.scene.control.Tab?>
+<?import javafx.scene.control.TabPane?>
+<?import javafx.scene.control.TableColumn?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Text?>
+<?import javafx.scene.effect.DropShadow?>
+<?import javafx.scene.paint.Color?>
+<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.control.DatePicker?>
+<?import java.net.URL?>
+
+<VBox prefHeight="600.0" prefWidth="831.0" styleClass="content-pane" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.controllers.UserController">
+    <padding>
+        <Insets bottom="20" left="20" right="20" top="20" />
+    </padding>
+    <spacing>15</spacing>
+    <children>
+        <Label text="Gestion des Utilisateurs" styleClass="section-title" />
+        <TabPane fx:id="mainTabPane" styleClass="finance-tab-pane" prefWidth="804.0" VBox.vgrow="ALWAYS">
+            <tabs>
+                <Tab fx:id="clientsTab" text="Clients Fidèles">
+                    <content>
+                        <AnchorPane styleClass="card-pane" style="-fx-padding: 10px;">
+                            <children>
+                                <VBox spacing="10" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+                                    <padding>
+                                        <Insets bottom="10" left="10" right="10" top="10" />
+                                    </padding>
+                                    <children>
+                                        <Label styleClass="subsection-title" text="Liste des Clients" />
+                                        <HBox alignment="CENTER_LEFT" spacing="10">
+                                            <children>
+                                                <TextField fx:id="searchClientField" prefWidth="250" promptText="Rechercher un client par nom..." styleClass="search-field" />
+                                                <Button fx:id="searchClientButton" onAction="#applyFilters" styleClass="material-button-primary" text="Rechercher" />
+                                            </children>
+                                        </HBox>
+                                        <HBox alignment="CENTER_LEFT" spacing="10">
+                                            <children>
+                                                <DatePicker fx:id="filterClientDatePicker" promptText="Filtrer par date de réservation" styleClass="search-field" />
+                                                <Button fx:id="resetDateFilterButton" onAction="#handleResetDateFilter" styleClass="button-neutral" text="Réinitialiser Date" />
+                                            </children>
+                                        </HBox>
+                                        <TableView fx:id="clientTable" styleClass="table-view" VBox.vgrow="ALWAYS">
+                                            <columns>
+                                                <TableColumn fx:id="nameClientColumn" prefWidth="250" text="Nom" />
+                                                <TableColumn fx:id="phoneClientColumn" prefWidth="250" text="Téléphone" />
+                                                <TableColumn fx:id="addressClientColumn" prefWidth="250" text="Adresse" />
+                                                <TableColumn fx:id="loyaltyClientColumn" prefWidth="150" text="Points de fidélité" />
+                                            </columns>
+                                        </TableView>
+                                        <Pagination fx:id="paginationClient" />
+                                        <HBox alignment="CENTER" spacing="10">
+                                            <children>
+                                                <Button fx:id="editClientButton" onAction="#openEditClientWindow" styleClass="material-button-primary" text="Modifier" />
+                                                <Button fx:id="deleteClientButton" styleClass="danger-button" text="Supprimer" />
+                                            </children>
+                                        </HBox>
+                                    </children>
+                                </VBox>
+                            </children>
+                        </AnchorPane>
+                    </content>
+                </Tab>
+                <Tab text="Compte client">
+                    <content>
+                        <AnchorPane styleClass="card-pane" style="-fx-padding: 10px;">
+                            <children>
+                                <VBox spacing="10" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+                                    <padding>
+                                        <Insets bottom="10" left="10" right="10" top="10" />
+                                    </padding>
+                                    <children>
+                                        <Label styleClass="subsection-title" text="Compte client" />
+                                        <HBox alignment="CENTER_LEFT" spacing="10">
+                                            <children>
+                                                <TextField fx:id="searchRemainingTimeField" prefWidth="250" promptText="Rechercher un client par nom ou téléphone..." styleClass="search-field" />
+                                                <Button fx:id="searchRemainingTimeButton" onAction="#applyFilters" styleClass="material-button-primary" text="Rechercher" />
+                                            </children>
+                                        </HBox>
+                                        <TableView fx:id="remainingTimeClientsTable" styleClass="table-view" VBox.vgrow="ALWAYS">
+                                            <columns>
+                                                <TableColumn fx:id="nameRemainingClientColumn" prefWidth="200" text="Nom" />
+                                                <TableColumn fx:id="phoneRemainingClientColumn" prefWidth="200" text="Téléphone" />
+                                                <TableColumn fx:id="remainingTimeColumn" prefWidth="200" text="Temps Restant" />
+                                                <TableColumn fx:id="actionsRemainingTimeColumn" prefWidth="200" text="Actions" />
+                                            </columns>
+                                        </TableView>
+                                        <Pagination fx:id="paginationRemainingTime" />
+                                    </children>
+                                </VBox>
+                            </children>
+                        </AnchorPane>
+                    </content>
+                </Tab>
+
+                <Tab fx:id="adminsTab" text="Admins">
+                    <content>
+                        <AnchorPane styleClass="card-pane" style="-fx-padding: 10px;">
+                            <children>
+                                <VBox spacing="10" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+                                    <padding>
+                                        <Insets bottom="10" left="10" right="10" top="10" />
+                                    </padding>
+                                    <children>
+                                        <Label styleClass="subsection-title" text="Liste des Administrateurs" />
+                                        <HBox alignment="CENTER_LEFT" spacing="10">
+                                            <children>
+                                                <TextField fx:id="searchAdminField" prefWidth="250" promptText="Rechercher un admin par nom..." styleClass="search-field" />
+                                                <Button fx:id="searchAdminButton" onAction="#applyFilters" styleClass="material-button-primary" text="Rechercher" />
+                                            </children>
+                                        </HBox>
+                                        <TableView fx:id="userTable" styleClass="table-view" VBox.vgrow="ALWAYS">
+                                            <columns>
+                                                <TableColumn fx:id="nameUserColumn" prefWidth="250" text="Nom" />
+                                                <TableColumn fx:id="emailUserColumn" prefWidth="250" text="Email" />
+                                                <TableColumn fx:id="roleUserColumn" prefWidth="250" text="Rôle" />
+                                            </columns>
+                                        </TableView>
+                                        <Pagination fx:id="paginationAdmin" />
+                                        <HBox alignment="CENTER" spacing="10">
+                                            <children>
+                                                <Button fx:id="addAdminButton" onAction="#openAddUserWindow" styleClass="action-button" text="Ajouter" />
+                                                <Button fx:id="editAdminButton" onAction="#openEditUserWindow" styleClass="material-button-primary" text="Modifier" />
+                                                <Button fx:id="deleteAdminButton" onAction="#deleteUser" styleClass="danger-button" text="Supprimer" />
+                                            </children>
+                                        </HBox>
+                                    </children>
+                                </VBox>
+                            </children>
+                        </AnchorPane>
+                    </content>
+                </Tab>
+                <Tab fx:id="parrainsTab" text="Parrains">
+                    <content>
+                        <AnchorPane styleClass="card-pane" style="-fx-padding: 10px;">
+                            <children>
+                                <VBox spacing="10" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+                                    <padding>
+                                        <Insets bottom="10" left="10" right="10" top="10" />
+                                    </padding>
+                                    <children>
+                                        <Label styleClass="subsection-title" text="Liste des Parrains" />
+                                        <HBox alignment="CENTER_LEFT" spacing="10">
+                                            <children>
+                                                <TextField fx:id="searchParrainField" prefWidth="250" promptText="Rechercher un parrain par nom..." styleClass="search-field" />
+                                                <Button fx:id="searchParrainButton" onAction="#applyFilters" styleClass="material-button-primary" text="Rechercher" />
+                                            </children>
+                                        </HBox>
+                                        <TableView fx:id="parrainTable" styleClass="table-view" VBox.vgrow="ALWAYS">
+                                            <columns>
+                                                <TableColumn fx:id="nameParrainColumn" prefWidth="163.0" text="Nom" />
+                                                <TableColumn fx:id="emailParrainColumn" prefWidth="132.0" text="Email" />
+                                                <TableColumn fx:id="phoneParrainColumn" prefWidth="162.0" text="Téléphone" />
+                                                <TableColumn fx:id="addressParrainColumn" prefWidth="160.0" text="Adresse" />
+                                                <TableColumn fx:id="codeParrainageColumn" prefWidth="171.0" text="Code Parrainage" />
+                                                <TableColumn fx:id="pointsParrainageColumn" prefWidth="195.0" text="Points de parrainage" />
+                                            </columns>
+                                        </TableView>
+                                        <Pagination fx:id="paginationParrain" />
+                                        <HBox alignment="CENTER" spacing="10">
+                                            <children>
+                                                <Button fx:id="addParrainButton" onAction="#openAddParrainWindow" styleClass="action-button" text="Ajouter" />
+                                                <Button fx:id="editParrainButton" onAction="#openEditParrainWindow" styleClass="material-button-primary" text="Modifier" />
+                                                <Button fx:id="deleteParrainButton" onAction="#deleteParrain" styleClass="danger-button" text="Supprimer" />
+                                            </children>
+                                        </HBox>
+                                    </children>
+                                </VBox>
+                            </children>
+                        </AnchorPane>
+                    </content>
+                </Tab>
+            </tabs>
+        </TabPane>
+    </children>
+</VBox>

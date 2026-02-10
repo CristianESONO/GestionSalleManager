@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import java.lang.*?>
+<?import javafx.geometry.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.effect.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.*?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.Pagination?>
+<?import javafx.scene.control.Tab?>
+<?import javafx.scene.control.TabPane?>
+<?import javafx.scene.control.TableColumn?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Text?>
+<?import javafx.scene.effect.DropShadow?>
+<?import javafx.scene.paint.Color?>
+<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.control.DatePicker?>
+
+<VBox prefHeight="600.0" prefWidth="831.0" styleClass="content-pane" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.controllers.FinanceController">
+    <padding>
+        <Insets bottom="20" left="20" right="20" top="20" />
+    </padding>
+    <spacing>15</spacing>
+    <children>
+        <Label text="Gestion Financière" styleClass="section-title" />
+        <VBox fx:id="adminInfoBox" styleClass="info-box" spacing="5">
+            <children>
+                <HBox spacing="20">
+                   <children>
+                       <Label fx:id="adminNameLabel" />
+                       <Label fx:id="dateTimeLabel" />
+                   </children>
+                </HBox>
+                <HBox spacing="20">
+                   <children>
+                       <Label fx:id="totalVentesLabel" style="-fx-font-weight: bold;" />
+                       <Label fx:id="totalReservationsLabel" style="-fx-font-weight: bold;" />
+                   </children>
+                </HBox>
+                <Button onAction="#generateDailyPdf" styleClass="action-button" text="Générer Rapport Journalier PDF" />
+            </children>
+        </VBox>
+        <TabPane fx:id="mainTabPane" styleClass="finance-tab-pane" prefWidth="804.0" VBox.vgrow="ALWAYS">
+            <tabs>
+                <!-- Onglet Ventes -->
+                <Tab fx:id="ventesTab" text="Ventes">
+                    <content>
+                        <AnchorPane styleClass="card-pane" style="-fx-padding: 10px;">
+                            <children>
+                                <VBox spacing="10" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+                                    <padding>
+                                        <Insets bottom="10" left="10" right="10" top="10" />
+                                    </padding>
+                                    <children>
+                                        <Label styleClass="subsection-title" text="Ventes (Réservations et Paiements)" />
+                                        <HBox alignment="CENTER_LEFT" spacing="10">
+                                            <children>
+                                                <TextField fx:id="searchVenteField" prefWidth="250" promptText="Rechercher par ticket, client, mode de paiement..." styleClass="search-field" />
+                                            </children>
+                                        </HBox>
+                                        <TableView fx:id="ventesTable" styleClass="table-view" VBox.vgrow="ALWAYS">
+                                            <columns>
+                                                <TableColumn fx:id="numeroTicketVenteColumn" prefWidth="120" text="Numéro Ticket" />
+                                                <TableColumn fx:id="clientVenteColumn" prefWidth="120" text="Client" />
+                                                <TableColumn fx:id="montantTotalVenteColumn" prefWidth="100" text="Montant Total" />
+                                                <TableColumn fx:id="modePaiementVenteColumn" prefWidth="120" text="Mode de Paiement" />
+                                                <TableColumn fx:id="dateHeureVenteColumn" prefWidth="160" text="Date et Heure" />
+                                            </columns>
+                                            <columnResizePolicy>
+                                                <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
+                                            </columnResizePolicy>
+                                        </TableView>
+                                        <Pagination fx:id="ventesPagination" />
+                                    </children>
+                                </VBox>
+                            </children>
+                        </AnchorPane>
+                    </content>
+                </Tab>
+                <!-- Onglet Stock -->
+                <Tab fx:id="stockTab" text="Stock">
+                    <content>
+                        <AnchorPane styleClass="card-pane" style="-fx-padding: 10px;">
+                            <children>
+                                <VBox spacing="10" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+                                    <padding>
+                                        <Insets bottom="10" left="10" right="10" top="10" />
+                                    </padding>
+                                    <children>
+                                        <Label styleClass="subsection-title" text="Stock (Produits et Prix)" />
+                                        <HBox alignment="CENTER_LEFT" spacing="10">
+                                            <children>
+                                                <TextField fx:id="searchStockField" prefWidth="250" promptText="Rechercher par nom de produit..." styleClass="search-field" />
+                                            </children>
+                                        </HBox>
+                                        <TableView fx:id="stockTable" styleClass="table-view" VBox.vgrow="ALWAYS">
+                                            <columns>
+                                                <TableColumn fx:id="nomProduitStockColumn" prefWidth="180" text="Nom du Produit" />
+                                                <TableColumn fx:id="prixProduitStockColumn" prefWidth="100" text="Prix" />
+                                                <TableColumn fx:id="stockProduitStockColumn" prefWidth="100" text="Stock" />
+                                                <TableColumn fx:id="dateAjoutStockColumn" prefWidth="150" text="Date Péremption" />
+                                            </columns>
+                                            <columnResizePolicy>
+                                                <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
+                                            </columnResizePolicy>
+                                        </TableView>
+                                        <Pagination fx:id="stockPagination" />
+                                    </children>
+                                </VBox>
+                            </children>
+                        </AnchorPane>
+                    </content>
+                </Tab>
+                <!-- Onglet Journal -->
+                <Tab fx:id="journalTab" closable="false" text="Journal">
+                    <content>
+                        <AnchorPane styleClass="card-pane" style="-fx-padding: 10px;">
+                            <children>
+                                <VBox spacing="10" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+                                    <padding>
+                                        <Insets bottom="10" left="10" right="10" top="10" />
+                                    </padding>
+                                    <children>
+                                        <Label styleClass="subsection-title" text="Journal des Opérations" />
+                                        <HBox alignment="CENTER_LEFT" spacing="10">
+                                            <children>
+                                                <TextField fx:id="searchJournalField" prefWidth="250" promptText="Rechercher dans le journal..." styleClass="search-field" />
+                                                <DatePicker fx:id="startDatePicker" promptText="Date début" styleClass="search-field" />
+                                                <DatePicker fx:id="endDatePicker" promptText="Date fin" styleClass="search-field" />
+                                                <Button onAction="#filterJournalByDate" styleClass="material-button-primary" text="Filtrer par date" />
+                                            </children>
+                                        </HBox>
+                                        <TableView fx:id="journalTable" styleClass="table-view" VBox.vgrow="ALWAYS">
+                                            <columns>
+                                                <TableColumn fx:id="journalCheckColumn" text=" " prefWidth="40" />
+                                                <TableColumn fx:id="journalTypeColumn" prefWidth="116.0" text="Type" />
+                                                <TableColumn fx:id="journalDescriptionColumn" prefWidth="142.0" text="Description" />
+                                                <TableColumn fx:id="journalDateColumn" prefWidth="107.0" text="Date et Heure" />
+                                                <TableColumn fx:id="journalMontantColumn" prefWidth="95.0" text="Montant" />
+                                                <TableColumn fx:id="journalAdminColumn" prefWidth="99.0" text="Admin" />
+                                                <TableColumn fx:id="journalActionsColumn" prefWidth="165.0" text="Actions" />
+                                            </columns>
+                                            <columnResizePolicy>
+                                                <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
+                                            </columnResizePolicy>
+                                        </TableView>
+                                        <Pagination fx:id="journalPagination" />
+                                        <Button onAction="#generateSelectedJournalPdf" styleClass="action-button" text="Générer PDF des lignes sélectionnées" />
+                                    </children>
+                                </VBox>
+                            </children>
+                        </AnchorPane>
+                    </content>
+                </Tab>
+            </tabs>
+        </TabPane>
+    </children>
+</VBox>

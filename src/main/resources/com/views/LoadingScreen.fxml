@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ProgressIndicator?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.layout.VBox?>
+
+<AnchorPane styleClass="loading-pane" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.controllers.LoadingScreenController">
+    <VBox alignment="CENTER" spacing="20" AnchorPane.topAnchor="200" AnchorPane.leftAnchor="50" AnchorPane.rightAnchor="50">
+        <Label text="Vérification des mises à jour..." style="-fx-text-fill: white; -fx-font-size: 24px; -fx-font-weight: bold;" />
+        <ProgressIndicator progress="-1" style="-fx-progress-color: white;" />
+    </VBox>
+</AnchorPane>
