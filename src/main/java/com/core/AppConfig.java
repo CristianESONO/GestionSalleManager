@@ -36,6 +36,9 @@ public final class AppConfig {
         props.setProperty("login.maxAttempts", "5");
         props.setProperty("login.lockMinutes", "15");
         props.setProperty("password.minLength", "8");
+        props.setProperty("tv.enabled", "false");
+        props.setProperty("tv.api.baseUrl", "");
+        props.setProperty("tv.api.key", "");
 
         // 1. Charger depuis le classpath (ressource dans le JAR)
         try (InputStream in = AppConfig.class.getResourceAsStream(CONFIG_RESOURCE)) {
@@ -155,5 +158,18 @@ public final class AppConfig {
     public static Path getUpdateLockPath() {
         Path configPath = getExternalConfigPath();
         return configPath != null ? configPath.getParent().resolve("update_lock.txt") : null;
+    }
+
+    // --- Contrôle TV (style Switch SAB) ---
+    public static boolean isTvControlEnabled() {
+        return "true".equalsIgnoreCase(get("tv.enabled"));
+    }
+
+    public static String getTvApiBaseUrl() {
+        return get("tv.api.baseUrl");
+    }
+
+    public static String getTvApiKey() {
+        return get("tv.api.key");
     }
 }
