@@ -1,62 +1,97 @@
 package com.entities;
 
-import jakarta.persistence.*;
+import javax.persistence.*;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.HashSet;
+import java.util.Objects; // Ajout de l'import pour Objects.hash
+import java.util.Set;
 
 @Entity
 @Table(name = "produits")
 public class Produit {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)  // Génération automatique de l'ID
-    private int id;  // Clé primaire
-    
-    private String nom;  // Nom du produit
-    
-    private BigDecimal prix;  // Prix du produit
-    
-    private int stock;  // Stock disponible
-    
-    private LocalDateTime dateAjout;  // Date d'ajout du produit
-    
-    private String image;  // Image du produit (chemin ou URL)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private int id;
 
-    // Constructeur par défaut
+    private String nom;
+
+    private LocalDate dateLimiteConsommation;
+
+    private BigDecimal prix;
+
+    private int stock;
+
+    private LocalDateTime dateAjout;
+
+    private String image;
+
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "categorie_id")
+    private Categorie categorie;
+
+    @ManyToMany(fetch = FetchType.EAGER) // Chargement immédiat
+    @JoinTable(
+        name = "promotion_produit",
+        joinColumns = @JoinColumn(name = "produit_id"),
+        inverseJoinColumns = @JoinColumn(name = "promotion_id")
+    )
+    private Set<Promotion> promotions = new HashSet<>();
+
+
+    private BigDecimal ancienPrix;
+
     public Produit() {}
 
-    // Constructeur avec paramètres
-    public Produit(String nom, BigDecimal prix, int stock, String image) {
+    public Produit(String nom, BigDecimal prix, int stock, String image, LocalDate dateLimiteConsommation) {
         this.nom = nom;
         this.prix = prix;
         this.stock = stock;
-        this.image = image;  // Ajouter l'image
-        this.dateAjout = LocalDateTime.now();  // Initialiser avec la date et l'heure actuelles
+        this.image = image;
+        this.dateAjout = LocalDateTime.now();
+        this.dateLimiteConsommation = dateLimiteConsommation;
     }
 
-    // Méthode pour réduire le stock lors de l'ajout au panier
+    // === Méthodes métier ===
+
     public boolean reducerStock(int quantite) {
         if (quantite <= stock) {
-            stock -= quantite;  // Réduit le stock si la quantité est disponible
+            stock -= quantite;
             return true;
         }
-        return false;  // Si la quantité demandée est plus grande que le stock
+        return false;
     }
 
-    // Méthode pour augmenter le stock
     public void augmenterStock(int quantite) {
         stock += quantite;
     }
 
-    // Méthode pour afficher les informations du produit
+    public void appliquerPromotion() {
+        for (Promotion promo : promotions) {
+            if (promo.isValid()) {
+                this.ancienPrix = this.prix;
+                BigDecimal taux = BigDecimal.valueOf(promo.getTauxReduction());
+                BigDecimal remise = prix.multiply(taux).setScale(2, RoundingMode.HALF_UP);
+                this.prix = prix.subtract(remise);
+                break;
+            }
+        }
+    }
+
+
+
+
+
     @Override
     public String toString() {
         return String.format("%s - %.2f FCFA (Stock : %d)", nom, prix, stock);
     }
 
-    // Getters et setters
+    // === Getters & Setters ===
+
     public int getId() {
         return id;
     }
@@ -73,12 +108,28 @@ public class Produit {
         this.nom = nom;
     }
 
+    public LocalDate getDateLimiteConsommation() {
+        return dateLimiteConsommation;
+    }
+
+    public void setDateLimiteConsommation(LocalDate dateLimiteConsommation) {
+        this.dateLimiteConsommation = dateLimiteConsommation;
+    }
+
     public BigDecimal getPrix() {
         return prix;
     }
 
     public void setPrix(BigDecimal prix) {
         this.prix = prix;
+    }
+
+    public BigDecimal getAncienPrix() {
+        return ancienPrix;
+    }
+
+    public void setAncienPrix(BigDecimal ancienPrix) {
+        this.ancienPrix = ancienPrix;
     }
 
     public int getStock() {
@@ -101,9 +152,46 @@ public class Produit {
         return image;
     }
 
-     public void setImage(String image) {
+    public void setImage(String image) {
         this.image = image;
     }
 
-    
+    public Categorie getCategorie() {
+        return categorie;
+    }
+
+    public void setCategorie(Categorie categorie) {
+        this.categorie = categorie;
+    }
+
+    public Set<Promotion> getPromotions() {
+        return promotions;
+    }
+
+    public void setPromotions(Set<Promotion> promotions) {
+        this.promotions = promotions;
+    }
+
+    public void addPromotion(Promotion promotion) {
+        this.promotions.add(promotion);
+    }
+
+    public void removePromotion(Promotion promotion) {
+        this.promotions.remove(promotion);
+    }
+
+    // --- Ajout de equals() et hashCode() ---
+    // Essentiel pour la comparaison correcte des entités par leur ID unique
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Produit produit = (Produit) o;
+        return id == produit.id;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
+    }
 }

@@ -1,83 +1,78 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import javafx.scene.image.*?>
+<?import javafx.geometry.*?>
+<?import javafx.scene.effect.*?>
 <?import javafx.scene.*?>
 <?import java.lang.*?>
+<?import javafx.scene.image.*?>
 <?import javafx.scene.text.*?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
-<?import javafx.scene.effect.DropShadow?>
 
-
-<AnchorPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="600.0" prefWidth="500.0" style="-fx-background-color: linear-gradient(to bottom, #13b0da, #0d8bbf);" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.controllers.RegisterController">
+<AnchorPane prefHeight="640.0" prefWidth="360.0" styleClass="login-container" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.controllers.RegisterController">
    <children>
-      <!-- Titre -->
-      <Text fill="WHITE" layoutX="160.0" layoutY="60.0" strokeType="OUTSIDE" strokeWidth="0.0" text="INSCRIPTION" textAlignment="CENTER">
-         <font>
-            <Font name="Arial Bold" size="28.0" />
-         </font>
-      </Text>
-
-      <!-- Conteneur du formulaire -->
-      <GridPane hgap="15" layoutX="50.0" layoutY="210.0" prefHeight="160.0" prefWidth="400.0" vgap="15">
-         <columnConstraints>
-            <ColumnConstraints prefWidth="180.0" />
-            <ColumnConstraints prefWidth="180.0" />
-         </columnConstraints>
-
-         <rowConstraints>
-            <RowConstraints minHeight="40.0" />
-            <RowConstraints minHeight="40.0" />
-            <RowConstraints minHeight="40.0" />
-         </rowConstraints>
-
+      <VBox alignment="CENTER" layoutX="0.0" layoutY="0.0" prefHeight="640.0" prefWidth="360.0" spacing="15" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
          <children>
-            <!-- Nom -->
-            <TextField fx:id="txtName" promptText="Nom complet" style="-fx-background-color: rgba(255, 255, 255, 0.1); -fx-text-fill: white; -fx-border-color: #9643A9; -fx-border-radius: 10; -fx-background-radius: 10;">
-               <font>
-                  <Font name="System Bold" size="14.0" />
-               </font>
+            <VBox alignment="CENTER" spacing="15" styleClass="login-card">
+               <padding>
+                  <Insets bottom="36" left="36" right="36" top="40" />
+               </padding>
+               <children>
+                  <ImageView fitHeight="100.0" fitWidth="100.0" pickOnBounds="true" preserveRatio="true">
+                     <image>
+                        <Image url="@../img/register.png" />
+                     </image>
+                     <VBox.margin>
+                        <Insets bottom="16.0" />
+                     </VBox.margin>
+                  </ImageView>
+                  <Label text="INSCRIPTION" styleClass="login-title">
+                     <VBox.margin>
+                        <Insets bottom="20.0" />
+                     </VBox.margin>
+                  </Label>
+                  <Label fx:id="lblError" alignment="CENTER" visible="false" wrapText="true" styleClass="label-error">
+                  <VBox.margin>
+                     <Insets bottom="10.0" left="20.0" right="20.0" />
+                  </VBox.margin>
+               </Label>
+               <TextField fx:id="txtName" promptText="Nom d'utilisateur" styleClass="material-text-field">
+               <VBox.margin>
+                  <Insets left="40.0" right="40.0" />
+               </VBox.margin>
             </TextField>
 
-            <!-- Email -->
-            <TextField fx:id="txtEmail" promptText="Email" style="-fx-background-color: rgba(255, 255, 255, 0.1); -fx-text-fill: white; -fx-border-color: #9643A9; -fx-border-radius: 10; -fx-background-radius: 10;" GridPane.columnIndex="1">
+            <TextField fx:id="txtEmail" promptText="Email" styleClass="material-text-field">
+               <VBox.margin>
+                  <Insets left="40.0" right="40.0" />
+               </VBox.margin>
             </TextField>
 
-            <!-- Mot de passe -->
-            <PasswordField fx:id="txtPassword" promptText="Mot de passe" style="-fx-background-color: rgba(255, 255, 255, 0.1); -fx-text-fill: white; -fx-border-color: #9643A9; -fx-border-radius: 10; -fx-background-radius: 10;" GridPane.rowIndex="1">
-            </PasswordField>
-
-            <!-- Rôle -->
-            <ComboBox fx:id="comboRole" prefHeight="30.0" prefWidth="180.0" promptText="Rôle" style="-fx-background-color: rgba(255, 255, 255, 0.1); -fx-text-fill: white; -fx-border-color: #9643A9; -fx-border-radius: 10; -fx-background-radius: 10;" GridPane.columnIndex="1" GridPane.rowIndex="1">
-            </ComboBox>
+               <PasswordField fx:id="txtPassword" promptText="Mot de passe" styleClass="material-text-field">
+                  <VBox.margin>
+                     <Insets left="40.0" right="40.0" />
+                  </VBox.margin>
+               </PasswordField>
+               <VBox alignment="CENTER" spacing="15.0">
+                  <children>
+                     <Button fx:id="btnRegister" onAction="#handleRegister" prefHeight="45.0" prefWidth="280.0" styleClass="material-button-primary" text="S'INSCRIRE" textFill="WHITE">
+                        <cursor>
+                           <Cursor fx:constant="HAND" />
+                        </cursor>
+                     </Button>
+                     <Button fx:id="btnBack" onAction="#handleBack" prefHeight="45.0" prefWidth="280.0" styleClass="material-button-secondary" text="RETOUR" textFill="WHITE">
+                        <cursor>
+                           <Cursor fx:constant="HAND" />
+                        </cursor>
+                     </Button>
+                  </children>
+                  <VBox.margin>
+                     <Insets top="20.0" />
+                  </VBox.margin>
+               </VBox>
+               </children>
+            </VBox>
          </children>
-      </GridPane>
-
-      <!-- Boutons alignés -->
-      <HBox layoutX="100.0" layoutY="420.0" spacing="25">
-         <children>
-            <Button fx:id="btnRegister" prefHeight="45" prefWidth="160" style="-fx-background-color: linear-gradient(to right, #13b0da, #0d8bbf); -fx-background-radius: 10; -fx-border-radius: 10; -fx-font-size: 18px;" text="S'inscrire" textFill="WHITE">
-               <effect>
-                  <DropShadow color="#9643A9" radius="10" />
-               </effect>
-               <cursor>
-                  <Cursor fx:constant="HAND" />
-               </cursor>
-            </Button>
-
-            <Button fx:id="btnBack" prefHeight="45" prefWidth="160" style="-fx-background-color: transparent; -fx-border-color: white; -fx-border-radius: 10; -fx-text-fill: white; -fx-font-size: 18px;" text="Retour" textFill="WHITE">
-               <cursor>
-                  <Cursor fx:constant="HAND" />
-               </cursor>
-            </Button>
-         </children>
-      </HBox>
-
-      <!-- Image -->
-      <ImageView fitHeight="100.0" fitWidth="120.0" layoutX="190.0" layoutY="110.0" pickOnBounds="true" preserveRatio="true">
-         <image>
-            <Image url="@../img/71xzcr0FFvL.jpg" />
-         </image>
-      </ImageView>
+      </VBox>
    </children>
 </AnchorPane>

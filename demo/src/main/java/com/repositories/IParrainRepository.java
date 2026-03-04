@@ -25,6 +25,10 @@ public interface IParrainRepository {
     // Récupérer un parrain par son email (si nécessaire)
     Parrain findByEmail(String email);
 
+    // Récupérer un parrain par son code de parrainage
+    Parrain findByCodeParrainage(String codeParrainage);
+    
+
     public boolean existsByName(String name);
     
 }

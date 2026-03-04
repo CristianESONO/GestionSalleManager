@@ -1,12 +1,19 @@
 package com.entities;
 
-
 import java.util.Date;
+import java.util.Objects;
 
-import jakarta.persistence.*;
+import javax.persistence.*;
 
+// Définir la stratégie d'héritage. SINGLE_TABLE est souvent la plus simple pour les hiérarchies.
+// Toutes les sous-classes seront stockées dans la même table 'users'.
 @Entity
 @Table(name = "users")
+@Inheritance(strategy = InheritanceType.SINGLE_TABLE)
+// Colonne pour distinguer les types d'entités (User, Client, Parrain, etc.)
+@DiscriminatorColumn(name = "user_type", discriminatorType = DiscriminatorType.STRING)
+// Valeur par défaut pour la classe User elle-même si elle est instanciée directement
+@DiscriminatorValue("USER") 
 public class User {
 
     @Id
@@ -25,9 +32,16 @@ public class User {
 
     private Date registrationDate;
 
+    @Column(name = "failed_login_attempts")
+    private Integer failedLoginAttempts;
+
+    @Column(name = "locked_until")
+    @Temporal(TemporalType.TIMESTAMP)
+    private Date lockedUntil;
+
     // Constructeur par défaut
     public User() {
-        this.role = Role.Admin;  // Par défaut, rôle Admin
+        this.role = Role.Admin; // Par défaut, rôle Admin pour un User générique
     }
 
     // Constructeur complet
@@ -37,7 +51,7 @@ public class User {
         this.email = email;
         this.password = password;
         this.registrationDate = registrationDate;
-        this.role = Role.Admin;  // Par défaut, rôle Admin
+        this.role = Role.Admin;
     }
 
     // Constructeur sans ID
@@ -46,7 +60,7 @@ public class User {
         this.email = email;
         this.password = password;
         this.registrationDate = registrationDate;
-        this.role = Role.Admin;  // Par défaut, rôle Admin
+        this.role = Role.Admin;
     }
 
     // Constructeur avec rôle
@@ -115,9 +129,37 @@ public class User {
         this.registrationDate = registrationDate;
     }
 
-    @Override
-public String toString() {
-    return name;
-}
+    public int getFailedLoginAttempts() {
+        return failedLoginAttempts == null ? 0 : failedLoginAttempts;
+    }
 
+    public void setFailedLoginAttempts(Integer failedLoginAttempts) {
+        this.failedLoginAttempts = failedLoginAttempts == null ? 0 : failedLoginAttempts;
+    }
+
+    public Date getLockedUntil() {
+        return lockedUntil;
+    }
+
+    public void setLockedUntil(Date lockedUntil) {
+        this.lockedUntil = lockedUntil;
+    }
+
+    @Override
+    public String toString() {
+        return name;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        User user = (User) o;
+        return id == user.id;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
+    }
 }

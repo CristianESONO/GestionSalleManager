@@ -1,6 +1,9 @@
 package com.repositories;
 
 import com.entities.Reservation;
+import com.entities.User;
+
+import java.time.LocalDateTime;
 import java.util.List;
 
 public interface IReservationRepository {
@@ -13,6 +16,9 @@ public interface IReservationRepository {
     
     // Récupérer une réservation par son ID
     Reservation findById(int id);
+
+     // Nouvelle méthode : Récupérer les réservations d'un client dans une plage de dates
+    List<Reservation> findByClientIdAndDateRange(int clientId, LocalDateTime startDate, LocalDateTime endDate);
     
     // Mettre à jour une réservation
     boolean update(Reservation reservation);
@@ -27,4 +33,6 @@ public interface IReservationRepository {
     boolean existsByTicketNumber(String numeroTicket);
 
     boolean existsById(int id);
+
+    List<Reservation> findReservationsByUser(User user);
 }

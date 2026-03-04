@@ -1,7 +1,10 @@
 package com.repositories;
 
 import com.entities.Produit;
+
+import java.math.BigDecimal;
 import java.util.List;
+import java.util.Set;
 
 public interface IProduitRepository {
     // Ajouter un produit
@@ -24,4 +27,15 @@ public interface IProduitRepository {
 
     // Vérifier si un produit existe déjà par son nom
     boolean checkIfProduitExists(String nom);
+    
+
+    // ✅ Mettre à jour le prix et l'ancien prix d'un produit
+    void updatePrixEtAncienPrix(int produitId, BigDecimal ancienPrix, BigDecimal nouveauPrix);
+    void restaurerPrixInitial(int produitId, BigDecimal ancienPrix) throws Exception;
+
+    Produit findByIdWithPromotions(int produitId);
+
+    Set<Produit> findByPromotionId(int promotionId);
+
+
 }

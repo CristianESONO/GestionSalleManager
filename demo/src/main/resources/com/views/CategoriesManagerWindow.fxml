@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TableColumn?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+<VBox xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.controllers.CategoriesManagerController" spacing="15" prefWidth="450" prefHeight="400">
+    <padding><Insets top="20" right="20" bottom="20" left="20"/></padding>
+    <Label text="Catégories de produits" style="-fx-font-size: 18px; -fx-font-weight: bold;"/>
+    <HBox spacing="10">
+        <TextField fx:id="nomField" promptText="Nom de la catégorie" prefWidth="200"/>
+        <Button fx:id="btnAjouter" text="Ajouter" onAction="#addCategorie"/>
+        <Button fx:id="btnModifier" text="Modifier" onAction="#editCategorie"/>
+        <Button fx:id="btnSupprimer" text="Supprimer" onAction="#deleteCategorie"/>
+    </HBox>
+    <TableView fx:id="categoriesTable" prefHeight="280" VBox.vgrow="ALWAYS">
+        <columns>
+            <TableColumn fx:id="colId" text="Id" prefWidth="60"/>
+            <TableColumn fx:id="colNom" text="Nom" prefWidth="350"/>
+        </columns>
+    </TableView>
+</VBox>

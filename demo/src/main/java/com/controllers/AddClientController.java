@@ -18,7 +18,6 @@ public class AddClientController {
     @FXML private TextField nameField;
     @FXML private TextField emailField;
     @FXML private TextField phoneField;
-    @FXML private DatePicker birthDateField;
     @FXML private TextField addressField;
     @FXML private TextField loyaltyPointsField;
     @FXML private ComboBox<String> roleComboBox;
@@ -33,12 +32,11 @@ public class AddClientController {
         String name = nameField.getText();
         String email = emailField.getText();
         String phone = phoneField.getText();
-        LocalDate birthDate = birthDateField.getValue();
         String address = addressField.getText();
         String loyaltyPointsStr = loyaltyPointsField.getText();
 
         // Validation des champs
-        if (name.isEmpty() || email.isEmpty() || phone.isEmpty() || birthDate == null || address.isEmpty() || loyaltyPointsStr.isEmpty()) {
+        if (name.isEmpty() || email.isEmpty() || phone.isEmpty() || address.isEmpty() || loyaltyPointsStr.isEmpty()) {
             ControllerUtils.showErrorAlert("Erreur", "Veuillez remplir tous les champs.");
             return;
         }
@@ -54,18 +52,22 @@ public class AddClientController {
         }
 
         // Conversion des champs
-        Date date = Date.from(birthDate.atStartOfDay(ZoneId.systemDefault()).toInstant());
         int loyaltyPoints = Integer.parseInt(loyaltyPointsStr);
 
         // Générer un mot de passe aléatoire
         String password = generateRandomPassword();
 
         // Créer un nouveau client
-        Client newClient = new Client(name, email, password, new Date(), phone, date, address, loyaltyPoints);
+        Client newClient = new Client(name, email, password, new Date(), phone, address, loyaltyPoints);
         newClient.setRole(Role.Client);
 
         // Ajouter le client via le service
-        Fabrique.getService().addClient(newClient);
+        try {
+            Fabrique.getService().addClient(newClient);
+        } catch (Exception e) {
+            ControllerUtils.showErrorAlert("Erreur", e.getMessage() != null ? e.getMessage() : "Impossible d'ajouter le client.");
+            return;
+        }
 
         // Afficher un message de succès
         ControllerUtils.showInfoAlert("Succès", "Le client a été ajouté avec succès.");
@@ -85,7 +87,6 @@ public class AddClientController {
         nameField.clear();
         emailField.clear();
         phoneField.clear();
-        birthDateField.setValue(null);
         addressField.clear();
         loyaltyPointsField.clear();
         roleComboBox.getSelectionModel().clearSelection();

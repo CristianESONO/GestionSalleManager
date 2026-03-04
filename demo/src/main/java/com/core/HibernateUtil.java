@@ -3,6 +3,7 @@ package com.core;
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.Persistence;
+// ... (autres imports javax.persistence)
 
 public class HibernateUtil {
     private static final String PERSISTENCE_UNIT_NAME = "gestionSallePU";

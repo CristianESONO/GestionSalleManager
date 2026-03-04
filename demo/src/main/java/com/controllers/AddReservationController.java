@@ -1,317 +1,528 @@
 package com.controllers;
 
+import com.core.Fabrique;
+import com.entities.Client;
+import com.entities.Game;
+import com.entities.GameSession;
+import com.entities.Parrain;
+import com.entities.Payment;
+import com.entities.Poste;
+import com.entities.Promotion;
+import com.entities.Reservation;
+import com.entities.TypePromotion;
+import com.entities.User;
+import com.utils.ReservationReceiptPrinter;
+import javafx.application.Platform;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
+import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.stage.Stage;
-
-import java.io.IOException;
-import java.text.SimpleDateFormat;
+import javafx.util.StringConverter;
 import java.time.Duration;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
-
-import com.core.Fabrique;
-import com.entities.*;
-
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-import java.util.Random;
-
-import org.apache.pdfbox.pdmodel.PDDocument;
-import org.apache.pdfbox.pdmodel.PDPage;
-import org.apache.pdfbox.pdmodel.PDPageContentStream;
-import org.apache.pdfbox.pdmodel.font.PDType1Font;
-import org.apache.pdfbox.pdmodel.font.Standard14Fonts;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 public class AddReservationController {
+    @FXML private TextField searchClientField;
+    @FXML private ComboBox<String> searchFilterComboBox;
+    @FXML private TextField nameField;
+    @FXML private TextField phoneField;
+    @FXML private TextField addressField;
+    @FXML private ComboBox<Poste> posteComboBox;
+    @FXML private ComboBox<Game> gameComboBox;
+    @FXML private ComboBox<String> modePaiementComboBox;
+    @FXML private ComboBox<Integer> hoursComboBox;
+    @FXML private ComboBox<Integer> minutesComboBox;
+    @FXML private ComboBox<Parrain> parrainComboBox;
+    @FXML private Label amountLabel;
+    @FXML private CheckBox temporaryClientCheckBox;
+    @FXML private Button searchButton;
 
-    @FXML
-    private TextField nameField;
-
-    @FXML
-    private TextField phoneField;
-
-    @FXML
-    private DatePicker birthDateField;
-
-    @FXML
-    private TextField addressField;
-
-    @FXML
-    private TextField loyaltyPointsField;
-
-    @FXML
-    private ComboBox<String> roleComboBox;
-
-    @FXML
-    private ComboBox<Game> gameComboBox;
-
-    @FXML
-    private ComboBox<Poste> posteComboBox;
-
-    @FXML
-    private ComboBox<Integer> durationComboBox;
-
-    @FXML
-    private TextField codeParrainageField;
-
-    @FXML
-    private Button addButton;
-
-    @FXML
-    private Button cancelButton;
+    private double calculatedAmount;
+    private ReservationController parentController;
+    private String connectedUserName;
+    private User connectedUser;
+    private List<Poste> allPostes;
 
     @FXML
     public void initialize() {
-        // Configurer le ComboBox pour la durée
-        setupDurationComboBox();
-
-        // Configurer le ComboBox des rôles
-        setupRoleComboBox();
-
-        // Charger les jeux et les postes
-        loadGames();
-        loadPostes();
-
-        // Écouter les changements de sélection dans le ComboBox des jeux
-        setupGameComboBoxListener();
-
-        // Configurer les boutons
-        addButton.setOnAction(event -> {
-            try {
-                addReservation();
-            } catch (Exception e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
+        try {
+            checkFXMLFields();
+            setupPhoneField();
+            // v1.3.5 : filtre de recherche (Téléphone / Nom / Les deux)
+            if (searchFilterComboBox != null) {
+                searchFilterComboBox.getItems().setAll("Téléphone ou nom", "Téléphone uniquement", "Nom uniquement");
+                searchFilterComboBox.setValue("Téléphone ou nom");
             }
-        });
-        cancelButton.setOnAction(event -> cancel());
-    }
+            // v1.3.5 : valider la recherche client avec la touche "Entrée"
+            if (searchClientField != null) {
+                searchClientField.setOnAction(e -> searchClient(null));
+            }
+            setupHoursAndMinutesComboBoxes();
+            loadGames();
+            loadParrains();
+            if (modePaiementComboBox != null) {
+                modePaiementComboBox.setItems(FXCollections.observableArrayList(
+                    "En Espèce", "Wave", "Orange Money", "Free Money"
+                ));
+            }
+            if (posteComboBox != null) {
+                posteComboBox.setConverter(new StringConverter<Poste>() {
+                    @Override
+                    public String toString(Poste poste) {
+                        if (poste == null) return "";
+                        return "Poste " + poste.getId() + " - " + (poste.getName() != null ? poste.getName() : "");
+                    }
+                    @Override
+                    public Poste fromString(String string) {
+                        return null;
+                    }
+                });
+            }
+            loadPostes();
+            if (gameComboBox != null) {
+                gameComboBox.valueProperty().addListener((obs, oldVal, newGame) -> {
+                    filterPostesByGame(newGame);
+                    calculateAndSetAmount();
+                });
+            }
+            if (posteComboBox != null) {
+                posteComboBox.valueProperty().addListener((obs, oldVal, newVal) -> calculateAndSetAmount());
+            }
+            if (hoursComboBox != null) {
+                hoursComboBox.valueProperty().addListener((obs, oldVal, newVal) -> calculateAndSetAmount());
+            }
+            if (minutesComboBox != null) {
+                minutesComboBox.valueProperty().addListener((obs, oldVal, newVal) -> calculateAndSetAmount());
+            }
 
-    private void setupDurationComboBox() {
-        // Ajouter des valeurs multiples de 15 minutes (15, 30, 45, 60, 75, etc.)
-        for (int i = 15; i <= 180; i += 15) { // Limite à 180 minutes (3 heures)
-            durationComboBox.getItems().add(i);
+            // Masquer les champs par défaut
+            nameField.setVisible(false);
+            addressField.setVisible(false);
+
+            // Ajouter un listener pour la case à cocher "Client temporaire"
+            temporaryClientCheckBox.selectedProperty().addListener((obs, oldVal, newVal) -> {
+                if (newVal) {
+                    // Désactiver les champs si "Client temporaire" est coché
+                    nameField.setDisable(true);
+                    addressField.setDisable(true);
+                    nameField.clear();
+                    addressField.clear();
+                    phoneField.setDisable(true);
+                    phoneField.clear();
+                    // Désactiver le champ parrain
+                    parrainComboBox.setDisable(true);
+                    parrainComboBox.setValue(null);
+                } else {
+                    // Réactiver les champs si "Client temporaire" est décoché
+                    nameField.setDisable(false);
+                    addressField.setDisable(false);
+                    phoneField.setDisable(false);
+                    // Réactiver le champ parrain
+                    parrainComboBox.setDisable(false);
+                }
+            });
+            calculateAndSetAmount();
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException("Erreur d'initialisation du contrôleur", e);
         }
-        durationComboBox.getSelectionModel().selectFirst(); // Sélectionner la première valeur par défaut
     }
 
-    private void setupRoleComboBox() {
-        // Ajouter les rôles disponibles
-        roleComboBox.getItems().add(Role.Client.name());
+    private void checkFXMLFields() {
+        if (nameField == null) System.err.println("ERREUR: nameField est null");
+        if (phoneField == null) System.err.println("ERREUR: phoneField est null");
+        if (addressField == null) System.err.println("ERREUR: addressField est null");
+        if (posteComboBox == null) System.err.println("ERREUR: posteComboBox est null");
+        if (gameComboBox == null) System.err.println("ERREUR: gameComboBox est null");
+        if (modePaiementComboBox == null) System.err.println("ERREUR: modePaiementComboBox est null");
+        if (hoursComboBox == null) System.err.println("ERREUR: hoursComboBox est null");
+        if (minutesComboBox == null) System.err.println("ERREUR: minutesComboBox est null");
+        if (parrainComboBox == null) System.err.println("ERREUR: parrainComboBox est null");
+        if (amountLabel == null) System.err.println("ERREUR: amountLabel est null");
+    }
+
+    private void setupPhoneField() {
+        phoneField.textProperty().addListener((observable, oldValue, newValue) -> {
+            if (newValue == null || newValue.isEmpty()) return;
+            String filteredValue = newValue.replaceAll("[^0-9]", "");
+            if (filteredValue.length() > 9) filteredValue = filteredValue.substring(0, 9);
+            if (!filteredValue.equals(newValue)) phoneField.setText(filteredValue);
+        });
+    }
+
+    public void setClientInfo(Client client) {
+        if (client != null) {
+            phoneField.setText(client.getPhone() != null ? client.getPhone() : "");
+            nameField.setText(client.getName() != null ? client.getName() : "");
+            addressField.setText(client.getAddress() != null ? client.getAddress() : "");
+
+            nameField.setVisible(true);
+            addressField.setVisible(true);
+            nameField.setDisable(true);
+            addressField.setDisable(true);
+            phoneField.setDisable(true);
+
+            temporaryClientCheckBox.setSelected(false);
+            temporaryClientCheckBox.setDisable(true);
+            if (searchClientField != null) {
+                searchClientField.setText(client.getPhone() != null && !client.getPhone().isEmpty() ? client.getPhone() : client.getName());
+            }
+        }
+    }
+
+    private void setupHoursAndMinutesComboBoxes() {
+        ObservableList<Integer> hours = FXCollections.observableArrayList();
+        for (int i = 0; i <= 23; i++) hours.add(i);
+        hoursComboBox.setItems(hours);
+        hoursComboBox.setValue(0);
+        ObservableList<Integer> minutes = FXCollections.observableArrayList(0, 15, 30, 45);
+        minutesComboBox.setItems(minutes);
+        minutesComboBox.setValue(0);
     }
 
     private void loadGames() {
         List<Game> games = Fabrique.getService().getAllGames();
-        gameComboBox.getItems().addAll(games);
-    }
-
-    private void loadPostes() {
-        List<Poste> postes = Fabrique.getService().getPostes();
-        posteComboBox.getItems().addAll(postes);
-    }
-
-    private void setupGameComboBoxListener() {
-        // Écouter les changements de sélection dans le ComboBox des jeux
-        gameComboBox.getSelectionModel().selectedItemProperty().addListener((obs, oldGame, newGame) -> {
-            if (newGame != null) {
-                // Charger les postes disponibles pour le jeu sélectionné
-                loadPostesForGame(newGame);
-            } else {
-                // Effacer les postes si aucun jeu n'est sélectionné
-                posteComboBox.getItems().clear();
-            }
+        gameComboBox.setItems(FXCollections.observableArrayList(games));
+        gameComboBox.setConverter(new StringConverter<Game>() {
+            @Override public String toString(Game game) { return game != null ? game.getName() : ""; }
+            @Override public Game fromString(String string) { return null; }
         });
     }
 
-    private void loadPostesForGame(Game game) {
-        // Récupérer les postes disponibles pour le jeu sélectionné
-        List<Poste> postes = Fabrique.getService().getPostesForGame(game);
-        posteComboBox.getItems().clear(); // Effacer les anciens postes
-        posteComboBox.getItems().addAll(postes); // Ajouter les nouveaux postes
+    private void loadParrains() {
+        List<Parrain> parrains = Fabrique.getService().getAllParrains();
+        parrainComboBox.setItems(FXCollections.observableArrayList(parrains));
+        parrainComboBox.setConverter(new StringConverter<Parrain>() {
+            @Override public String toString(Parrain parrain) { return parrain != null ? parrain.getCodeParrainage() : ""; }
+            @Override public Parrain fromString(String string) { return null; }
+        });
+    }
+
+    private void loadPostes() {
+        try {
+            allPostes = Fabrique.getService().getPostes();
+            if (allPostes == null) allPostes = new ArrayList<>();
+            posteComboBox.setItems(FXCollections.observableArrayList(allPostes));
+        } catch (Exception e) {
+            e.printStackTrace();
+            allPostes = new ArrayList<>();
+            posteComboBox.setItems(FXCollections.observableArrayList());
+            Platform.runLater(() -> ControllerUtils.showErrorAlert("Erreur de chargement", "Impossible de charger la liste des postes: " + e.getMessage()));
+        }
+    }
+
+    private void filterPostesByGame(Game selectedGame) {
+        try {
+            posteComboBox.setValue(null);
+            if (selectedGame == null) {
+                posteComboBox.setItems(FXCollections.observableArrayList(allPostes));
+            } else {
+                List<Poste> filteredPostes = allPostes.stream()
+                    .filter(poste -> poste.getGames() != null && poste.getGames().contains(selectedGame))
+                    .collect(Collectors.toList());
+                posteComboBox.setItems(FXCollections.observableArrayList(filteredPostes));
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            posteComboBox.setItems(FXCollections.observableArrayList(allPostes));
+        }
+    }
+
+    private Duration getSelectedDuration() {
+        Integer selectedHours = hoursComboBox.getValue() != null ? hoursComboBox.getValue() : 0;
+        Integer selectedMinutes = minutesComboBox.getValue() != null ? minutesComboBox.getValue() : 0;
+        long totalMinutes = selectedHours * 60 + selectedMinutes;
+        return Duration.ofMinutes(totalMinutes);
+    }
+
+    private void calculateAndSetAmount() {
+        Reservation tempReservation = new Reservation();
+        tempReservation.setDuration(getSelectedDuration());
+        tempReservation.setReservationDate(LocalDateTime.now());
+        Optional<Promotion> activePromo = Fabrique.getService().getBestActivePromotionForToday();
+        activePromo.ifPresent(promo -> {
+            if (promo.getTypePromotion() == TypePromotion.RESERVATION) {
+                tempReservation.setAppliedPromotion(promo);
+            }
+        });
+        calculatedAmount = tempReservation.calculatePriceBasedOnDuration();
+        String promoInfo = activePromo.map(p -> " (Promo: " + p.getNom() + ")").orElse("");
+        amountLabel.setText(String.format("Montant : %.2f FCFA%s", calculatedAmount, promoInfo));
     }
 
     @FXML
-    private void addReservation() throws Exception {
-        // Récupérer les valeurs du formulaire client
-        String name = nameField.getText().trim();
-        String phone = phoneField.getText().trim();
-        LocalDate birthDate = birthDateField.getValue();
-        String address = addressField.getText().trim();
-        int loyaltyPoints = Integer.parseInt(loyaltyPointsField.getText().trim());
-        Role role = roleComboBox.getValue().equals(Role.Client.name()) ? Role.Client : Role.Admin;
-        Date date = Date.from(birthDate.atStartOfDay(ZoneId.systemDefault()).toInstant());
-    
-        // Récupérer les autres valeurs pour la réservation
-        Game selectedGame = gameComboBox.getValue();
-        Poste selectedPoste = posteComboBox.getValue();
-        int durationInMinutes = durationComboBox.getValue();
-        String codeParrainage = codeParrainageField.getText().trim();
-    
-        // Valider les champs obligatoires
-        if (name.isEmpty() || phone.isEmpty() || birthDate == null || address.isEmpty() || selectedGame == null || selectedPoste == null) {
-            ControllerUtils.showErrorAlert("Erreur", "Veuillez remplir tous les champs obligatoires.");
+    private void searchClient(ActionEvent event) {
+        String search = searchClientField != null ? searchClientField.getText().trim() : "";
+        if (search.isEmpty()) {
+            ControllerUtils.showErrorAlert("Recherche vide", "Veuillez entrer un numéro de téléphone ou un nom de client.");
             return;
         }
-    
-        // Valider la durée
-        if (durationInMinutes < 15 || durationInMinutes % 15 != 0) {
-            ControllerUtils.showErrorAlert("Erreur", "La durée doit être un multiple de 15 minutes (15, 30, 45, etc.).");
-            return;
+        String filter = (searchFilterComboBox != null && searchFilterComboBox.getValue() != null) ? searchFilterComboBox.getValue() : "Téléphone ou nom";
+        Client client = null;
+        if ("Téléphone uniquement".equals(filter)) {
+            client = Fabrique.getService().findByTel(search);
+        } else if ("Nom uniquement".equals(filter)) {
+            java.util.List<Client> byName = Fabrique.getService().findClientsByNameContaining(search);
+            if (byName.isEmpty()) {
+                client = null;
+            } else if (byName.size() == 1) {
+                client = byName.get(0);
+            } else {
+                Dialog<Client> dialog = new Dialog<>();
+                dialog.setTitle("Plusieurs clients trouvés");
+                dialog.setHeaderText("Choisissez le client");
+                ListView<Client> listView = new ListView<>(FXCollections.observableArrayList(byName));
+                listView.setCellFactory(lv -> new ListCell<Client>() {
+                    @Override
+                    protected void updateItem(Client c, boolean empty) {
+                        super.updateItem(c, empty);
+                        setText(empty || c == null ? "" : (c.getName() != null ? c.getName() : "") + " - " + (c.getPhone() != null ? c.getPhone() : ""));
+                    }
+                });
+                listView.setPrefHeight(200);
+                listView.getSelectionModel().select(0);
+                dialog.getDialogPane().setContent(listView);
+                dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+                dialog.setResultConverter(btn -> btn == ButtonType.OK ? listView.getSelectionModel().getSelectedItem() : null);
+                Optional<Client> chosen = dialog.showAndWait();
+                client = chosen.orElse(null);
+            }
+        } else {
+            client = Fabrique.getService().findClientByPhoneOrName(search);
         }
-    
-        // Vérifier si le client existe déjà en base de données
-        Client client = Fabrique.getService().findByTel(phone);
-    
-        if (client == null) {
-            // Créer un nouveau client s'il n'existe pas
-            client = new Client();
-            client.setName(name);
-            client.setPhone(phone);
-            client.setBirthDate(date);
-            client.setAddress(address);
-            client.setLoyaltyPoints(loyaltyPoints);
-            client.setRole(role);
-            client.setRegistrationDate(date);
-    
-            // Ajouter le nouveau client à la base de données
-            Fabrique.getService().addClient(client);
-        }
-    
-        // Créer la réservation
-        LocalDateTime dateTime = LocalDateTime.now();
-        Duration duration = Duration.ofMinutes(durationInMinutes);
-        Reservation reservation = new Reservation(client, dateTime, duration, codeParrainage, selectedPoste, selectedGame);
-    
-        // Générer et définir le numéro de ticket
-        String numeroTicket = reservation.generateTicketNumber();
-        reservation.setNumeroTicket(numeroTicket);
-    
-        try {
-            // Ajouter la réservation
-            Fabrique.getService().insertReservation(reservation);
-
-             // Générer une facture PDF (à implémenter)
-             genererFacturePDF(reservation);
-    
-            ControllerUtils.showInfoAlert("Succès", "Réservation ajoutée avec succès.");
-            ControllerUtils.closeWindow(durationComboBox); // Fermer la fenêtre après l'ajout
-        } catch (Exception e) {
-            ControllerUtils.showErrorAlert("Erreur", "Échec de l'ajout de la réservation : " + e.getMessage());
+        if (client != null) {
+            setClientInfo(client);
+            ControllerUtils.showInfoAlert("Client trouvé", "Les informations du client ont été chargées. Complétez la réservation.");
+        } else {
+            nameField.setVisible(true);
+            nameField.setDisable(false);
+            nameField.clear();
+            addressField.setVisible(true);
+            addressField.setDisable(false);
+            addressField.clear();
+            phoneField.setDisable(false);
+            boolean looksLikePhone = search.matches("[0-9]+") && search.length() >= 9;
+            phoneField.setText(looksLikePhone ? search : "");
+            temporaryClientCheckBox.setVisible(true);
+            temporaryClientCheckBox.setSelected(false);
+            if (temporaryClientCheckBox.isDisable()) temporaryClientCheckBox.setDisable(false);
+            ControllerUtils.showInfoAlert("Client non trouvé", "Ce client n'est pas enregistré. Entrez le numéro de téléphone ci-dessous (et nom/adresse si besoin) pour enregistrer un nouveau client, ou cochez 'Client temporaire'.");
         }
     }
 
-
-
-    public void genererFacturePDF(Reservation reservation) {
-    try (PDDocument document = new PDDocument()) {
-        PDPage page = new PDPage();
-        document.addPage(page);
-
-        try (PDPageContentStream contentStream = new PDPageContentStream(document, page)) {
-            // Définir les marges et les positions
-            float margin = 50;
-            float yStart = page.getMediaBox().getHeight() - margin;
-            float yPosition = yStart;
-            float lineHeight = 20;
-
-            // Police et taille pour le titre
-            contentStream.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 18);
-            contentStream.beginText();
-            contentStream.newLineAtOffset(margin, yPosition);
-            contentStream.showText("FACTURE DE RÉSERVATION");
-            contentStream.endText();
-            yPosition -= lineHeight * 2;
-
-            // Police et taille pour les informations de la facture
-            contentStream.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 12);
-
-            // Informations de la réservation
-            contentStream.beginText();
-            contentStream.newLineAtOffset(margin, yPosition);
-            contentStream.showText("Numéro de réservation : " + reservation.getNumeroTicket());
-            contentStream.endText();
-            yPosition -= lineHeight;
-
-            SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy HH:mm");
-            contentStream.beginText();
-            contentStream.newLineAtOffset(margin, yPosition);
-            contentStream.showText("Date de réservation : " + dateFormat.format(reservation.getReservationDate()));
-            contentStream.endText();
-            yPosition -= lineHeight;
-
-            contentStream.beginText();
-            contentStream.newLineAtOffset(margin, yPosition);
-            contentStream.showText("Client : " + reservation.getClient().getName());
-            contentStream.endText();
-            yPosition -= lineHeight;
-
-            contentStream.beginText();
-            contentStream.newLineAtOffset(margin, yPosition);
-            contentStream.showText("Jeu réservé : " + reservation.getGame().getName());
-            contentStream.endText();
-            yPosition -= lineHeight;
-
-            contentStream.beginText();
-            contentStream.newLineAtOffset(margin, yPosition);
-            contentStream.showText("Poste réservé : " + reservation.getPoste().getName());
-            contentStream.endText();
-            yPosition -= lineHeight;
-
-            contentStream.beginText();
-            contentStream.newLineAtOffset(margin, yPosition);
-            contentStream.showText("Durée : " + reservation.getDuration().toMinutes() + " minutes");
-            contentStream.endText();
-            yPosition -= lineHeight;
-
-            contentStream.beginText();
-            contentStream.newLineAtOffset(margin, yPosition);
-            contentStream.showText("Code de parrainage : " + (reservation.getCodeParrainage() != null ? reservation.getCodeParrainage() : "N/A"));
-            contentStream.endText();
-            yPosition -= lineHeight * 2;
-
-            // Pied de page
-            contentStream.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA), 10);
-            contentStream.beginText();
-            contentStream.newLineAtOffset(margin, yPosition - lineHeight * 2);
-            contentStream.showText("Merci pour votre réservation !");
-            contentStream.endText();
-
-            contentStream.beginText();
-            contentStream.newLineAtOffset(margin, yPosition - lineHeight * 3);
-            contentStream.showText("Contact : contact@votreentreprise.com | Tél : +221 77 137 45 53 26");
-            contentStream.endText();
+    private Duration getRemainingTimeForClient(Client client) {
+        if (client == null) {
+            return Duration.ZERO;
         }
 
-        // Sauvegarder le document
-        String filePath = "Facture_Reservation_" + reservation.getNumeroTicket() + ".pdf";
-        document.save(filePath);
-        System.out.println("Facture de réservation générée avec succès : " + filePath);
-    } catch (IOException e) {
+        List<GameSession> sessions = Fabrique.getService().findGameSessionsByClientId(client.getId());
+        Duration totalRemainingTime = Duration.ZERO;
+
+        for (GameSession session : sessions) {
+            if ("En pause".equals(session.getStatus())) {
+                Duration remainingTime = session.getPausedRemainingTime();
+                if (remainingTime != null && !remainingTime.isNegative() && !remainingTime.isZero()) {
+                    totalRemainingTime = totalRemainingTime.plus(remainingTime);
+                }
+            }
+        }
+
+        return totalRemainingTime;
+    }
+
+
+   @FXML
+private void addReservation(ActionEvent event) {
+    try {
+        String clientPhone = phoneField.getText().trim();
+        Poste poste = posteComboBox.getValue();
+        Game game = gameComboBox.getValue();
+        Duration selectedDuration = getSelectedDuration(); // Durée sélectionnée par l'utilisateur
+        String modePaiement = modePaiementComboBox.getSelectionModel().getSelectedItem();
+
+        // Validation des champs obligatoires
+        if (!temporaryClientCheckBox.isSelected() && (clientPhone.isEmpty() || clientPhone.length() < 9)) {
+            ControllerUtils.showErrorAlert("Numéro invalide", "Veuillez entrer un numéro de téléphone valide (9 chiffres).");
+            return;
+        }
+        if (poste == null || game == null || selectedDuration.toMinutes() < 15 || modePaiement == null) {
+            ControllerUtils.showErrorAlert("Champs manquants", "Veuillez remplir tous les champs obligatoires.");
+            return;
+        }
+        if (connectedUser == null) {
+            connectedUser = Fabrique.getService().getCurrentUser();
+            if (connectedUser == null) {
+                ControllerUtils.showErrorAlert("Erreur d'authentification", "Aucun utilisateur connecté détecté.");
+                return;
+            }
+        }
+
+        // Gestion du client (temporaire ou permanent)
+        final Client[] clientHolder = new Client[1];
+        if (temporaryClientCheckBox.isSelected()) {
+            clientHolder[0] = new Client();
+            clientHolder[0].setName("Client temporaire");
+            clientHolder[0].setPhone(null);
+            clientHolder[0].setLoyaltyPoints(0);
+            clientHolder[0].setRegistrationDate(new Date());
+            Fabrique.getService().addClient(clientHolder[0]);
+        } else {
+            String clientName = nameField.getText().trim();
+            if (clientName.isEmpty() && !temporaryClientCheckBox.isSelected()) {
+                ControllerUtils.showErrorAlert("Nom manquant", "Veuillez entrer le nom du client.");
+                return;
+            }
+            clientPhone = phoneField.getText().trim();
+            clientHolder[0] = Fabrique.getService().findByTel(clientPhone);
+            if (clientHolder[0] == null) {
+                clientHolder[0] = new Client();
+                clientHolder[0].setName(clientName);
+                clientHolder[0].setPhone(clientPhone);
+                clientHolder[0].setAddress(addressField.getText().trim().isEmpty() ? null : addressField.getText().trim());
+                clientHolder[0].setLoyaltyPoints(0);
+                clientHolder[0].setRegistrationDate(new Date());
+                Fabrique.getService().addClient(clientHolder[0]);
+                ControllerUtils.showInfoAlert("Nouveau client", String.format("Le client '%s' a été ajouté avec succès.", clientHolder[0].getName()));
+            } else {
+                clientHolder[0].setName(clientName);
+                clientHolder[0].setAddress(addressField.getText().trim().isEmpty() ? clientHolder[0].getAddress() : addressField.getText().trim());
+                Fabrique.getService().updateClient(clientHolder[0]);
+            }
+        }
+
+        final Client client = clientHolder[0];
+        Duration remainingTime = getRemainingTimeForClient(client);
+
+        // Mettre à jour les anciennes sessions en pause pour ce client
+        List<GameSession> pausedSessions = Fabrique.getService().getAllGameSessions().stream()
+            .filter(session -> "En pause".equals(session.getStatus()) && session.getClient().getId() == client.getId())
+            .collect(Collectors.toList());
+
+        // Marquer les anciennes sessions en pause comme "Terminées"
+        for (GameSession session : pausedSessions) {
+            session.setPausedRemainingTime(Duration.ZERO);
+            session.setStatus("Terminée");
+            Fabrique.getService().updateGameSession(session);
+            Reservation associatedReservation = session.getReservation();
+            if (associatedReservation != null) {
+                associatedReservation.setStatus("Terminée");
+                Fabrique.getService().updateReservation(associatedReservation);
+            }
+        }
+
+        // Calculer la durée totale (temps restant + temps sélectionné)
+        Duration totalDuration = selectedDuration.plus(remainingTime);
+
+        // Recalculer le montant à payer (uniquement pour le temps supplémentaire)
+        double amountToPay = calculatedAmount;
+        if (!remainingTime.isZero() && !remainingTime.isNegative()) {
+            // Calculer le montant pour la durée supplémentaire (selectedDuration)
+            Reservation tempReservation = new Reservation();
+            tempReservation.setDuration(selectedDuration);
+            amountToPay = tempReservation.calculatePriceBasedOnDuration();
+        }
+
+        // Créer la nouvelle réservation avec la durée totale
+        Reservation reservation = new Reservation();
+        reservation.setNumeroTicket(Reservation.generateRandomTicketNumber());
+        reservation.setClient(client);
+        reservation.setPoste(poste);
+        reservation.setGame(game);
+        reservation.setDuration(totalDuration);
+        reservation.setReservationDate(LocalDateTime.now());
+        reservation.setTotalPrice(amountToPay); // Montant ajusté
+        reservation.setStatus("En attente");
+        reservation.setCreatedBy(connectedUser);
+
+        // Gestion du code de parrainage
+        if (!temporaryClientCheckBox.isSelected() && parrainComboBox.getValue() != null) {
+            reservation.setCodeParrainage(parrainComboBox.getValue().getCodeParrainage());
+        } else {
+            reservation.setCodeParrainage(null);
+        }
+
+        // Appliquer une promotion si disponible
+        Optional<Promotion> activePromo = Fabrique.getService().getBestActivePromotionForToday();
+        activePromo.ifPresent(promo -> {
+            if (promo.getTypePromotion() == TypePromotion.RESERVATION) {
+                reservation.setAppliedPromotion(promo);
+            }
+        });
+
+        // Enregistrer la réservation et le paiement
+        Fabrique.getService().insertReservation(reservation);
+        String detailReservations = String.format(
+            "Réservation pour %s (Poste %d) - Durée: %d minutes (dont %d minutes de temps restant)",
+            game.getName(), poste.getId(), totalDuration.toMinutes(), remainingTime.toMinutes()
+        );
+        Payment payment = new Payment(
+            reservation.getNumeroTicket(),
+            new Date(),
+            amountToPay,
+            modePaiement,
+            client,
+            "",
+            detailReservations,
+            connectedUser
+        );
+        Fabrique.getService().addPayment(payment);
+
+        // Mise à jour des points de fidélité (uniquement pour le temps payé)
+        if (!temporaryClientCheckBox.isSelected() && selectedDuration.toMinutes() > 0) {
+            int pointsEarned = (int) (selectedDuration.toMinutes() / 15);
+            if (pointsEarned > 0) {
+                Client freshClient = Fabrique.getService().findByTel(clientPhone);
+                freshClient.setLoyaltyPoints(freshClient.getLoyaltyPoints() + pointsEarned);
+                Fabrique.getService().updateClient(freshClient);
+                ControllerUtils.showInfoAlert("Points de fidélité ajoutés",
+                    String.format("Le client '%s' a gagné %d points de fidélité. Total actuel : %d points.",
+                        freshClient.getName(), pointsEarned, freshClient.getLoyaltyPoints()));
+            }
+        }
+
+        // Affichage du reçu et fermeture de la fenêtre
+        ControllerUtils.showInfoAlert("Réservation ajoutée", "Réservation et paiement enregistrés avec succès!");
+        ReservationReceiptPrinter printer = new ReservationReceiptPrinter(reservation, connectedUserName, modePaiement);
+        printer.printReceipt();
+
+        if (parentController != null) {
+            parentController.loadReservations();
+            parentController.loadActiveSessions();
+        }
+
+        Stage stage = (Stage) ((Button) event.getSource()).getScene().getWindow();
+        stage.close();
+
+    } catch (Exception e) {
         e.printStackTrace();
+        ControllerUtils.showErrorAlert("Erreur", "Erreur lors de l'ajout de la réservation: " + e.getMessage());
     }
 }
 
-       /**
-     * Génère un mot de passe aléatoire.
-     * @return Un mot de passe aléatoire de 10 caractères.
-     */
-    private String generateRandomPassword() {
-        String characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-        Random random = new Random();
-        StringBuilder password = new StringBuilder();
 
-        for (int i = 0; i < 10; i++) {
-            int index = random.nextInt(characters.length());
-            password.append(characters.charAt(index));
-        }
 
-        return password.toString();
-    }
-    
     @FXML
-    private void cancel() {
-        ControllerUtils.closeWindow(durationComboBox); // Fermer la fenêtre lors de l'annulation
+    private void cancel(ActionEvent event) {
+        Stage stage = (Stage) ((Button) event.getSource()).getScene().getWindow();
+        stage.close();
+    }
+
+    public void setParentController(ReservationController parentController) {
+        this.parentController = parentController;
+    }
+
+    public void setConnectedUserName(String userName) {
+        this.connectedUserName = userName;
+    }
+
+    public void setConnectedUser(User user) {
+        this.connectedUser = user;
     }
 }

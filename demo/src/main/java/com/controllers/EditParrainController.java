@@ -10,7 +10,7 @@ public class EditParrainController {
 
     @FXML private TextField nameField;
     @FXML private TextField emailField;
-    @FXML private PasswordField passwordField;
+    //@FXML private PasswordField passwordField;
     @FXML private TextField phoneField;
     @FXML private TextField addressField;
     @FXML private TextField codeParrainageField;
@@ -19,8 +19,32 @@ public class EditParrainController {
 
     @FXML
     private void initialize() {
-        // Initialisation si nécessaire
+        // Limiter le champ téléphone à 9 chiffres
+        setupPhoneField();
     }
+
+    private void setupPhoneField() {
+        phoneField.textProperty().addListener((observable, oldValue, newValue) -> {
+            if (newValue == null || newValue.isEmpty()) {
+                return;
+            }
+
+            // Ne garder que les chiffres
+            String filteredValue = newValue.replaceAll("[^0-9]", "");
+
+            // Limiter à 9 chiffres
+            if (filteredValue.length() > 9) {
+                filteredValue = filteredValue.substring(0, 9);
+            }
+
+            // Mettre à jour le champ si nécessaire
+            if (!filteredValue.equals(newValue)) {
+                phoneField.setText(filteredValue);
+            }
+        });
+    }
+
+
 
     /**
      * Charge les informations du parrain dans les champs du formulaire.
@@ -30,7 +54,7 @@ public class EditParrainController {
         this.parrainToEdit = parrain;
         nameField.setText(parrain.getName());
         emailField.setText(parrain.getEmail());
-        passwordField.setText(parrain.getPassword());
+        //passwordField.setText(parrain.getPassword());
         phoneField.setText(parrain.getPhone());
         addressField.setText(parrain.getAddress());
         codeParrainageField.setText(parrain.getCodeParrainage());
@@ -41,13 +65,13 @@ public class EditParrainController {
         // Récupérer les nouvelles valeurs
         String name = nameField.getText();
         String email = emailField.getText();
-        String password = passwordField.getText();
+        //String password = passwordField.getText();
         String phone = phoneField.getText();
         String address = addressField.getText();
         String codeParrainage = codeParrainageField.getText();
 
         // Validation des champs
-        if (name.isEmpty() || email.isEmpty() || password.isEmpty() || phone.isEmpty() || address.isEmpty() || codeParrainage.isEmpty()) {
+        if (name.isEmpty() || email.isEmpty() || phone.isEmpty() || address.isEmpty() || codeParrainage.isEmpty()) {
             ControllerUtils.showErrorAlert("Erreur", "Veuillez remplir tous les champs.");
             return;
         }
@@ -65,7 +89,7 @@ public class EditParrainController {
         // Mettre à jour les informations du parrain
         parrainToEdit.setName(name);
         parrainToEdit.setEmail(email);
-        parrainToEdit.setPassword(password);
+        //parrainToEdit.setPassword(password);
         parrainToEdit.setPhone(phone);
         parrainToEdit.setAddress(address);
         parrainToEdit.setCodeParrainage(codeParrainage);

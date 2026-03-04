@@ -3,93 +3,87 @@ package com.controllers;
 import java.io.IOException;
 import java.net.URL;
 import java.util.ResourceBundle;
-
 import com.App;
 import com.core.Fabrique;
 import com.entities.User;
-
 import javafx.fxml.FXML;
-import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
-import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextField;
-import javafx.stage.Stage;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
+import javafx.event.EventHandler;
 
 public class ConnexionController implements Initializable {
 
-    @FXML
-    private TextField txtLogin;
+    @FXML private TextField txtLogin;
+    @FXML private PasswordField txtPassword;
+    @FXML private Label lblError;
+    @FXML private Button btnInscription;
 
-    @FXML
-    private PasswordField txtPassword;
-
-    @FXML
-    private Label lblError;
-
-    //@FXML
-    //private Button btnInscription;
-
-    public static User user;
+    public static User user; // Conserve cette variable si elle est utilisée ailleurs
 
     @Override
-    public void initialize(URL arg0, ResourceBundle arg1) {
-        lblError.setVisible(false); // Masquer le message d'erreur au démarrage
+    public void initialize(URL location, ResourceBundle resources) {
+        lblError.setVisible(false);
+
+        // Vérifie s'il existe déjà un SuperAdmin et désactive le bouton si c'est le cas
+        boolean superAdminExists = Fabrique.getService().superAdminExists();
+        btnInscription.setDisable(superAdminExists);
+
+        // Gestionnaire pour la touche Entrer
+        EventHandler<KeyEvent> enterKeyHandler = event -> {
+            if (event.getCode() == KeyCode.ENTER) {
+                handleConnexion();
+            }
+        };
+
+        // Appliquer le gestionnaire aux deux champs de texte
+        txtLogin.setOnKeyPressed(enterKeyHandler);
+        txtPassword.setOnKeyPressed(enterKeyHandler);
     }
 
-    
     @FXML
     public void handleConnexion() {
         String login = txtLogin.getText().trim();
         String password = txtPassword.getText().trim();
-
         if (login.isEmpty() || password.isEmpty()) {
             showError("Veuillez entrer un login et un mot de passe.");
             return;
         }
-
         user = Fabrique.getService().seConnecter(login, password);
         if (user == null) {
-            showError("Identifiants incorrects.");
+            String reason = Fabrique.getService().getLastLoginFailureReason();
+            showError(reason != null ? reason : "Identifiants incorrects.");
         } else {
+            Fabrique.getService().setCurrentUser(user);
             lblError.setVisible(false);
             try {
-                // Récupérer la scène actuelle
-                Scene currentScene = txtLogin.getScene(); // ou btnInscription.getScene()
-                // Rediriger vers la page d'accueil
-                App.setRoot("accueil", 1024, 768, currentScene); // Passer la scène actuelle
-            } catch (IOException e) {
+                // Charger la vue "accueil"
+                MainSceneController.getInstance().loadView("accueil");
+                // Mettre à jour la barre de titre
+                MainSceneController.getInstance().setWindowTitle("GESTION KAYPLAY - Accueil");
+                // Mettre à jour la visibilité du menu en fonction du rôle de l'utilisateur connecté
+                MainSceneController.getInstance().updateMenuForUser(user);
+            } catch (Exception e) {
                 e.printStackTrace();
                 showError("Erreur lors du chargement de la page d'accueil.");
             }
         }
     }
 
-   /* @FXML
+    @FXML
     private void handleInscription() {
         try {
-            // Charger la scène de l'inscription
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/views/register.fxml"));
-            Scene registerScene = new Scene(loader.load());
-
-            // Créer une nouvelle fenêtre (stage) pour l'inscription
-            Stage registerStage = new Stage();
-            registerStage.setScene(registerScene);
-            registerStage.setTitle("Inscription");
-
-            // Afficher la fenêtre
-            registerStage.show();
-
-            // Fermer la fenêtre actuelle (connexion)
-            Stage currentStage = (Stage) btnInscription.getScene().getWindow();
-            currentStage.close();
-        } catch (IOException e) {
+            MainSceneController.getInstance().loadView("register");
+            MainSceneController.getInstance().setWindowTitle("GESTION KAYPLAY - Inscription");
+        } catch (Exception e) {
             e.printStackTrace();
             showError("Erreur lors du chargement de la page d'inscription.");
         }
-    }*/ 
+    }
 
     private void showError(String message) {
         lblError.setText(message);

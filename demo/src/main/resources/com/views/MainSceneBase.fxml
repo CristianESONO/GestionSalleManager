@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.*?>
+<?import javafx.scene.effect.DropShadow?>
+<?import javafx.scene.image.*?>
+<?import javafx.scene.paint.Color?>
+
+<AnchorPane prefHeight="600.0" prefWidth="900.0" styleClass="root" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.controllers.MainSceneController">
+
+    <children>
+        <VBox alignment="TOP_CENTER" layoutX="0.0" layoutY="30.0" prefHeight="570.0" prefWidth="220.0" spacing="20" styleClass="sidebar" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.topAnchor="30.0">
+            <children>
+                <ImageView fitHeight="100.0" fitWidth="100.0" preserveRatio="true">
+                    <image>
+                        <Image url="@../img/register.png" />
+                    </image>
+                    <VBox.margin>
+                        <Insets top="20" />
+                    </VBox.margin>
+                </ImageView>
+
+                <Label fx:id="lblUserRole" style="-fx-text-fill: #ecf0f1; -fx-font-size: 16px; -fx-font-weight: bold; -fx-padding: 5px 0;" />
+
+                <VBox alignment="CENTER" spacing="10">
+                    <children>
+                        <Button prefHeight="45" prefWidth="200" styleClass="menu-button" text="Utilisateurs" onAction="#handleLoadViewUtilisateurs" fx:id="btnUtilisateurs">
+                            <font>
+                                <Font size="16.0" />
+                            </font>
+                            <effect>
+                                <DropShadow color="#00000033" offsetX="0.0" offsetY="2.0" radius="5.0" />
+                            </effect>
+                        </Button>
+
+                        <Button fx:id="btnPosteJeu" prefHeight="45" prefWidth="200" styleClass="menu-button" text="Postes - Jeux" onAction="#handleLoadViewPostesJeu">
+                            <font>
+                                <Font size="16.0" />
+                            </font>
+                            <effect>
+                                <DropShadow color="#00000033" offsetX="0.0" offsetY="2.0" radius="5.0" />
+                            </effect>
+                        </Button>
+
+                        <Button fx:id="btnPostes" prefHeight="45" prefWidth="200" styleClass="menu-button" text="Postes" onAction="#handleLoadViewPostes" visible="false">
+                            <font>
+                                <Font size="16.0" />
+                            </font>
+                            <effect>
+                                <DropShadow color="#00000033" offsetX="0.0" offsetY="2.0" radius="5.0" />
+                            </effect>
+                        </Button>
+
+                        <Button fx:id="btnJeux" prefHeight="45" prefWidth="200" styleClass="menu-button" text="Jeux" onAction="#handleLoadViewJeux" visible="false">
+                            <font>
+                                <Font size="16.0" />
+                            </font>
+                            <effect>
+                                <DropShadow color="#00000033" offsetX="0.0" offsetY="2.0" radius="5.0" />
+                            </effect>
+                        </Button>
+
+                        <Button prefHeight="45" prefWidth="200" styleClass="menu-button" text="Réservations" onAction="#handleLoadViewReservations" fx:id="btnReservations">
+                            <font>
+                                <Font size="16.0" />
+                            </font>
+                            <effect>
+                                <DropShadow color="#00000033" offsetX="0.0" offsetY="2.0" radius="5.0" />
+                            </effect>
+                        </Button>
+
+                        <Button prefHeight="45" prefWidth="200" styleClass="menu-button" text="Produits" onAction="#handleLoadViewProduits" fx:id="btnProduits">
+                            <font>
+                                <Font size="16.0" />
+                            </font>
+                            <effect>
+                                <DropShadow color="#00000033" offsetX="0.0" offsetY="2.0" radius="5.0" />
+                            </effect>
+                        </Button>
+
+                        <Button prefHeight="45" prefWidth="200" styleClass="menu-button" text="Finances" onAction="#handleLoadViewFinances" fx:id="btnFinances">
+                            <font>
+                                <Font size="16.0" />
+                            </font>
+                            <effect>
+                                <DropShadow color="#00000033" offsetX="0.0" offsetY="2.0" radius="5.0" />
+                            </effect>
+                        </Button>
+
+                        <Button fx:id="btnPromotions" prefHeight="45" prefWidth="200" styleClass="menu-button" text="Promotions" onAction="#handleLoadViewPromotions">
+                            <font>
+                                <Font size="16.0" />
+                            </font>
+                            <effect>
+                                <DropShadow color="#00000033" offsetX="0.0" offsetY="2.0" radius="5.0" />
+                            </effect>
+                        </Button>
+                    </children>
+                    <VBox.margin>
+                        <Insets left="10" right="10" />
+                    </VBox.margin>
+                </VBox>
+
+                <Region VBox.vgrow="ALWAYS" />
+                <Button prefHeight="40" prefWidth="200" styleClass="menu-button" text="Sauvegarder la base" onAction="#handleBackup" fx:id="btnBackup">
+                    <font><Font size="14.0" /></font>
+                    <effect><DropShadow color="#00000033" offsetX="0.0" offsetY="2.0" radius="5.0" /></effect>
+                    <VBox.margin><Insets bottom="5" /></VBox.margin>
+                </Button>
+                <Button prefHeight="40" prefWidth="200" styleClass="menu-button" text="Vérifier les mises à jour" onAction="#handleCheckForUpdates" fx:id="btnCheckUpdates">
+                    <font><Font size="14.0" /></font>
+                    <effect><DropShadow color="#00000033" offsetX="0.0" offsetY="2.0" radius="5.0" /></effect>
+                    <VBox.margin><Insets bottom="5" /></VBox.margin>
+                </Button>
+                <Button prefHeight="45" fx:id="btnDeconnexion" prefWidth="200" styleClass="logout-button" text="Déconnexion" onAction="#handleDeconnexion">
+                    <font>
+                        <Font size="16.0" />
+                    </font>
+                    <effect>
+                        <DropShadow color="#00000033" offsetX="0.0" offsetY="2.0" radius="5.0" />
+                    </effect>
+                    <VBox.margin>
+                        <Insets bottom="20" />
+                    </VBox.margin>
+                </Button>
+            </children>
+        </VBox>
+
+        <AnchorPane fx:id="contentPane" styleClass="content-pane" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="220.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="30.0">
+            </AnchorPane>
+
+        <HBox fx:id="titleBar" alignment="CENTER_RIGHT" prefHeight="30.0" prefWidth="900.0" styleClass="title-bar" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+            <children>
+                <Label fx:id="windowTitleLabel" text="GESTION KAYPLAY" HBox.hgrow="ALWAYS">
+                    <font>
+                        <Font size="14.0" />
+                    </font>
+                    <padding>
+                        <Insets left="10.0" />
+                    </padding>
+                </Label>
+                <Button fx:id="btnMinimize" minWidth="30.0" prefHeight="30.0" prefWidth="30.0" styleClass="window-button" text="_" onAction="#handleMinimize">
+                    <font>
+                        <Font name="System Bold" size="14.0" />
+                    </font>
+                </Button>
+                <Button fx:id="btnMaximize" minWidth="30.0" prefHeight="30.0" prefWidth="30.0" styleClass="window-button" text="☐" onAction="#handleMaximizeRestore">
+                    <font>
+                        <Font name="System Bold" size="14.0" />
+                    </font>
+                </Button>
+                <Button fx:id="btnClose" minWidth="30.0" prefHeight="30.0" prefWidth="30.0" styleClass="window-button" text="✕" onAction="#handleClose">
+                    <font>
+                        <Font name="System Bold" size="14.0" />
+                    </font>
+                </Button>
+            </children>
+        </HBox>
+        <Region fx:id="titleBarDragRegion" styleClass="window-drag-region" prefHeight="30.0" prefWidth="680.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="90.0" AnchorPane.topAnchor="0.0" />
+    </children>
+</AnchorPane>

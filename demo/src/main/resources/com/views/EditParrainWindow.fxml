@@ -1,51 +1,79 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import java.lang.*?>
-<?import javafx.scene.control.*?>
-<?import javafx.scene.layout.*?>
-<?import javafx.scene.text.*?>
-<?import javafx.scene.control.Button?>
-<?import javafx.scene.control.PasswordField?>
-<?import javafx.scene.control.TextField?>
-<?import javafx.scene.layout.AnchorPane?>
-<?import javafx.scene.layout.GridPane?>
-<?import javafx.scene.text.Text?>
 <?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.effect.DropShadow?>
+<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.layout.ColumnConstraints?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.RowConstraints?>
+<?import javafx.scene.text.Text?>
 
-<AnchorPane style="-fx-background-color: linear-gradient(to bottom, #13b0da, #0d8bbf);" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/8" fx:controller="com.controllers.EditParrainController">
+<AnchorPane prefHeight="550.0" prefWidth="650.0" styleClass="content-pane form-dialog" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.controllers.EditParrainController">
    <children>
-       <!-- Titre Modifier Parrain -->
-       <Text layoutX="30" layoutY="30" style="-fx-font-size: 24px; -fx-fill: white;" text="Modifier Parrain" />
-   
-       <GridPane hgap="20" layoutX="30" layoutY="80" style="-fx-background-color: transparent;" vgap="20">
-      <children>
-              <!-- Colonne 1 -->
-              <TextField fx:id="nameField" prefWidth="250" promptText="Nom" GridPane.columnIndex="0" GridPane.rowIndex="0" />
-              <TextField fx:id="emailField" prefWidth="250" promptText="Email" GridPane.columnIndex="0" GridPane.rowIndex="1" />
-              <PasswordField fx:id="passwordField" prefWidth="250" promptText="Mot de passe" GridPane.columnIndex="0" GridPane.rowIndex="2" />
-              <TextField fx:id="phoneField" prefWidth="250" promptText="Numéro de téléphone" GridPane.columnIndex="0" GridPane.rowIndex="3" />
-              
-              <!-- Colonne 2 -->
-              <TextField fx:id="addressField" prefWidth="250" promptText="Adresse" GridPane.columnIndex="1" GridPane.rowIndex="0" />
-              <TextField fx:id="codeParrainageField" prefWidth="250" promptText="Code de parrainage" GridPane.columnIndex="1" GridPane.rowIndex="1" />
-              
-              <!-- Boutons -->
-              <Button fx:id="saveButton" style="-fx-background-color: #4CAF50; -fx-text-fill: white; -fx-font-size: 14px; -fx-border-radius: 5; -fx-background-radius: 5;" text="Enregistrer" GridPane.columnIndex="0" GridPane.columnSpan="2" GridPane.rowIndex="4"  onAction="#saveParrain"/>
-              <Button fx:id="cancelButton" onAction="#cancel" style="-fx-background-color: #F44336; -fx-text-fill: white; -fx-font-size: 14px; -fx-border-radius: 5; -fx-background-radius: 5;" text="Annuler" GridPane.columnIndex="1" GridPane.columnSpan="2" GridPane.rowIndex="4" />
-      </children>
+      <Text fill="#0f172a" layoutX="30.0" layoutY="50.0" style="-fx-font-size: 28px; -fx-font-weight: bold;" text="Modifier Parrain">
+         <effect>
+            <DropShadow color="#00000066" offsetX="0.0" offsetY="2.0" radius="5.0" />
+         </effect>
+      </Text>
+
+      <GridPane hgap="30" layoutX="30.0" layoutY="100.0" prefHeight="300.0" prefWidth="590.0" vgap="20">
+         <children>
+            <TextField fx:id="nameField" prefHeight="35.0" prefWidth="250.0" promptText="Nom" style="-fx-background-color: #ffffff; -fx-border-color: #bdc3c7; -fx-border-radius: 5px; -fx-background-radius: 5px; -fx-font-size: 14px; -fx-padding: 8px 10px; -fx-prompt-text-fill: #7f8c8d;" GridPane.columnIndex="0" GridPane.rowIndex="0">
+               <effect>
+                  <DropShadow color="#0000001a" offsetX="0.0" offsetY="1.0" radius="3.0" />
+               </effect>
+            </TextField>
+            <TextField fx:id="emailField" prefHeight="35.0" prefWidth="250.0" promptText="Email" style="-fx-background-color: #ffffff; -fx-border-color: #bdc3c7; -fx-border-radius: 5px; -fx-background-radius: 5px; -fx-font-size: 14px; -fx-padding: 8px 10px; -fx-prompt-text-fill: #7f8c8d;" GridPane.columnIndex="0" GridPane.rowIndex="1">
+               <effect>
+                  <DropShadow color="#0000001a" offsetX="0.0" offsetY="1.0" radius="3.0" />
+               </effect>
+            </TextField>
+            <TextField fx:id="phoneField" prefHeight="35.0" prefWidth="250.0" promptText="Numéro de téléphone" style="-fx-background-color: #ffffff; -fx-border-color: #bdc3c7; -fx-border-radius: 5px; -fx-background-radius: 5px; -fx-font-size: 14px; -fx-padding: 8px 10px; -fx-prompt-text-fill: #7f8c8d;" GridPane.columnIndex="0" GridPane.rowIndex="2">
+               <effect>
+                  <DropShadow color="#0000001a" offsetX="0.0" offsetY="1.0" radius="3.0" />
+               </effect>
+            </TextField>
+
+            <TextField fx:id="addressField" prefHeight="35.0" prefWidth="250.0" promptText="Adresse" style="-fx-background-color: #ffffff; -fx-border-color: #bdc3c7; -fx-border-radius: 5px; -fx-background-radius: 5px; -fx-font-size: 14px; -fx-padding: 8px 10px; -fx-prompt-text-fill: #7f8c8d;" GridPane.columnIndex="1" GridPane.rowIndex="0">
+               <effect>
+                  <DropShadow color="#0000001a" offsetX="0.0" offsetY="1.0" radius="3.0" />
+               </effect>
+            </TextField>
+            <TextField fx:id="codeParrainageField" prefHeight="35.0" prefWidth="250.0" promptText="Code de parrainage" style="-fx-background-color: #ffffff; -fx-border-color: #bdc3c7; -fx-border-radius: 5px; -fx-background-radius: 5px; -fx-font-size: 14px; -fx-padding: 8px 10px; -fx-prompt-text-fill: #7f8c8d;" GridPane.columnIndex="1" GridPane.rowIndex="1">
+               <effect>
+                  <DropShadow color="#0000001a" offsetX="0.0" offsetY="1.0" radius="3.0" />
+               </effect>
+            </TextField>
+         </children>
          <columnConstraints>
-            <ColumnConstraints />
-            <ColumnConstraints />
-            <ColumnConstraints />
+            <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="270.0" />
+            <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="270.0" />
          </columnConstraints>
          <rowConstraints>
-            <RowConstraints />
-            <RowConstraints />
-            <RowConstraints />
-            <RowConstraints />
-            <RowConstraints />
-            <RowConstraints />
+            <RowConstraints vgrow="SOMETIMES" />
+            <RowConstraints vgrow="SOMETIMES" />
+            <RowConstraints vgrow="SOMETIMES" />
+            <RowConstraints vgrow="SOMETIMES" />
+            <RowConstraints vgrow="SOMETIMES" />
          </rowConstraints>
-       </GridPane>
+      </GridPane>
+
+      <HBox alignment="CENTER" layoutX="30.0" layoutY="470.0" spacing="30.0" prefWidth="590.0">
+         <children>
+            <Button fx:id="saveButton" onAction="#saveParrain" prefHeight="45.0" prefWidth="150.0" style="-fx-background-color: #2ecc71; -fx-text-fill: white; -fx-font-size: 16px; -fx-padding: 10px 20px; -fx-border-radius: 5px; -fx-background-radius: 5px; -fx-cursor: hand;" text="Enregistrer">
+               <effect>
+                  <DropShadow color="#00000033" offsetX="0.0" offsetY="2.0" radius="5.0" />
+               </effect>
+            </Button>
+            <Button fx:id="cancelButton" onAction="#cancel" prefHeight="45.0" prefWidth="150.0" style="-fx-background-color: #e74c3c; -fx-text-fill: white; -fx-font-size: 16px; -fx-padding: 10px 20px; -fx-border-radius: 5px; -fx-background-radius: 5px; -fx-cursor: hand;" text="Annuler">
+               <effect>
+                  <DropShadow color="#00000033" offsetX="0.0" offsetY="2.0" radius="5.0" />
+               </effect>
+            </Button>
+         </children>
+      </HBox>
    </children>
 </AnchorPane>

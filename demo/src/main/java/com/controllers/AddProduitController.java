@@ -1,117 +1,162 @@
 package com.controllers;
 
 import com.core.Fabrique;
+import com.core.WindowManager;
+import com.entities.Categorie;
 import com.entities.Produit;
+import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
-import javafx.scene.control.*;
-import javafx.scene.control.Alert.AlertType;
+import javafx.fxml.Initializable;
+import javafx.scene.control.ComboBox;
+import javafx.scene.control.DatePicker;
+import javafx.scene.control.TextField;
+import javafx.util.StringConverter;
+
+import java.net.URL;
+import java.util.ResourceBundle;
 import javafx.scene.image.Image;
-import javafx.scene.image.ImageView; // Importation pour ImageView
+import javafx.scene.image.ImageView;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
+
 import java.io.File;
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.LocalDate;
+import java.util.UUID;
 
-public class AddProduitController {
-
+public class AddProduitController implements Initializable {
     @FXML private TextField nomField;
     @FXML private TextField prixField;
     @FXML private TextField stockField;
+    @FXML private DatePicker dateLimitePicker;
     @FXML private TextField txtImagePath;
-    @FXML private ImageView imageView; // Ajout de l'ImageView
+    @FXML private ImageView imageView;
+    @FXML private ComboBox<Categorie> categorieComboBox;
+    private String selectedImagePath;
+    private ProduitController parentController;
 
-    private String imagePath; // Chemin de l'image (String)
+    @Override
+    public void initialize(URL location, ResourceBundle resources) {
+        if (categorieComboBox != null) {
+            categorieComboBox.getItems().setAll(Fabrique.getService().getAllCategories());
+            categorieComboBox.setConverter(new StringConverter<Categorie>() {
+                @Override
+                public String toString(Categorie c) {
+                    return c == null ? "" : (c.getNom() != null ? c.getNom() : "");
+                }
+                @Override
+                public Categorie fromString(String s) { return null; }
+            });
+        }
+    }
+
+    public void setParentController(ProduitController parentController) {
+        this.parentController = parentController;
+    }
 
     @FXML
-    private void chooseImage() {
-       // Ouvrir une boîte de dialogue pour sélectionner un fichier image
-       FileChooser fileChooser = new FileChooser();
-       fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Image Files", "*.png", "*.jpg", "*.jpeg", "*.gif"));
-
-       // Récupérer le fichier sélectionné
-       File file = fileChooser.showOpenDialog(new Stage());
-
-       if (file != null) {
-            // Mettre à jour le chemin de l'image dans le champ de texte
-            txtImagePath.setText(file.getAbsolutePath());
-
-            // Mettre à jour l'image dans ImageView
-            Image image = new Image(file.toURI().toString());
-            imageView.setImage(image);
+    private void chooseImage(ActionEvent event) {
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Choisir une image pour le produit");
+        fileChooser.getExtensionFilters().addAll(
+                new FileChooser.ExtensionFilter("Image Files", "*.png", "*.jpg", "*.jpeg", "*.gif")
+        );
+        File selectedFile = fileChooser.showOpenDialog(new Stage());
+        if (selectedFile != null) {
+            selectedImagePath = selectedFile.getAbsolutePath();
+            txtImagePath.setText(selectedImagePath);
+            try {
+                Image image = new Image(selectedFile.toURI().toURL().toExternalForm());
+                imageView.setImage(image);
+                imageView.setFitWidth(150);
+                imageView.setFitHeight(150);
+                imageView.setPreserveRatio(true);
+            } catch (Exception e) {
+                ControllerUtils.showErrorAlert("Erreur d'affichage de l'image", "Impossible d'afficher l'image sélectionnée.");
+                e.printStackTrace();
+            }
         }
     }
 
     @FXML
-    private void addProduit() {
+    private void addProduit(ActionEvent event) {
+        String nom = nomField.getText();
+        String prixText = prixField.getText();
+        String stockText = stockField.getText();
+        LocalDate dateLimite = dateLimitePicker.getValue();
+        if (nom.isEmpty() || prixText.isEmpty() || stockText.isEmpty() || dateLimite == null) {
+            ControllerUtils.showErrorAlert("Champs manquants", "Veuillez remplir tous les champs obligatoires.");
+            return;
+        }
         try {
-            String nom = nomField.getText().trim();
-            if (nom.isEmpty()) {
-                showAlert("Erreur", "Le nom du produit est obligatoire.");
+            BigDecimal prix = new BigDecimal(prixText);
+            int stock = Integer.parseInt(stockText);
+            if (prix.compareTo(BigDecimal.ZERO) < 0 || stock < 0) {
+                ControllerUtils.showErrorAlert("Valeurs invalides", "Le prix et le stock ne peuvent pas être négatifs.");
                 return;
             }
 
-            String imagePath = txtImagePath.getText(); // Récupérer le chemin de l'image
-              // Vérifier que l'image existe réellement
-            Path path = Paths.get(imagePath);
-            if (!Files.exists(path) || !Files.isRegularFile(path)) {
-                showAlert( "Image invalide", "Le fichier d'image sélectionné est invalide ou n'existe pas.");
-                return;
-            }
+            String finalImagePath = null;
+            if (selectedImagePath != null && !selectedImagePath.isEmpty()) {
+                try {
+                    // Chemin du dossier de la base de données (AppData\Roaming\GestionSalles)
+                    String appDataPath = System.getenv("APPDATA");
+                    Path dbDir = Paths.get(appDataPath, "GestionSalles");
+                    // Sous-dossier pour les images
+                    Path imagesDir = Paths.get(dbDir.toString(), "images");
+                    if (!Files.exists(imagesDir)) {
+                        Files.createDirectories(imagesDir);
+                    }
 
-            BigDecimal prix;
-            try {
-                prix = new BigDecimal(prixField.getText().trim());
-                if (prix.compareTo(BigDecimal.ZERO) <= 0) {
-                    showAlert("Erreur", "Le prix doit être un nombre positif.");
-                    return;
+                    File sourceFile = new File(selectedImagePath);
+                    String fileExtension = "";
+                    int dotIndex = selectedImagePath.lastIndexOf('.');
+                    if (dotIndex > 0 && dotIndex < selectedImagePath.length() - 1) {
+                        fileExtension = selectedImagePath.substring(dotIndex);
+                    }
+
+                    String uniqueFileName = UUID.randomUUID().toString() + fileExtension;
+                    Path targetPath = imagesDir.resolve(uniqueFileName);
+
+                    Files.copy(sourceFile.toPath(), targetPath, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+
+                    // Stocker le chemin relatif par rapport au dossier de la base de données
+                    finalImagePath = Paths.get("images", uniqueFileName).toString();
+                } catch (IOException e) {
+                    ControllerUtils.showErrorAlert("Erreur de copie d'image", "Impossible de copier l'image : " + e.getMessage());
+                    e.printStackTrace();
+                    finalImagePath = null;
                 }
-            } catch (NumberFormatException e) {
-                showAlert("Erreur", "Le prix doit être un nombre valide.");
-                return;
             }
 
-            int stock;
-            try {
-                stock = Integer.parseInt(stockField.getText().trim());
-                if (stock < 0) {
-                    showAlert("Erreur", "Le stock ne peut pas être négatif.");
-                    return;
-                }
-            } catch (NumberFormatException e) {
-                showAlert("Erreur", "Le stock doit être un nombre entier.");
-                return;
+            Produit nouveauProduit = new Produit(nom, prix, stock, finalImagePath, dateLimite);
+            if (categorieComboBox != null) {
+                nouveauProduit.setCategorie(categorieComboBox.getValue());
+            }
+            Fabrique.getService().insertProduit(nouveauProduit);
+            ControllerUtils.showInfoAlert("Succès", "Produit ajouté avec succès !");
+
+            if (parentController != null) {
+                parentController.refreshProduitList();
             }
 
-            // Créer un nouveau produit
-            Produit produit = new Produit(nom, prix, stock, imagePath);
-
-            // Sauvegarder le produit dans la base de données
-            Fabrique.getService().insertProduit(produit);
-
-            // Fermer la fenêtre
-            closeWindow();
+            Stage stage = (Stage) nomField.getScene().getWindow();
+            stage.close();
+        } catch (NumberFormatException e) {
+            ControllerUtils.showErrorAlert("Format invalide", "Veuillez entrer des nombres valides pour le prix et le stock.");
         } catch (Exception e) {
-            showAlert("Erreur", "Une erreur inattendue est survenue.");
+            ControllerUtils.showErrorAlert("Erreur d'ajout", "Impossible d'ajouter le produit : " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
     @FXML
-    private void cancel() {
-        closeWindow();
-    }
-
-    private void closeWindow() {
+    private void cancel(ActionEvent event) {
         Stage stage = (Stage) nomField.getScene().getWindow();
         stage.close();
-    }
-
-    private void showAlert(String title, String message) {
-        Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.setTitle(title);
-        alert.setContentText(message);
-        alert.show();
     }
 }

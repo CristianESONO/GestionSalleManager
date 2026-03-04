@@ -27,6 +27,9 @@ public interface IClientRepository {
 
     public boolean existsByName(String name);
 
+    /** Recherche des clients dont le nom contient la chaîne donnée (insensible à la casse). */
+    List<Client> findByNameContaining(String name);
+
     // Récupérer les clients ayant un certain nombre de points de fidélité
     List<Client> findByLoyaltyPointsGreaterThan(int points);
 }

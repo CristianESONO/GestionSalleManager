@@ -5,40 +5,47 @@ import com.repositories.IGameRepository;
 import com.repositories.IGameSessionRepository;
 import com.repositories.IParrainRepository;
 import com.repositories.IPaymentRepository;
-import com.repositories.IPosteGameRepository;
 import com.repositories.IPosteRepository;
 import com.repositories.IProduitRepository;
+import com.repositories.IPromoRepository;
 import com.repositories.IReservationRepository;
 import com.repositories.IUserRepository;
-import com.repositories.bd.ClientRepository;
-import com.repositories.bd.GameRepository;
-import com.repositories.bd.GameSessionRepository;
-import com.repositories.bd.ParrainRepository;
-import com.repositories.bd.PaymentRepository;
-import com.repositories.bd.PosteGameRepository;
-import com.repositories.bd.PosteRepository;
-import com.repositories.bd.ProduitRepository;
-import com.repositories.bd.ReservationRepository;
-import com.repositories.bd.UserRepository;
+import com.repositories.ICategorieRepository;
+import com.repositories.bd.CategorieRepositoryJpa;
+import com.repositories.bd.ClientRepositoryJpa;
+import com.repositories.bd.GameRepositoryJpa;
+import com.repositories.bd.GameSessionRepositoryJpa;
+import com.repositories.bd.ParrainRepositoryJpa;
+import com.repositories.bd.PaymentRepositoryJpa;
+import com.repositories.bd.PosteRepositoryJpa;
+import com.repositories.bd.ProduitRepositoryJpa;
+import com.repositories.bd.PromotionRepositoryJpa;
+import com.repositories.bd.ReservationRepositoryJpa;
+import com.repositories.bd.UserRepositoryJpa;
 import com.services.IService;
 import com.services.Service;
 
 public class Fabrique {
+    private static IService serviceInstance;
 
-    public static IService getService(){
-        IClientRepository clientRepository = new ClientRepository();
-        IGameRepository gameRepository = new GameRepository();
-        IGameSessionRepository gameSessionRepository = new GameSessionRepository();
-        IPaymentRepository paymentRepository = new PaymentRepository();
-        IPosteRepository posteRepository = new PosteRepository();
-        IProduitRepository produitRepository = new ProduitRepository();
-        IReservationRepository reservationRepository = new ReservationRepository();
-        IUserRepository userRepository = new UserRepository();
-        IParrainRepository parrainRepository = new ParrainRepository();
-        IPosteGameRepository posteGameRepository = new PosteGameRepository();
-        return new Service(gameSessionRepository, gameRepository, clientRepository, 
-                    paymentRepository, posteRepository, produitRepository, reservationRepository,
-                     userRepository, parrainRepository, posteGameRepository);
+    public static IService getService() {
+        if (serviceInstance == null) {
+            IClientRepository clientRepository = new ClientRepositoryJpa();
+            IGameRepository gameRepository = new GameRepositoryJpa();
+            IGameSessionRepository gameSessionRepository = new GameSessionRepositoryJpa();
+            IPaymentRepository paymentRepository = new PaymentRepositoryJpa();
+            IPosteRepository posteRepository = new PosteRepositoryJpa();
+            IProduitRepository produitRepository = new ProduitRepositoryJpa();
+            IReservationRepository reservationRepository = new ReservationRepositoryJpa();
+            IUserRepository userRepository = new UserRepositoryJpa();
+            IParrainRepository parrainRepository = new ParrainRepositoryJpa();
+            IPromoRepository promoRepository = new PromotionRepositoryJpa();
+            ICategorieRepository categorieRepository = new CategorieRepositoryJpa();
+
+            serviceInstance = new Service(gameSessionRepository, produitRepository, reservationRepository, userRepository,
+                    paymentRepository, clientRepository, gameRepository, posteRepository, parrainRepository, promoRepository, categorieRepository);
+        }
+        return serviceInstance;
     }
-    
 }
+

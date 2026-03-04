@@ -22,8 +22,6 @@ public class EditReservationController {
     @FXML
     private TextField phoneField;
     @FXML
-    private DatePicker birthDateField;
-    @FXML
     private TextField addressField;
     @FXML
     private TextField loyaltyPointsField;
@@ -83,7 +81,6 @@ public class EditReservationController {
         nameField.setText(client.getName());
         emailField.setText(client.getEmail());
         phoneField.setText(client.getPhone());
-        birthDateField.setValue(client.getBirthDate().toInstant().atZone(ZoneId.systemDefault()).toLocalDate());
         addressField.setText(client.getAddress());
         loyaltyPointsField.setText(String.valueOf(client.getLoyaltyPoints()));
         roleComboBox.setValue(client.getRole().name());

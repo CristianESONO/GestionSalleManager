@@ -1,111 +1,64 @@
 package com.controllers;
 
-import java.io.IOException;
-import java.util.Optional;
+import java.net.URL;
+import java.util.ResourceBundle;
+
 import javafx.fxml.FXML;
-import javafx.fxml.FXMLLoader;
-import javafx.scene.Parent;
-import javafx.scene.Scene;
-import javafx.scene.control.Alert;
-import javafx.scene.control.Button;
-import javafx.scene.control.ButtonType;
+import javafx.fxml.Initializable;
+import javafx.scene.control.Label;
 import javafx.scene.effect.DropShadow;
 import javafx.scene.input.MouseEvent;
-import javafx.scene.layout.AnchorPane;
-import javafx.scene.control.Alert.AlertType;
-import javafx.stage.Stage;
+// Importations liées au menu et déconnexion supprimées car gérées par MainSceneController
+// import javafx.scene.control.Button;
+// import com.core.Fabrique;
+// import com.entities.Role;
+// import com.entities.User;
 
-public class AccueilController {
-    
-    @FXML
-    private AnchorPane mainContent;
-    
-    @FXML
-    private Button btnDeconnexion;
-    
+
+public class AccueilController implements Initializable {
+
+    // Supprimez tous les @FXML des boutons de menu et du label de rôle
+    // @FXML private Label lblUserRole;
+    // @FXML private Button btnPosteJeu;
+    // @FXML private Button btnPostes;
+    // @FXML private Button btnJeux;
+    // @FXML private Button btnReservations;
+    // @FXML private Button btnPromotions;
+    // @FXML private Button btnDeconnexion;
+
     private final DropShadow shadow = new DropShadow();
 
+    @Override
+    public void initialize(URL location, ResourceBundle resources) {
+        // La logique de visibilité du menu et du rôle est maintenant dans MainSceneController
+        // User currentUser = Fabrique.getService().getCurrentUser();
+        // boolean isSuperAdmin = currentUser != null && currentUser.getRole() == Role.SuperAdmin;
+        // String roleName = currentUser != null ? currentUser.getRole().name() : "Invité";
+        // lblUserRole.setText("(" + roleName + ")");
+
+        // Les contrôles de visibilité des boutons sont aussi dans MainSceneController
+        // btnPosteJeu.setVisible(!isSuperAdmin);
+        // ...
+    }
+
+    // Gardez si vous voulez des effets visuels sur des éléments spécifiques à votre page d'accueil
     @FXML
     private void handleMouseEntered(MouseEvent event) {
-        if (event.getSource() instanceof Button) {
-            Button button = (Button) event.getSource();
+        if (event.getSource() instanceof javafx.scene.control.Button button) {
             shadow.setColor(javafx.scene.paint.Color.web("#9643A9"));
             button.setEffect(shadow);
         }
     }
-    
+
     @FXML
     private void handleMouseExited(MouseEvent event) {
-        if (event.getSource() instanceof Button) {
-            Button button = (Button) event.getSource();
+        if (event.getSource() instanceof javafx.scene.control.Button button) {
             button.setEffect(null);
         }
     }
-    
-    public void handleLoadViewUtilisateurs() throws IOException {
-        loadView("listuser");
-    }
-    
-    public void handleLoadViewJeux() throws IOException {
-        loadView("jeux");
-    }
-    
-    public void handleLoadViewPostes() throws IOException {
-        loadView("postes");
-    }
-    
-    public void handleLoadViewReservations() throws IOException {
-        loadView("reservations");
-    }
-    
-    public void handleLoadViewProduits() throws IOException {
-        loadView("produits");
-    }
-    
-    public void handleLoadViewFinances() throws IOException {
-        loadView("finances");
-    }
-    
-    public void handleLoadViewSession() throws IOException {
-        loadView("GameSession");
-    }
-    
-    public void handleDeconnexion() throws IOException {
-        Alert alert = new Alert(AlertType.CONFIRMATION);
-        alert.setTitle("Confirmation");
-        alert.setHeaderText(null);
-        alert.setContentText("Êtes-vous sûr de vouloir vous déconnecter ?");
-        Optional<ButtonType> option = alert.showAndWait();
-    
-        if (option.isPresent() && option.get().equals(ButtonType.OK)) {
-            // Récupérer la fenêtre actuelle (Stage)
-            Stage currentStage = (Stage) btnDeconnexion.getScene().getWindow();
-    
-            // Fermer la fenêtre actuelle (cela fermera l'application)
-            currentStage.close();
-        }
-    }
-    
 
-    private void loadView(String fxml) {
-        try {
-            AnchorPane root = FXMLLoader.load(getClass().getResource("/com/views/" + fxml + ".fxml"));
-            mainContent.getChildren().clear();
-            mainContent.getChildren().add(root);
-            
-            // Ancrage pour que la vue occupe tout l'espace disponible
-            AnchorPane.setTopAnchor(root, 0.0);
-            AnchorPane.setBottomAnchor(root, 0.0);
-            AnchorPane.setLeftAnchor(root, 0.0);
-            AnchorPane.setRightAnchor(root, 0.0);
-        } catch (IOException e) {
-            e.printStackTrace();
-            // Afficher un message d'erreur à l'utilisateur
-            Alert alert = new Alert(AlertType.ERROR);
-            alert.setTitle("Erreur");
-            alert.setHeaderText(null);
-            alert.setContentText("Impossible de charger la vue : " + fxml);
-            alert.showAndWait();
-        }
-    }
+    // Supprimez toutes les méthodes handleLoadView... et handleDeconnexion,
+    // car elles sont maintenant dans MainSceneController.
+    // @FXML public void handleLoadViewUtilisateurs() { ... }
+    // @FXML public void handleDeconnexion() { ... }
 }

@@ -39,32 +39,31 @@ public class EditGameSessionController {
     @FXML
     private void saveGameSession() {
         try {
-            // Récupérer les valeurs des champs de saisie
             String clientName = clientField.getText();
             String gameName = gameField.getText();
             long paidDuration = Long.parseLong(paidDurationField.getText());
             String status = statusComboBox.getValue();
 
-            // Mettre à jour les informations de la session de jeu
             gameSession.getClient().setName(clientName);
             gameSession.getGame().setName(gameName);
             gameSession.setPaidDuration(java.time.Duration.ofMinutes(paidDuration));
             gameSession.setStatus(status);
 
-            // Sauvegarder les modifications (vous pouvez appeler un service pour cela)
             boolean success = Fabrique.getService().updateGameSession(gameSession);
             if (success) {
                 Alert alert = new Alert(Alert.AlertType.INFORMATION, "Session de jeu modifiée avec succès.");
                 alert.show();
-
-                // Fermer la fenêtre modale
                 closeWindow();
             } else {
                 Alert alert = new Alert(Alert.AlertType.ERROR, "Erreur lors de la modification de la session.");
                 alert.show();
             }
         } catch (NumberFormatException e) {
-            Alert alert = new Alert(Alert.AlertType.ERROR, "Veuillez entrer des valeurs valides.");
+            Alert alert = new Alert(Alert.AlertType.ERROR, "Veuillez entrer une durée valide (nombre entier).");
+            alert.show();
+        } catch (Exception e) {
+            e.printStackTrace();
+            Alert alert = new Alert(Alert.AlertType.ERROR, "Une erreur inattendue est survenue lors de la sauvegarde : " + e.getMessage());
             alert.show();
         }
     }

@@ -1,234 +1,137 @@
 package com.controllers;
 
+import com.core.Fabrique;
 import com.entities.Client;
 import com.entities.Payment;
 import com.entities.Produit;
-import com.core.Fabrique;
-
-import java.io.FileOutputStream;
+import com.entities.User;
+import javafx.collections.FXCollections;
+import javafx.event.ActionEvent;
+import javafx.fxml.FXML;
+import javafx.scene.control.ButtonType;
+import javafx.scene.control.ComboBox;
+import javafx.scene.text.Text;
+import javafx.stage.Stage;
+import com.utils.ReceiptPrinter;
+import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
-
-import javafx.collections.FXCollections;
-import javafx.fxml.FXML;
-import javafx.scene.control.ComboBox;
-import javafx.stage.Stage;
-
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.pdfbox.pdmodel.PDDocument;
-import org.apache.pdfbox.pdmodel.PDPage;
-import org.apache.pdfbox.pdmodel.PDPageContentStream;
-import org.apache.pdfbox.pdmodel.font.PDType1Font;
-import org.apache.pdfbox.pdmodel.font.Standard14Fonts;
-
 public class PaymentController {
+    @FXML private ComboBox<String> modePaiementComboBox;
+    @FXML private Text montantTotalText;
+    private Map<Produit, Integer> produitsDansLePanier;
+    private double montantTotal;
+    private String detailsProduits;
+    private String detailReservations; // Nouveau champ pour les détails des réservations
+    private Runnable onPaymentSuccessCallback;
+    private User connectedUser;
 
-    @FXML
-    private ComboBox<Client> clientComboBox; // ComboBox pour sélectionner un client
-
-    @FXML
-    private ComboBox<String> modePaiementComboBox; // ComboBox pour sélectionner un mode de paiement
-
-    private List<Client> clients; // Liste des clients disponibles
-    private double montantTotal; // Montant total du panier
-    private String detailsProduits; // Détails des produits du panier
-    private Map<Produit, Integer> produitsDansLePanier; // Map pour stocker les produits et leur quantité
-
-    // Méthode pour initialiser les données
-    public void initializeData(List<Client> clients, double montantTotal, String detailsProduits, Map<Produit, Integer> produitsDansLePanier) {
-        this.clients = clients;
-        this.montantTotal = montantTotal;
-        this.detailsProduits = detailsProduits;
-        this.produitsDansLePanier = produitsDansLePanier;
-
-        // Remplir les ComboBox
-        clientComboBox.setItems(FXCollections.observableArrayList(clients));
-        modePaiementComboBox.setItems(FXCollections.observableArrayList("Cash", "Wave Money", "Orange Money"));
+    public void setOnPaymentSuccessCallback(Runnable callback) {
+        this.onPaymentSuccessCallback = callback;
     }
 
-    // Méthode pour valider le paiement
+    @FXML
+    public void initialize() {
+        modePaiementComboBox.setItems(FXCollections.observableArrayList("En Espèce", "Wave", "Orange Money", "free money", "Wizall Money"));
+    }
+
+    public void setConnectedUser(User user) {
+        this.connectedUser = user;
+    }
+
+    // Mise à jour : ajout du paramètre detailReservations
+    public void initializeData(List<Client> clients, double montantTotal, String detailsProduits, String detailReservations, Map<Produit, Integer> produitsDansLePanier) {
+        this.montantTotal = montantTotal;
+        this.detailsProduits = detailsProduits;
+        this.detailReservations = detailReservations; // Initialisation du nouveau champ
+        this.produitsDansLePanier = produitsDansLePanier;
+        montantTotalText.setText(String.format("%.2f FCFA", montantTotal));
+    }
+
     @FXML
     private void handleValider() throws Exception {
-        Client clientSelectionne = clientComboBox.getSelectionModel().getSelectedItem();
         String modePaiement = modePaiementComboBox.getSelectionModel().getSelectedItem();
+        if (modePaiement == null) {
+            showAlert("Erreur de sélection", "Veuillez sélectionner un mode de paiement.");
+            return;
+        }
 
-        if (clientSelectionne != null && modePaiement != null) {
-            // Générer un numéro de ticket automatiquement
-            String numeroTicket = "TICKET-" + System.currentTimeMillis();
+        String numeroTicket = "TICKET-" + String.format("%06d", (int)(System.currentTimeMillis() % 1000000));
 
-            // Créer un objet Payment
-            Payment payment = new Payment(
-                    0, // L'ID sera généré automatiquement par la base de données
-                    numeroTicket,
-                    new Date(),
-                    montantTotal,
-                    modePaiement,
-                    clientSelectionne,
-                    detailsProduits
-            );
+        if (connectedUser == null) {
+            showAlert("Erreur", "Aucun utilisateur connecté détecté.");
+            return;
+        }
 
-            // Enregistrer le paiement (à implémenter)
+        // Mise à jour : création de l'objet Payment avec detailReservations
+        Payment payment = new Payment(
+            0,
+            numeroTicket,
+            new Date(),
+            montantTotal,
+            modePaiement,
+            detailsProduits,
+            detailReservations, // Passage du nouveau champ
+            connectedUser
+        );
+
+        try {
             enregistrerPaiement(payment);
-
-            // Générer une facture PDF (à implémenter)
-            genererFacturePDF(payment);
-
-            // Vider le panier
-            viderPanier();
-
-            // Diminuer le stock des produits
             diminuerStockProduits();
 
-            // Fermer la fenêtre
-            Stage stage = (Stage) clientComboBox.getScene().getWindow();
+            javafx.scene.control.Alert printConfirm = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.CONFIRMATION);
+            printConfirm.setTitle("Impression du ticket");
+            printConfirm.setHeaderText("Imprimer le ticket ?");
+            printConfirm.setContentText("Le client souhaite-t-il un ticket ?");
+            printConfirm.getButtonTypes().setAll(ButtonType.YES, ButtonType.NO);
+            printConfirm.showAndWait().ifPresent(response -> {
+                if (response == ButtonType.YES) {
+                    String userName = Fabrique.getService().getCurrentUser().getName();
+                    ReceiptPrinter receiptPrinter = new ReceiptPrinter(produitsDansLePanier, montantTotal, numeroTicket, userName, modePaiement);
+                    receiptPrinter.printReceipt();
+                }
+            });
+
+            if (onPaymentSuccessCallback != null) {
+                onPaymentSuccessCallback.run();
+            }
+
+            Stage stage = (Stage) modePaiementComboBox.getScene().getWindow();
             stage.close();
-        } else {
-            System.out.println("Veuillez sélectionner un client et un mode de paiement.");
+            showAlert("Paiement réussi", "La transaction a été validée et le reçu imprimé.");
+        } catch (Exception e) {
+            e.printStackTrace();
+            showAlert("Erreur", "Une erreur est survenue lors du traitement du paiement : " + e.getMessage());
         }
     }
 
-    // Méthode pour enregistrer le paiement (à implémenter)
     private void enregistrerPaiement(Payment payment) throws Exception {
-        // Logique pour enregistrer le paiement dans la base de données
         Fabrique.getService().addPayment(payment);
     }
 
-    // Méthode pour générer une facture PDF (à implémenter)
-  public void genererFacturePDF(Payment payment) {
-    try (PDDocument document = new PDDocument()) {
-        PDPage page = new PDPage();
-        document.addPage(page);
-
-        try (PDPageContentStream contentStream = new PDPageContentStream(document, page)) {
-            // Définir les marges et les positions
-            float margin = 50;
-            float yStart = page.getMediaBox().getHeight() - margin;
-            float yPosition = yStart;
-            float lineHeight = 20;
-
-            // Police et taille pour le titre
-            contentStream.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 18);
-            contentStream.beginText();
-            contentStream.newLineAtOffset(margin, yPosition);
-            contentStream.showText("FACTURE");
-            contentStream.endText();
-            yPosition -= lineHeight * 2;
-
-            // Police et taille pour les informations de la facture
-            contentStream.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 12);
-
-            // Informations de la facture
-            contentStream.beginText();
-            contentStream.newLineAtOffset(margin, yPosition);
-            contentStream.showText("Numéro de facture : " + payment.getNumeroTicket());
-            contentStream.endText();
-            yPosition -= lineHeight;
-
-            SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy HH:mm");
-            contentStream.beginText();
-            contentStream.newLineAtOffset(margin, yPosition);
-            contentStream.showText("Date : " + dateFormat.format(payment.getDateHeure()));
-            contentStream.endText();
-            yPosition -= lineHeight;
-
-            contentStream.beginText();
-            contentStream.newLineAtOffset(margin, yPosition);
-            contentStream.showText("Client : " + payment.getClient().getName());
-            contentStream.endText();
-            yPosition -= lineHeight;
-
-            contentStream.beginText();
-            contentStream.newLineAtOffset(margin, yPosition);
-            contentStream.showText("Mode de paiement : " + payment.getModePaiement());
-            contentStream.endText();
-            yPosition -= lineHeight;
-
-            contentStream.beginText();
-            contentStream.newLineAtOffset(margin, yPosition);
-            contentStream.showText("Montant total : " + payment.getMontantTotal() + " FCFA");
-            contentStream.endText();
-            yPosition -= lineHeight * 2;
-
-            // Tableau pour les détails des produits
-            contentStream.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 12);
-            contentStream.beginText();
-            contentStream.newLineAtOffset(margin, yPosition);
-            contentStream.showText("Détails des produits :");
-            contentStream.endText();
-            yPosition -= lineHeight;
-
-            // Séparateur
-            contentStream.moveTo(margin, yPosition);
-            contentStream.lineTo(page.getMediaBox().getWidth() - margin, yPosition);
-            contentStream.stroke();
-            yPosition -= lineHeight;
-
-            // Détails des produits
-            String[] produits = payment.getDetailsProduits().split(",");
-            for (String produit : produits) {
-                contentStream.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA), 10);
-                contentStream.beginText();
-                contentStream.newLineAtOffset(margin, yPosition);
-                contentStream.showText("- " + produit.trim());
-                contentStream.endText();
-                yPosition -= lineHeight;
-            }
-
-            // Pied de page
-            contentStream.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA), 10);
-            contentStream.beginText();
-            contentStream.newLineAtOffset(margin, yPosition - lineHeight * 2);
-            contentStream.showText("Merci pour votre achat !");
-            contentStream.endText();
-
-            contentStream.beginText();
-            contentStream.newLineAtOffset(margin, yPosition - lineHeight * 3);
-            contentStream.showText("Contact : contact@votreentreprise.com | Tél : +221 77 137 45 53 26");
-            contentStream.endText();
+    private void diminuerStockProduits() throws Exception {
+        if (produitsDansLePanier == null || produitsDansLePanier.isEmpty()) {
+            return;
         }
-
-        // Sauvegarder le document
-        String filePath = "Facture_" + payment.getNumeroTicket() + ".pdf";
-        document.save(filePath);
-        System.out.println("Facture générée avec succès : " + filePath);
-    } catch (IOException e) {
-        e.printStackTrace();
-    }
-}
-
-    // Méthode pour vider le panier
-    private void viderPanier() {
-        produitsDansLePanier.clear(); // Vider la Map du panier
+        Fabrique.getService().updateProduitStocks(produitsDansLePanier);
     }
 
-    // Méthode pour diminuer le stock des produits
-    private void diminuerStockProduits() {
-        for (Map.Entry<Produit, Integer> entry : produitsDansLePanier.entrySet()) {
-            Produit produit = entry.getKey();
-            int quantiteAchetee = entry.getValue();
-
-            // Diminuer le stock du produit
-            int nouveauStock = produit.getStock() - quantiteAchetee;
-            produit.setStock(nouveauStock);
-
-            // Mettre à jour le produit dans la base de données
-            mettreAJourProduit(produit);
-        }
-        
+    private void showAlert(String title, String message) {
+        javafx.scene.control.Alert alert = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.WARNING);
+        alert.setTitle(title);
+        alert.setContentText(message);
+        alert.showAndWait();
     }
 
-    // Méthode pour mettre à jour le produit dans la base de données
-    private void mettreAJourProduit(Produit produit) {
-        try {
-            // Utiliser votre service ou DAO pour mettre à jour le produit
-            Fabrique.getService().updateProduit(produit);
-            System.out.println("Produit mis à jour : " + produit.getNom());
-        } catch (Exception e) {
-            e.printStackTrace();
-            System.out.println("Erreur lors de la mise à jour du produit : " + produit.getNom());
-        }
+    @FXML
+    private void cancel(ActionEvent event) {
+        Stage stage = (Stage) ((javafx.scene.Node) event.getSource()).getScene().getWindow();
+        stage.close();
     }
 }

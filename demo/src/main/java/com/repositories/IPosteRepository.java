@@ -12,4 +12,6 @@ public interface IPosteRepository {
     void delete(Poste poste);
     boolean checkAvailability(int id);
     List<Poste> findByGame(Game game);
+    List<Poste> findPostesSansJeux();
+
 }

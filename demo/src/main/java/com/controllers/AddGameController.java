@@ -1,10 +1,14 @@
 package com.controllers;
 
 import java.io.File;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import com.core.Fabrique;
 import com.entities.Game;
@@ -14,108 +18,147 @@ import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
-import javafx.scene.control.Button;
+import javafx.scene.control.ComboBox; // Ajouté pour le ComboBox
 import javafx.scene.control.ListView;
 import javafx.scene.control.SelectionMode;
 import javafx.scene.control.TextField;
+import javafx.scene.image.Image; // Ajouté pour l'aperçu
+import javafx.scene.image.ImageView; // Ajouté pour l'aperçu
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
 public class AddGameController {
 
     @FXML
-    private TextField txtNom, txtDescription, txtType, txtStatus, txtImagePath;
-
+    private TextField txtName; // Renommé de txtNom
     @FXML
-    private ListView<Poste> listPostes; // ListView pour sélectionner les postes
-
+    private ComboBox<String> cbType; // Changé de TextField à ComboBox
     @FXML
-    private Button btnAddImage; // Bouton pour choisir une image
+    private TextField txtImagePath;
+    @FXML
+    private ImageView imageViewPreview; // Pour afficher l'aperçu de l'image
+    @FXML
+    private ListView<Poste> lvPostes; // Renommé de listPostes pour consistance
 
-    private ObservableList<Poste> postesList; // Liste observable des postes
+    private ObservableList<Poste> allPostes; // Liste observable de tous les postes
+    private GameController gameController; // Référence au GameController pour rafraîchir la vue principale
+
+    // Setter pour le GameController parent
+    public void setGameController(GameController gameController) {
+        this.gameController = gameController;
+    }
 
     @FXML
     public void initialize() {
+        // Initialise les types de jeux si ce n'est pas déjà fait dans le FXML
+        if (cbType.getItems().isEmpty()) {
+            cbType.getItems().addAll("Action", "Aventure", "Stratégie", "Sport", "Course", "Simulation", "RPG", "Casual", "Autre");
+        }
+
+        // Configure le ListView pour permettre la sélection multiple
+        lvPostes.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+
         // Charger la liste des postes disponibles
-        loadPostes();
-          // Configurer le ListView pour permettre la sélection multiple
-        listPostes.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+        loadAllPostes();
     }
 
-    private void loadPostes() {
-        // Récupérer la liste des postes disponibles depuis le service
-        List<Poste> postes = Fabrique.getService().getPostes();
-        postesList = FXCollections.observableArrayList(postes);
-        listPostes.setItems(postesList);
+    private void loadAllPostes() {
+        try {
+            List<Poste> postes = Fabrique.getService().getPostes(); // Assurez-vous que Fabrique.getService().getAllPostes() existe
+            allPostes = FXCollections.observableArrayList(postes);
+            lvPostes.setItems(allPostes);
+        } catch (Exception e) {
+            showAlert(AlertType.ERROR, "Erreur de chargement", "Impossible de charger les postes disponibles.");
+            e.printStackTrace();
+        }
     }
 
     @FXML
-    private void addGame() {
+    private void handleSave() { // Renommé de addGame pour être plus générique
         try {
             // Récupérer les valeurs du formulaire
-            String name = txtNom.getText();
-            String description = txtDescription.getText();
-            String type = txtType.getText();
-            String status = txtStatus.getText();
-            String imagePath = txtImagePath.getText(); // Récupérer le chemin de l'image
+            String name = txtName.getText().trim();
+            String type = cbType.getValue();
+            String imagePath = txtImagePath.getText().trim();
 
-            // Vérifier que tous les champs sont remplis
-            if (name.isEmpty() || description.isEmpty() || type.isEmpty() || status.isEmpty() || imagePath.isEmpty()) {
-                showAlert(AlertType.WARNING, "Champs manquants", "Veuillez remplir tous les champs.");
+            // Vérifier que tous les champs obligatoires sont remplis
+            if (name.isEmpty() || type == null || imagePath.isEmpty()) {
+                showAlert(AlertType.WARNING, "Champs manquants", "Veuillez remplir tous les champs obligatoires (Nom, Type, Chemin de l'image).");
                 return;
             }
 
-            // Vérifier que l'image existe réellement
-            Path path = Paths.get(imagePath);
-            if (!Files.exists(path) || !Files.isRegularFile(path)) {
+            // Vérifier que le fichier image existe réellement
+            File imageFile = new File(imagePath);
+            if (!imageFile.exists() || !imageFile.isFile()) {
                 showAlert(AlertType.ERROR, "Image invalide", "Le fichier d'image sélectionné est invalide ou n'existe pas.");
                 return;
             }
 
-            // Créer un objet Game
-            Game game = new Game(name, description, type, status, imagePath);
+            // Créer un objet Game (sans description ni status)
+            Game game = new Game(name, type, imagePath); // Assurez-vous d'avoir un constructeur Game(String name, String type, String imagePath)
+
             // Ajouter le jeu via le service
-            Fabrique.getService().addGame(game);
-             
+            Fabrique.getService().addGame(game); // Cette méthode doit retourner le jeu nouvellement créé avec son ID (ou rafraîchir game.id)
 
-              // Ajouter les postes sélectionnés au jeu
-            ObservableList<Poste> selectedPostes = listPostes.getSelectionModel().getSelectedItems();
+            // Récupérer les postes sélectionnés
+            ObservableList<Poste> selectedPostes = lvPostes.getSelectionModel().getSelectedItems();
+
+            // Associer les postes sélectionnés au jeu
+            List<Poste> gamePostes = new ArrayList<>(selectedPostes);
+            game.setPostes(gamePostes); // Met à jour l'objet Game en mémoire
+
+            // Persister les associations dans la base de données
             for (Poste poste : selectedPostes) {
-                game.addPoste(poste);
-
-                Fabrique.getService().addPosteToGame(poste, game);
+                Fabrique.getService().addPosteToGame(poste, game); // Cette méthode doit exister dans votre service
             }
-    
 
-        
-
-            // Fermer la fenêtre d'ajout (si nécessaire)
+            showAlert(AlertType.INFORMATION, "Succès", "Jeu ajouté avec succès !");
             closeWindow();
+            if (gameController != null) {
+                gameController.refreshGames(); // Rafraîchit la vue principale après l'ajout
+            }
 
         } catch (Exception e) {
+            showAlert(AlertType.ERROR, "Erreur", "Une erreur s'est produite lors de l'ajout du jeu : " + e.getMessage());
             e.printStackTrace();
-            showAlert(AlertType.ERROR, "Erreur", "Une erreur s'est produite lors de l'ajout du jeu.");
         }
     }
 
     @FXML
-    private void handleAddImage() {
-        // Ouvrir une boîte de dialogue pour sélectionner un fichier image
+    private void handleBrowseImage() { // Renommé de handleAddImage
         FileChooser fileChooser = new FileChooser();
         fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Image Files", "*.png", "*.jpg", "*.jpeg", "*.gif"));
 
-        // Récupérer le fichier sélectionné
         File file = fileChooser.showOpenDialog(new Stage());
 
         if (file != null) {
-            // Mettre à jour le chemin de l'image dans le champ de texte
             txtImagePath.setText(file.getAbsolutePath());
+            loadImagePreview(file.getAbsolutePath()); // Affiche l'aperçu
+        }
+    }
+
+    // Charge et affiche l'aperçu de l'image
+    private void loadImagePreview(String imagePath) {
+        if (imagePath == null || imagePath.isEmpty()) {
+            imageViewPreview.setImage(null);
+            return;
+        }
+        try {
+            File file = new File(imagePath);
+            if (file.exists() && !file.isDirectory()) {
+                Image image = new Image(file.toURI().toString());
+                imageViewPreview.setImage(image);
+            } else {
+                imageViewPreview.setImage(null);
+            }
+        } catch (Exception e) {
+            System.err.println("Erreur lors du chargement de l'aperçu de l'image: " + e.getMessage());
+            imageViewPreview.setImage(null);
         }
     }
 
     @FXML
-    private void cancel() {
-        // Fermer la fenêtre sans rien faire
+    private void handleCancel() { // Renommé de cancel
         closeWindow();
     }
 
@@ -130,7 +173,7 @@ public class AddGameController {
 
     // Méthode pour fermer la fenêtre
     private void closeWindow() {
-        Stage stage = (Stage) btnAddImage.getScene().getWindow();
+        Stage stage = (Stage) txtName.getScene().getWindow(); // Utilisez un champ FXML pour obtenir la scène
         stage.close();
     }
 }

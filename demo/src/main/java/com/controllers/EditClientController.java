@@ -19,7 +19,6 @@ public class EditClientController {
     @FXML private TextField nameField;
     @FXML private TextField emailField;
     @FXML private TextField phoneField;
-    @FXML private DatePicker birthDateField;
     @FXML private TextField addressField;
     @FXML private TextField loyaltyPointsField;
     @FXML private ComboBox<String> roleComboBox;
@@ -32,24 +31,6 @@ public class EditClientController {
         emailField.setText(client.getEmail());
         phoneField.setText(client.getPhone());
     
-        // Conversion de la date de naissance en LocalDate
-        if (client.getBirthDate() != null) {
-            if (client.getBirthDate() instanceof java.sql.Date) {
-                // Si c'est un java.sql.Date, utilisez toLocalDate()
-                java.sql.Date sqlDate = (java.sql.Date) client.getBirthDate();
-                birthDateField.setValue(sqlDate.toLocalDate());
-            } else if (client.getBirthDate() instanceof java.util.Date) {
-                // Si c'est un java.util.Date, utilisez toInstant()
-                java.util.Date utilDate = (java.util.Date) client.getBirthDate();
-                LocalDate localDate = utilDate.toInstant()
-                                              .atZone(ZoneId.systemDefault())
-                                              .toLocalDate();
-                birthDateField.setValue(localDate);
-            }
-        } else {
-            birthDateField.setValue(null); // Si la date est nulle, définissez le champ comme vide
-        }
-    
         addressField.setText(client.getAddress());
         loyaltyPointsField.setText(String.valueOf(client.getLoyaltyPoints()));
     
@@ -60,55 +41,31 @@ public class EditClientController {
 
     @FXML
 private void editClient() throws Exception {
-    String name = nameField.getText();
-    String email = emailField.getText();
-    String phone = phoneField.getText();
-    LocalDate birthDate = birthDateField.getValue();
-    String address = addressField.getText();
-    String loyaltyPointsStr = loyaltyPointsField.getText();
-    String role = roleComboBox.getValue();
+    String name = nameField.getText() != null ? nameField.getText().trim() : "";
+    String phone = phoneField.getText() != null ? phoneField.getText().trim() : "";
 
-    // Validation des champs
-    if (name.isEmpty() || email.isEmpty() || phone.isEmpty() || birthDate == null || address.isEmpty() || loyaltyPointsStr.isEmpty() || role == null) {
-        ControllerUtils.showErrorAlert("Erreur", "Veuillez remplir tous les champs.");
+    // v1.3.5 : le bouton "Modifier" ne modifie que (nom / numéro de tél)
+    if (name.isEmpty() || phone.isEmpty()) {
+        ControllerUtils.showErrorAlert("Erreur", "Veuillez renseigner le nom et le numéro de téléphone.");
         return;
     }
-
-    if (!ControllerUtils.isValidEmail(email)) {
-        ControllerUtils.showErrorAlert("Erreur", "L'email n'est pas valide.");
-        return;
-    }
-
     if (!ControllerUtils.isValidPhone(phone)) {
         ControllerUtils.showErrorAlert("Erreur", "Le numéro de téléphone n'est pas valide.");
         return;
     }
 
-    // Conversion de LocalDate en java.util.Date ou java.sql.Date
-    Date date;
-    if (selectedClient.getBirthDate() instanceof java.sql.Date) {
-        date = java.sql.Date.valueOf(birthDate); // Conversion en java.sql.Date
-    } else {
-        date = java.util.Date.from(birthDate.atStartOfDay(ZoneId.systemDefault()).toInstant()); // Conversion en java.util.Date
+    selectedClient.setName(name);
+    selectedClient.setPhone(phone);
+
+    try {
+        Fabrique.getService().updateClient(selectedClient);
+    } catch (Exception e) {
+        ControllerUtils.showErrorAlert("Erreur", e.getMessage() != null ? e.getMessage() : "Impossible de modifier le client.");
+        return;
     }
 
-    int loyaltyPoints = Integer.parseInt(loyaltyPointsStr);
-    Role clientRole = Role.valueOf(role);
-
-    // Mettre à jour les informations du client
-    selectedClient.setName(name);
-    selectedClient.setEmail(email);
-    selectedClient.setPhone(phone);
-    selectedClient.setBirthDate(date); // Utilisation de la date convertie
-    selectedClient.setAddress(address);
-    selectedClient.setLoyaltyPoints(loyaltyPoints);
-    selectedClient.setRole(clientRole);
-
-    // Sauvegarder les modifications
-    Fabrique.getService().updateClient(selectedClient);
-    ControllerUtils.showInfoAlert("Succès", "L'utilisateur a été modifié avec succès.");
+    ControllerUtils.showInfoAlert("Succès", "Le client a été modifié avec succès.");
     clearFields();
-
     ControllerUtils.closeWindow(nameField);
 }
 
@@ -122,7 +79,6 @@ private void editClient() throws Exception {
         nameField.clear();
         emailField.clear();
         phoneField.clear();
-        birthDateField.setValue(null);
         addressField.clear();
         loyaltyPointsField.clear();
         roleComboBox.getSelectionModel().clearSelection();

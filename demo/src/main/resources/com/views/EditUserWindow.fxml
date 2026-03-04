@@ -1,28 +1,63 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.ComboBox?>
 <?import javafx.scene.control.PasswordField?>
 <?import javafx.scene.control.TextField?>
+<?import javafx.scene.effect.DropShadow?>
 <?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
 <?import javafx.scene.text.Text?>
-<?import javafx.geometry.Insets?>
 
-<AnchorPane xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.controllers.EditUserController" style="-fx-background-color: linear-gradient(to bottom, #13b0da, #0d8bbf);">
-    <!-- Titre Modifier Utilisateur -->
-    <Text text="Modifier Utilisateur" style="-fx-font-size: 24px; -fx-fill: white;" layoutX="30" layoutY="30" />
+<AnchorPane prefHeight="450.0" prefWidth="400.0" styleClass="content-pane form-dialog" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.controllers.EditUserController">
+   <children>
+      <Text fill="#0f172a" layoutX="30.0" layoutY="50.0" style="-fx-font-size: 28px; -fx-font-weight: bold;" text="Modifier Utilisateur">
+         <effect>
+            <DropShadow color="#00000066" offsetX="0.0" offsetY="2.0" radius="5.0" />
+         </effect>
+      </Text>
 
-    <!-- Champs pour les informations de base -->
-    <TextField fx:id="nameField" promptText="Nom" layoutX="30" layoutY="80" prefWidth="300"/>
-    <TextField fx:id="emailField" promptText="Email" layoutX="30" layoutY="130" prefWidth="300"/>
-    <PasswordField fx:id="passwordField" promptText="Mot de passe" layoutX="30" layoutY="180" prefWidth="300"/>
-    
-    <!-- ComboBox pour le rôle -->
-    <ComboBox fx:id="roleComboBox" layoutX="30" layoutY="230" prefWidth="300"/>
-    
-    <!-- Bouton Modifier -->
-    <Button text="Modifier" fx:id="editButton" layoutX="30" layoutY="280" style="-fx-background-color: #4CAF50; -fx-text-fill: white; -fx-font-size: 14px; -fx-border-radius: 5; -fx-background-radius: 5;"  onAction="#editUser"/>
-    
-    <!-- Bouton Annuler -->
-    <Button text="Annuler" fx:id="cancelButton" layoutX="150" layoutY="280" style="-fx-background-color: #F44336; -fx-text-fill: white; -fx-font-size: 14px; -fx-border-radius: 5; -fx-background-radius: 5;" onAction="#cancel"/>
+      <VBox layoutX="30.0" layoutY="100.0" spacing="20.0">
+         <children>
+            <TextField fx:id="nameField" prefHeight="35.0" prefWidth="340.0" promptText="Nom" style="-fx-background-color: #ffffff; -fx-border-color: #bdc3c7; -fx-border-radius: 5px; -fx-background-radius: 5px; -fx-font-size: 14px; -fx-padding: 8px 10px; -fx-prompt-text-fill: #7f8c8d;">
+               <effect>
+                  <DropShadow color="#0000001a" offsetX="0.0" offsetY="1.0" radius="3.0" />
+               </effect>
+            </TextField>
+            <TextField fx:id="emailField" prefHeight="35.0" prefWidth="340.0" promptText="Email" style="-fx-background-color: #ffffff; -fx-border-color: #bdc3c7; -fx-border-radius: 5px; -fx-background-radius: 5px; -fx-font-size: 14px; -fx-padding: 8px 10px; -fx-prompt-text-fill: #7f8c8d;">
+               <effect>
+                  <DropShadow color="#0000001a" offsetX="0.0" offsetY="1.0" radius="3.0" />
+               </effect>
+            </TextField>
+            <PasswordField fx:id="passwordField" prefHeight="35.0" prefWidth="340.0" promptText="Mot de passe" style="-fx-background-color: #ffffff; -fx-border-color: #bdc3c7; -fx-border-radius: 5px; -fx-background-radius: 5px; -fx-font-size: 14px; -fx-padding: 8px 10px; -fx-prompt-text-fill: #7f8c8d;">
+               <effect>
+                  <DropShadow color="#0000001a" offsetX="0.0" offsetY="1.0" radius="3.0" />
+               </effect>
+            </PasswordField>
+            
+            <ComboBox fx:id="roleComboBox" prefHeight="35.0" prefWidth="340.0" promptText="Rôle" style="-fx-background-color: #ffffff; -fx-border-color: #bdc3c7; -fx-border-radius: 5px; -fx-background-radius: 5px; -fx-font-size: 14px; -fx-padding: 8px 10px;">
+               <effect>
+                  <DropShadow color="#0000001a" offsetX="0.0" offsetY="1.0" radius="3.0" />
+               </effect>
+            </ComboBox>
+         </children>
+      </VBox>
+
+      <HBox alignment="CENTER" layoutX="30.0" layoutY="350.0" prefHeight="50.0" prefWidth="340.0" spacing="30.0">
+         <children>
+            <Button fx:id="editButton" onAction="#editUser" prefHeight="45.0" prefWidth="150.0" style="-fx-background-color: #2ecc71; -fx-text-fill: white; -fx-font-size: 16px; -fx-padding: 10px 20px; -fx-border-radius: 5px; -fx-background-radius: 5px; -fx-cursor: hand;" text="Modifier">
+               <effect>
+                  <DropShadow color="#00000033" offsetX="0.0" offsetY="2.0" radius="5.0" />
+               </effect>
+            </Button>
+            <Button fx:id="cancelButton" onAction="#cancel" prefHeight="45.0" prefWidth="150.0" style="-fx-background-color: #e74c3c; -fx-text-fill: white; -fx-font-size: 16px; -fx-padding: 10px 20px; -fx-border-radius: 5px; -fx-background-radius: 5px; -fx-cursor: hand;" text="Annuler">
+               <effect>
+                  <DropShadow color="#00000033" offsetX="0.0" offsetY="2.0" radius="5.0" />
+               </effect>
+            </Button>
+         </children>
+      </HBox>
+   </children>
 </AnchorPane>

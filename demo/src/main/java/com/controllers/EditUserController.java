@@ -1,12 +1,13 @@
 package com.controllers;
 
+import com.core.AppConfig;
+import com.core.Fabrique;
+import com.entities.Role;
 import com.entities.User;
+import org.mindrot.jbcrypt.BCrypt;
 
 import java.util.Arrays;
 import java.util.stream.Collectors;
-
-import com.core.Fabrique;
-import com.entities.Role;
 import javafx.fxml.FXML;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.PasswordField;
@@ -47,10 +48,19 @@ public class EditUserController {
             return;
         }
 
+        int minLen = AppConfig.getPasswordMinLength();
+        String passwordToSave = password;
+        if (password.length() != 60) {
+            if (password.length() < minLen) {
+                ControllerUtils.showErrorAlert("Erreur", "Le mot de passe doit contenir au moins " + minLen + " caractères.");
+                return;
+            }
+            passwordToSave = BCrypt.hashpw(password, BCrypt.gensalt());
+        }
         Role userRole = Role.valueOf(role);
         selectedUser.setName(name);
         selectedUser.setEmail(email);
-        selectedUser.setPassword(password);
+        selectedUser.setPassword(passwordToSave);
         selectedUser.setRole(userRole);
 
         // Sauvegarder les modifications (à implémenter dans votre service)

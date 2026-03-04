@@ -106,6 +106,7 @@ public class GameSessionController {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/views/AddGameSessionWindow.fxml"));
             Scene scene = new Scene(loader.load());
+            scene.getStylesheets().add(getClass().getResource("/com/css/style.css").toExternalForm());
             Stage stage = new Stage();
             stage.setScene(scene);
             stage.initModality(Modality.APPLICATION_MODAL);
@@ -129,6 +130,7 @@ public class GameSessionController {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/views/EditGameSessionWindow.fxml"));
             Scene scene = new Scene(loader.load());
+            scene.getStylesheets().add(getClass().getResource("/com/css/style.css").toExternalForm());
             Stage stage = new Stage();
             EditGameSessionController controller = loader.getController();
             controller.initData(selectedSession);
@@ -151,14 +153,24 @@ public class GameSessionController {
             return;
         }
 
-        // Logique de suppression de la session de jeu
-        boolean success = Fabrique.getService().deleteGameSession(selectedSession.getId());
-        if (success) {
-            loadGameSessions();  // Rafraîchir la table
-            Alert alert = new Alert(Alert.AlertType.INFORMATION, "Session supprimée avec succès.");
-            alert.show();
-        } else {
-            Alert alert = new Alert(Alert.AlertType.ERROR, "Erreur lors de la suppression de la session.");
+        try {
+            // Logique de suppression de la session de jeu
+            boolean success = Fabrique.getService().deleteGameSession(selectedSession.getId());
+            if (success) {
+                loadGameSessions();  // Rafraîchir la table
+                Alert alert = new Alert(Alert.AlertType.INFORMATION, "Session supprimée avec succès.");
+                alert.show();
+            } else {
+                // This 'else' block will catch cases where deleteGameSession returns false,
+                // but not if it throws an exception (that's what the catch block is for).
+                Alert alert = new Alert(Alert.AlertType.ERROR, "Erreur lors de la suppression de la session.");
+                alert.show();
+            }
+        } catch (Exception e) {
+            // Here, you catch the Exception thrown by deleteGameSession
+            // You should log the exception for debugging purposes
+            e.printStackTrace(); // This prints the stack trace to the console
+            Alert alert = new Alert(Alert.AlertType.ERROR, "Une erreur inattendue est survenue lors de la suppression : " + e.getMessage());
             alert.show();
         }
     }

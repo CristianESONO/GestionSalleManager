@@ -41,6 +41,6 @@ public class ControllerUtils {
     }
 
     public static boolean isValidPhone(String phone) {
-        return phone.matches("\\d{10}"); // Exemple pour un numéro à 10 chiffres
+        return phone.matches("\\d{9}"); // Exemple pour un numéro à 9 chiffres
     }
 }

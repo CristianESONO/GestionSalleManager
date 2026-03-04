@@ -1,12 +1,14 @@
 package com.controllers;
 
-import com.entities.User;
+import com.core.AppConfig;
 import com.core.Fabrique;
 import com.entities.Role;
+import com.entities.User;
 import javafx.fxml.FXML;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextField;
+import org.mindrot.jbcrypt.BCrypt; // Import pour BCrypt
 
 import java.util.Date;
 
@@ -25,7 +27,6 @@ public class AddUserController {
     private void initialize() {
         // Ajouter "Sélectionner un rôle" comme valeur par défaut
         roleComboBox.getItems().add("Sélectionner un rôle");
-
         // Ajouter uniquement les rôles Admin et SuperAdmin
         roleComboBox.getItems().add(Role.Admin.name());
         roleComboBox.getItems().add(Role.SuperAdmin.name());
@@ -48,11 +49,18 @@ public class AddUserController {
             return;
         }
 
+        int minLen = AppConfig.getPasswordMinLength();
+        if (password.length() < minLen) {
+            ControllerUtils.showErrorAlert("Erreur", "Le mot de passe doit contenir au moins " + minLen + " caractères.");
+            return;
+        }
+
         try {
             Role userRole = Role.valueOf(role);
-            User newUser = new User(name, email, password, new Date());
+            // Hachage du mot de passe avec BCrypt
+            String hashedPassword = BCrypt.hashpw(password, BCrypt.gensalt());
+            User newUser = new User(name, email, hashedPassword, new Date());
             newUser.setRole(userRole);
-
             Fabrique.getService().addUser(newUser);
             ControllerUtils.showInfoAlert("Succès", "L'utilisateur a été ajouté avec succès.");
             clearFields();

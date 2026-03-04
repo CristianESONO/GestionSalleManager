@@ -20,8 +20,10 @@ public class AddParrainController {
 
     @FXML
     private void initialize() {
-        // Initialisation si nécessaire
+        // Limiter le champ téléphone à 9 chiffres
+        setupPhoneField();
     }
+
 
     @FXML
     private void addParrain() throws Exception {
@@ -51,9 +53,10 @@ public class AddParrainController {
         String password = generateRandomPassword();
         // Utiliser la date et l'heure actuelles
         Date registrationDate = new Date();
+        int parrainagePoints = 0; // Initialiser les points de parrainage à 0
 
         // Créer un nouveau parrain
-        Parrain newParrain = new Parrain(name, email, password, registrationDate, phone, address, codeParrainage);
+        Parrain newParrain = new Parrain(name, email, password, registrationDate, phone, address, codeParrainage, parrainagePoints);
         newParrain.setRole(Role.Parrain);
 
         // Ajouter le parrain via le service
@@ -66,6 +69,28 @@ public class AddParrainController {
         clearFields();
         ControllerUtils.closeWindow(nameField);
     }
+
+    private void setupPhoneField() {
+        phoneField.textProperty().addListener((observable, oldValue, newValue) -> {
+            if (newValue == null || newValue.isEmpty()) {
+                return;
+            }
+
+            // Ne garder que les chiffres
+            String filteredValue = newValue.replaceAll("[^0-9]", "");
+
+            // Limiter à 9 chiffres
+            if (filteredValue.length() > 9) {
+                filteredValue = filteredValue.substring(0, 9);
+            }
+
+            // Mettre à jour le champ si nécessaire
+            if (!filteredValue.equals(newValue)) {
+                phoneField.setText(filteredValue);
+            }
+        });
+    }
+
 
     @FXML
     private void cancel() {

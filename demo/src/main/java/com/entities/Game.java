@@ -1,36 +1,48 @@
 package com.entities;
 
-import jakarta.persistence.*;
-
+import javax.persistence.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects; // Ajout de l'import pour Objects.hash
 
 @Entity
 @Table(name = "games")
 public class Game {
     
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)  // Génération automatique de l'ID
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int id;
     
     private String name;
     
-    private String description;
-    
-    private String type;
-    
-    private String status;
+    private String type; // Renommé 'genre' en 'type' si c'est le cas, sinon gardez 'genre'
     
     private String imagePath; // Chemin de l'image du jeu
 
-    // Collections pour les relations
     @OneToMany(mappedBy = "game", fetch = FetchType.LAZY)
     private List<GameSession> gameSessions;
 
     // Relation ManyToMany avec Poste
-    @ManyToMany(mappedBy = "games")
-    private List<Poste> postes;
-  
+    @ManyToMany(mappedBy = "games", fetch = FetchType.LAZY) // Ajout de FetchType.LAZY pour être explicite
+    private List<Poste> postes = new ArrayList<>(); // Initialisation de la collection
+
+    // Constructeur par défaut (OBLIGATOIRE pour JPA)
+    public Game() { }
+
+    // Constructeur avec paramètres (sans ID, pour les nouvelles entités)
+    public Game(String name, String type, String imagePath) {
+        this.name = name;
+        this.type = type;
+        this.imagePath = imagePath;
+    }
+
+    // Constructeur complet avec ID
+    public Game(int id, String name, String type, String imagePath) {
+        this.id = id;
+        this.name = name;
+        this.type = type;
+        this.imagePath = imagePath;
+    }
 
     // Getters et setters
     public int getId() {
@@ -49,51 +61,12 @@ public class Game {
         this.name = name;
     }
 
-    public String getDescription() {
-        return description;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
-    }
-
-    public String getType() {
+    public String getType() { // Si vous avez renommé 'genre' en 'type'
         return type;
     }
 
-    public void setType(String type) {
+    public void setType(String type) { // Si vous avez renommé 'genre' en 'type'
         this.type = type;
-    }
-
-    public String getStatus() {
-        return status;
-    }
-
-    public void setStatus(String status) {
-        this.status = status;
-    }
-
-    public List<Poste> getPostes() {
-        return postes;
-    }
-
-    public void setPostes(List<Poste> postes) {
-        this.postes = postes;
-    }
-
-      // Méthode pour ajouter un poste
-    public void addPoste(Poste poste) {
-        if (postes == null) {
-            postes = new ArrayList<>();
-        }
-        postes.add(poste);
-    }
-
-    // Méthode pour supprimer un poste
-    public void removePoste(Poste poste) {
-        if (postes != null) {
-            postes.remove(poste);
-        }
     }
 
     public String getImagePath() {
@@ -112,42 +85,53 @@ public class Game {
         this.gameSessions = gameSessions;
     }
 
-    // Constructeur par défaut
-    public Game() { }
-
-    // Constructeur avec paramètres
-    public Game(int id, String name, String description, String type, String status, String imagePath) {
-        this.id = id;
-        this.name = name;
-        this.description = description;
-        this.type = type;
-        this.status = status;
-        this.imagePath = imagePath;
+    public List<Poste> getPostes() {
+        return postes;
     }
 
-    // Constructeur avec gameSessions
-    public Game(int id, String name, String description, String type, String status, String imagePath, List<GameSession> gameSessions) {
-        this(id, name, description, type, status, imagePath); // Appel du constructeur de base
-        this.gameSessions = gameSessions;
+    public void setPostes(List<Poste> postes) {
+        this.postes = postes;
     }
 
-    // Constructeur avec gameSessions sans spécifier l'ID
-    public Game(String name, String description, String type, String status, String imagePath, List<GameSession> gameSessions) {
-        this(name, description, type, status, imagePath); // Appel du constructeur de base
-        this.gameSessions = gameSessions;
+    // Méthode pour ajouter un poste (utilitaire)
+    public void addPoste(Poste poste) {
+        if (this.postes == null) {
+            this.postes = new ArrayList<>();
+        }
+        this.postes.add(poste);
+        // Assurez-vous aussi que le poste a ce jeu si la relation est bidirectionnelle
+        // if (!poste.getGames().contains(this)) {
+        //     poste.getGames().add(this);
+        // }
     }
 
-    // Constructeur sans gameSessions
-    public Game(String name, String description, String type, String status, String imagePath) {
-        this.name = name;
-        this.description = description;
-        this.type = type;
-        this.status = status;
-        this.imagePath = imagePath;
+    // Méthode pour supprimer un poste (utilitaire)
+    public void removePoste(Poste poste) {
+        if (this.postes != null) {
+            this.postes.remove(poste);
+            // if (poste.getGames().contains(this)) {
+            //     poste.getGames().remove(this);
+            // }
+        }
     }
 
     @Override
     public String toString() {
         return name;
+    }
+
+    // --- Ajout de equals() et hashCode() ---
+    // Essentiel pour la comparaison correcte des entités par leur ID unique
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Game game = (Game) o;
+        return id == game.id;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
     }
 }
