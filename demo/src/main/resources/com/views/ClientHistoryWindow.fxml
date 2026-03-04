@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TableColumn?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<AnchorPane prefHeight="520.0" prefWidth="820.0" styleClass="content-pane" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.controllers.ClientHistoryController">
+    <children>
+        <VBox spacing="12" AnchorPane.bottomAnchor="15.0" AnchorPane.leftAnchor="15.0" AnchorPane.rightAnchor="15.0" AnchorPane.topAnchor="15.0">
+            <children>
+                <Label styleClass="section-title" text="Historique des sessions de jeu" />
+                <Label fx:id="clientInfoLabel" wrapText="true" style="-fx-font-size: 13px;" />
+                <TableView fx:id="historyTable" styleClass="table-view" VBox.vgrow="ALWAYS">
+                    <columns>
+                        <TableColumn fx:id="colDateResa" prefWidth="110" text="Date réservation" />
+                        <TableColumn fx:id="colTicket" prefWidth="90" text="N° Ticket" />
+                        <TableColumn fx:id="colPoste" prefWidth="70" text="Poste" />
+                        <TableColumn fx:id="colJeu" prefWidth="120" text="Jeu" />
+                        <TableColumn fx:id="colDuree" prefWidth="70" text="Durée" />
+                        <TableColumn fx:id="colMontant" prefWidth="70" text="Montant" />
+                        <TableColumn fx:id="colPoints" prefWidth="70" text="Points fidélité" />
+                        <TableColumn fx:id="colStatut" prefWidth="80" text="Statut" />
+                    </columns>
+                </TableView>
+                <HBox alignment="CENTER_RIGHT" spacing="15">
+                    <Button fx:id="btnGenererPdf" onAction="#genererPdf" styleClass="action-button" text="Générer PDF" />
+                    <Button onAction="#fermer" styleClass="button-neutral" text="Fermer" />
+                </HBox>
+            </children>
+            <padding>
+                <Insets bottom="10" left="10" right="10" top="10" />
+            </padding>
+        </VBox>
+    </children>
+</AnchorPane>
