@@ -2,7 +2,7 @@
 ; Corrections : chemin AppData (Roaming), Run en double supprimé
 
 #define MyAppName "Gestion Salle Jeu"
-#define MyAppVersion "1.3.4"
+#define MyAppVersion "1.3.5"
 #define MyAppPublisher "Ruslan Cristian ESONO MAYE"
 #define MyAppExeName "GestionSalle.exe"
 #define MyAppAssocName "Gestion Salle"
