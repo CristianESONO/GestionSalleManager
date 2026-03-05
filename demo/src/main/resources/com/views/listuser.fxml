@@ -104,7 +104,6 @@
                                         <Pagination fx:id="paginationClient" />
                                         <HBox alignment="CENTER" spacing="10">
                                             <children>
-                                                <Button fx:id="addClientButton" onAction="#openAddClientWindow" styleClass="action-button" text="Ajouter" />
                                                 <Button fx:id="editClientButton" onAction="#openEditClientWindow" styleClass="material-button-primary" text="Modifier" />
                                                 <Button fx:id="deleteClientButton" onAction="#deleteClient" styleClass="danger-button" text="Supprimer" />
                                             </children>

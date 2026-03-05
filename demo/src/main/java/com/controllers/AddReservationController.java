@@ -75,8 +75,11 @@ public class AddReservationController {
                         ControllerUtils.showInfoAlert("Client sélectionné", "Les informations du client ont été chargées.");
                         clientChoiceComboBox.setVisible(false);
                         clientChoiceComboBox.setManaged(false);
-                        clientChoiceComboBox.getItems().clear();
-                        clientChoiceComboBox.setValue(null);
+                        // Différer la réinitialisation pour éviter l'erreur [fromindex:0 toindex:1 size:0] au rafraîchissement de la liste
+                        Platform.runLater(() -> {
+                            clientChoiceComboBox.getItems().clear();
+                            clientChoiceComboBox.setValue(null);
+                        });
                     }
                 });
             }
@@ -284,7 +287,7 @@ public class AddReservationController {
         if (byName.isEmpty()) {
             nameField.setVisible(true);
             nameField.setDisable(false);
-            nameField.clear();
+            nameField.setText(search);
             addressField.setVisible(true);
             addressField.setDisable(false);
             addressField.clear();
@@ -294,7 +297,7 @@ public class AddReservationController {
             temporaryClientCheckBox.setVisible(true);
             temporaryClientCheckBox.setSelected(false);
             if (temporaryClientCheckBox.isDisable()) temporaryClientCheckBox.setDisable(false);
-            ControllerUtils.showInfoAlert("Client non trouvé", "Ce client n'est pas enregistré. Entrez le numéro de téléphone ci-dessous (et nom/adresse si besoin) pour enregistrer un nouveau client, ou cochez 'Client temporaire'.");
+            ControllerUtils.showInfoAlert("Client non trouvé", "Ce client n'est pas enregistré. Le nom a été complété. Entrez le numéro de téléphone ci-dessous (et adresse si besoin) pour enregistrer un nouveau client, ou cochez 'Client temporaire'.");
             if (clientChoiceComboBox != null) {
                 clientChoiceComboBox.setVisible(false);
                 clientChoiceComboBox.setManaged(false);

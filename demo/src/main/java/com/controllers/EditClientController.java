@@ -17,7 +17,6 @@ import java.util.stream.Collectors;
 public class EditClientController {
 
     @FXML private TextField nameField;
-    @FXML private TextField emailField;
     @FXML private TextField phoneField;
     @FXML private TextField addressField;
     @FXML private TextField loyaltyPointsField;
@@ -28,23 +27,21 @@ public class EditClientController {
     public void setClient(Client client) {
         selectedClient = client;
         nameField.setText(client.getName());
-        emailField.setText(client.getEmail());
         phoneField.setText(client.getPhone());
-    
-        addressField.setText(client.getAddress());
+        addressField.setText(client.getAddress() != null ? client.getAddress() : "");
         loyaltyPointsField.setText(String.valueOf(client.getLoyaltyPoints()));
-    
-        // Remplir le ComboBox des rôles
-        roleComboBox.getItems().addAll(Arrays.stream(Role.values()).map(Role::name).collect(Collectors.toList()));
-        roleComboBox.setValue(client.getRole().name());
+        if (roleComboBox != null) {
+            roleComboBox.getItems().addAll(Arrays.stream(Role.values()).map(Role::name).collect(Collectors.toList()));
+            roleComboBox.setValue(client.getRole().name());
+        }
     }
 
     @FXML
 private void editClient() throws Exception {
     String name = nameField.getText() != null ? nameField.getText().trim() : "";
     String phone = phoneField.getText() != null ? phoneField.getText().trim() : "";
+    String address = addressField.getText() != null ? addressField.getText().trim() : "";
 
-    // v1.3.5 : le bouton "Modifier" ne modifie que (nom / numéro de tél)
     if (name.isEmpty() || phone.isEmpty()) {
         ControllerUtils.showErrorAlert("Erreur", "Veuillez renseigner le nom et le numéro de téléphone.");
         return;
@@ -56,6 +53,7 @@ private void editClient() throws Exception {
 
     selectedClient.setName(name);
     selectedClient.setPhone(phone);
+    selectedClient.setAddress(address.isEmpty() ? null : address);
 
     try {
         Fabrique.getService().updateClient(selectedClient);
@@ -77,10 +75,9 @@ private void editClient() throws Exception {
 
     private void clearFields() {
         nameField.clear();
-        emailField.clear();
         phoneField.clear();
         addressField.clear();
         loyaltyPointsField.clear();
-        roleComboBox.getSelectionModel().clearSelection();
+        if (roleComboBox != null) roleComboBox.getSelectionModel().clearSelection();
     }
 }

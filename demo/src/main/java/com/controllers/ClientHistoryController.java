@@ -3,6 +3,7 @@ package com.controllers;
 import com.core.Fabrique;
 import com.entities.Client;
 import com.entities.Reservation;
+import com.utils.ReservationDisplayUtils;
 import javafx.fxml.FXML;
 import javafx.scene.control.Label;
 import javafx.scene.control.TableColumn;
@@ -68,14 +69,8 @@ public class ClientHistoryController {
             Reservation r = cell.getValue();
             return new javafx.beans.property.SimpleStringProperty(r != null && r.getNumeroTicket() != null ? r.getNumeroTicket() : "-");
         });
-        colPoste.setCellValueFactory(cell -> {
-            var p = cell.getValue() != null ? cell.getValue().getPoste() : null;
-            return new javafx.beans.property.SimpleStringProperty(p != null && p.getName() != null ? p.getName() : (p != null ? "Poste " + p.getId() : "-"));
-        });
-        colJeu.setCellValueFactory(cell -> {
-            var g = cell.getValue() != null ? cell.getValue().getGame() : null;
-            return new javafx.beans.property.SimpleStringProperty(g != null && g.getName() != null ? g.getName() : "-");
-        });
+        colPoste.setCellValueFactory(cell -> new javafx.beans.property.SimpleStringProperty(ReservationDisplayUtils.safeGetPosteName(cell.getValue())));
+        colJeu.setCellValueFactory(cell -> new javafx.beans.property.SimpleStringProperty(ReservationDisplayUtils.safeGetGameName(cell.getValue())));
         colDuree.setCellValueFactory(cell -> {
             Duration d = cell.getValue() != null ? cell.getValue().getDuration() : null;
             if (d == null) return new javafx.beans.property.SimpleStringProperty("-");
@@ -188,8 +183,8 @@ public class ClientHistoryController {
                 if (y < margin + rowH) break;
                 String dateStr = r.getReservationDate() != null ? r.getReservationDate().format(DateTimeFormatter.ofPattern("dd/MM/yy HH:mm")) : "-";
                 String ticket = r.getNumeroTicket() != null ? r.getNumeroTicket() : "-";
-                String poste = r.getPoste() != null ? (r.getPoste().getName() != null ? r.getPoste().getName() : "P" + r.getPoste().getId()) : "-";
-                String jeu = r.getGame() != null && r.getGame().getName() != null ? r.getGame().getName() : "-";
+                String poste = ReservationDisplayUtils.safeGetPosteName(r);
+                String jeu = ReservationDisplayUtils.safeGetGameName(r);
                 String duree = r.getDuration() != null ? String.format("%dh%02d", r.getDuration().toHours(), r.getDuration().toMinutesPart()) : "-";
                 String montant = String.format("%.0f", r.getTotalPrice());
                 int pts = (r.getDuration() != null && !r.getDuration().isZero()) ? (int)(r.getDuration().toMinutes() / 15) : 0;

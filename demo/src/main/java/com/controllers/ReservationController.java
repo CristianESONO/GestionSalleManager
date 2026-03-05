@@ -7,6 +7,7 @@ import com.entities.Reservation;
 import com.entities.Role;
 import com.entities.User;
 import com.utils.ReservationReceiptPrinter;
+import com.utils.ReservationDisplayUtils;
 import com.entities.GameSession;
 import com.core.Fabrique;
 import com.core.WindowManager;
@@ -119,8 +120,8 @@ public class ReservationController implements Initializable {
     private void setupReservationTable() {
         numeroTicketColumn.setCellValueFactory(cellData -> new SimpleStringProperty(cellData.getValue().getNumeroTicket()));
         clientColumn.setCellValueFactory(cellData -> new SimpleStringProperty(cellData.getValue().getClient() != null ? cellData.getValue().getClient().getName() : "N/A"));
-        posteColumn.setCellValueFactory(cellData -> new SimpleStringProperty(cellData.getValue().getPoste().getName()));
-        gameColumn.setCellValueFactory(cellData -> new SimpleStringProperty(cellData.getValue().getGame().getName()));
+        posteColumn.setCellValueFactory(cellData -> new SimpleStringProperty(ReservationDisplayUtils.safeGetPosteName(cellData.getValue())));
+        gameColumn.setCellValueFactory(cellData -> new SimpleStringProperty(ReservationDisplayUtils.safeGetGameName(cellData.getValue())));
         reservationDateColumn.setCellValueFactory(cellData -> new SimpleStringProperty(cellData.getValue().getReservationDate().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))));
         durationColumn.setCellValueFactory(cellData -> {
             Duration duration = cellData.getValue().getDuration();
@@ -196,8 +197,8 @@ public class ReservationController implements Initializable {
 
     private void setupActiveSessionsTable() {
         sessionClientColumn.setCellValueFactory(cellData -> new SimpleStringProperty(cellData.getValue().getClient() != null ? cellData.getValue().getClient().getName() : "N/A"));
-        sessionPosteColumn.setCellValueFactory(cellData -> new SimpleStringProperty(cellData.getValue().getPoste().getName()));
-        sessionGameColumn.setCellValueFactory(cellData -> new SimpleStringProperty(cellData.getValue().getGame().getName()));
+        sessionPosteColumn.setCellValueFactory(cellData -> new SimpleStringProperty(ReservationDisplayUtils.safeGetPosteName(cellData.getValue())));
+        sessionGameColumn.setCellValueFactory(cellData -> new SimpleStringProperty(ReservationDisplayUtils.safeGetGameName(cellData.getValue())));
         sessionStartTimeColumn.setCellValueFactory(cellData -> new SimpleStringProperty(cellData.getValue().getStartTime().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))));
         sessionEndTimeColumn.setCellValueFactory(cellData -> {
             LocalDateTime endTime = cellData.getValue().getEndTime();
@@ -367,18 +368,18 @@ public class ReservationController implements Initializable {
                     reservations.stream()
                             .filter(reservation -> {
                                 Client client = reservation.getClient();
-                                Game game = reservation.getGame();
-                                Poste poste = reservation.getPoste();
+                                String gameName = ReservationDisplayUtils.safeGetGameName(reservation);
+                                String posteName = ReservationDisplayUtils.safeGetPosteName(reservation);
                                 double totalPrice = reservation.getTotalPrice();
                                 String parrainCode = reservation.getCodeParrainage();
                                 Parrain parrain = parrainCode != null && !parrainCode.isEmpty() ? Fabrique.getService().getParrainByCodeParrainage(parrainCode) : null;
                                 boolean matchesClient = client != null && client.getName().toLowerCase().contains(query.toLowerCase());
-                                boolean matchesTicket = reservation.getNumeroTicket().toLowerCase().contains(query.toLowerCase());
-                                boolean matchesGame = game != null && game.getName().toLowerCase().contains(query.toLowerCase());
-                                boolean matchesPoste = poste != null && poste.getName().toLowerCase().contains(query.toLowerCase());
+                                boolean matchesTicket = reservation.getNumeroTicket() != null && reservation.getNumeroTicket().toLowerCase().contains(query.toLowerCase());
+                                boolean matchesGame = gameName != null && gameName.toLowerCase().contains(query.toLowerCase());
+                                boolean matchesPoste = posteName != null && posteName.toLowerCase().contains(query.toLowerCase());
                                 boolean matchesPrice = String.format("%.2f", totalPrice).toLowerCase().contains(query.toLowerCase());
                                 boolean matchesParrain = (parrain != null && parrain.getName().toLowerCase().contains(query.toLowerCase())) || (parrainCode != null && parrainCode.toLowerCase().contains(query.toLowerCase()));
-                                boolean matchesStatus = reservation.getStatus().toLowerCase().contains(query.toLowerCase());
+                                boolean matchesStatus = reservation.getStatus() != null && reservation.getStatus().toLowerCase().contains(query.toLowerCase());
                                 return matchesClient || matchesTicket || matchesGame || matchesPoste || matchesPrice || matchesParrain || matchesStatus;
                             })
                             .collect(Collectors.toList())
@@ -394,7 +395,12 @@ private void startReservationSession(Reservation reservation) throws Exception {
         return;
     }
 
-    Poste poste = reservation.getPoste();
+    Poste poste = ReservationDisplayUtils.safeGetPoste(reservation);
+    Game game = ReservationDisplayUtils.safeGetGame(reservation);
+    if (poste == null || game == null) {
+        ControllerUtils.showErrorAlert("Réservation invalide", "Le poste ou le jeu associé à cette réservation a été supprimé. La réservation reste affichée mais ne peut pas être démarrée.");
+        return;
+    }
     if (poste.isHorsService()) {
         ControllerUtils.showErrorAlert("Poste hors service", "Le poste " + poste.getName() + " est hors service.");
         return;

@@ -28,33 +28,23 @@
                   <DropShadow color="#0000001a" offsetX="0.0" offsetY="1.0" radius="3.0" />
                </effect>
             </TextField>
-            <TextField fx:id="emailField" prefHeight="35.0" prefWidth="250.0" promptText="Email" style="-fx-background-color: #ffffff; -fx-border-color: #bdc3c7; -fx-border-radius: 5px; -fx-background-radius: 5px; -fx-font-size: 14px; -fx-padding: 8px 10px; -fx-prompt-text-fill: #7f8c8d;" GridPane.columnIndex="0" GridPane.rowIndex="1">
+            <TextField fx:id="phoneField" prefHeight="35.0" prefWidth="250.0" promptText="Numéro de téléphone" style="-fx-background-color: #ffffff; -fx-border-color: #bdc3c7; -fx-border-radius: 5px; -fx-background-radius: 5px; -fx-font-size: 14px; -fx-padding: 8px 10px; -fx-prompt-text-fill: #7f8c8d;" GridPane.columnIndex="0" GridPane.rowIndex="1">
                <effect>
                   <DropShadow color="#0000001a" offsetX="0.0" offsetY="1.0" radius="3.0" />
                </effect>
             </TextField>
-            <TextField fx:id="phoneField" prefHeight="35.0" prefWidth="250.0" promptText="Numéro de téléphone" style="-fx-background-color: #ffffff; -fx-border-color: #bdc3c7; -fx-border-radius: 5px; -fx-background-radius: 5px; -fx-font-size: 14px; -fx-padding: 8px 10px; -fx-prompt-text-fill: #7f8c8d;" GridPane.columnIndex="0" GridPane.rowIndex="2">
-               <effect>
-                  <DropShadow color="#0000001a" offsetX="0.0" offsetY="1.0" radius="3.0" />
-               </effect>
-            </TextField>
-            <DatePicker fx:id="birthDateField" prefHeight="35.0" prefWidth="250.0" promptText="Date de naissance" style="-fx-background-color: #ffffff; -fx-border-color: #bdc3c7; -fx-border-radius: 5px; -fx-background-radius: 5px; -fx-font-size: 14px; -fx-padding: 8px 10px;" GridPane.columnIndex="0" GridPane.rowIndex="3">
-               <effect>
-                  <DropShadow color="#0000001a" offsetX="0.0" offsetY="1.0" radius="3.0" />
-               </effect>
-            </DatePicker>
 
             <TextField fx:id="addressField" prefHeight="35.0" prefWidth="250.0" promptText="Adresse" style="-fx-background-color: #ffffff; -fx-border-color: #bdc3c7; -fx-border-radius: 5px; -fx-background-radius: 5px; -fx-font-size: 14px; -fx-padding: 8px 10px; -fx-prompt-text-fill: #7f8c8d;" GridPane.columnIndex="1" GridPane.rowIndex="0">
                <effect>
                   <DropShadow color="#0000001a" offsetX="0.0" offsetY="1.0" radius="3.0" />
                </effect>
             </TextField>
-            <TextField fx:id="loyaltyPointsField" prefHeight="35.0" prefWidth="250.0" promptText="Points de fidélité" style="-fx-background-color: #ffffff; -fx-border-color: #bdc3c7; -fx-border-radius: 5px; -fx-background-radius: 5px; -fx-font-size: 14px; -fx-padding: 8px 10px; -fx-prompt-text-fill: #7f8c8d;" GridPane.columnIndex="1" GridPane.rowIndex="1">
+            <TextField fx:id="loyaltyPointsField" editable="false" prefHeight="35.0" prefWidth="250.0" promptText="Points de fidélité" style="-fx-background-color: #e8e8e8; -fx-border-color: #bdc3c7; -fx-border-radius: 5px; -fx-background-radius: 5px; -fx-font-size: 14px; -fx-padding: 8px 10px; -fx-prompt-text-fill: #7f8c8d;" GridPane.columnIndex="1" GridPane.rowIndex="1">
                <effect>
                   <DropShadow color="#0000001a" offsetX="0.0" offsetY="1.0" radius="3.0" />
                </effect>
             </TextField>
-            <ComboBox fx:id="roleComboBox" prefHeight="35.0" prefWidth="250.0" promptText="Sélectionner un rôle" style="-fx-background-color: #ffffff; -fx-border-color: #bdc3c7; -fx-border-radius: 5px; -fx-background-radius: 5px; -fx-font-size: 14px; -fx-padding: 8px 10px;" GridPane.columnIndex="1" GridPane.rowIndex="2">
+            <ComboBox fx:id="roleComboBox" disable="true" prefHeight="35.0" prefWidth="250.0" promptText="Rôle" style="-fx-background-color: #e8e8e8; -fx-border-color: #bdc3c7; -fx-border-radius: 5px; -fx-background-radius: 5px; -fx-font-size: 14px; -fx-padding: 8px 10px;" GridPane.columnIndex="1" GridPane.rowIndex="2">
                <effect>
                   <DropShadow color="#0000001a" offsetX="0.0" offsetY="1.0" radius="3.0" />
                </effect>
@@ -65,8 +55,6 @@
             <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="270.0" />
          </columnConstraints>
          <rowConstraints>
-            <RowConstraints vgrow="SOMETIMES" />
-            <RowConstraints vgrow="SOMETIMES" />
             <RowConstraints vgrow="SOMETIMES" />
             <RowConstraints vgrow="SOMETIMES" />
             <RowConstraints vgrow="SOMETIMES" />
