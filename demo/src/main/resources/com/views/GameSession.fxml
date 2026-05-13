@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.TableColumn?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.effect.DropShadow?>
+<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.control.Label?>
+
+<AnchorPane prefHeight="600.0" prefWidth="800.0" styleClass="content-pane" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.controllers.GameSessionController">
+   <children>
+      <VBox spacing="20" AnchorPane.bottomAnchor="20.0" AnchorPane.leftAnchor="20.0" AnchorPane.rightAnchor="20.0" AnchorPane.topAnchor="20.0">
+         <children>
+            <Label styleClass="section-title" text="Gestion des Sessions de Jeux" />
+            <HBox alignment="CENTER_LEFT" spacing="15.0">
+               <children>
+                  <TextField fx:id="searchGameSessionField" prefHeight="35.0" prefWidth="300.0" promptText="Rechercher une session de jeu" styleClass="search-field" />
+                  <Button fx:id="searchGameSessionButton" prefHeight="35.0" prefWidth="120.0" styleClass="material-button-primary" text="Rechercher" />
+               </children>
+            </HBox>
+            <TableView fx:id="gameSessionTable" styleClass="table-view" VBox.vgrow="ALWAYS">
+               <columns>
+                  <TableColumn fx:id="idColumn" prefWidth="60.0" text="ID" />
+                  <TableColumn fx:id="clientColumn" prefWidth="170.0" text="Client" />
+                  <TableColumn fx:id="gameColumn" prefWidth="170.0" text="Jeu" />
+                  <TableColumn fx:id="paidDurationColumn" prefWidth="170.0" text="Durée Payée (min)" />
+                  <TableColumn fx:id="statusColumn" prefWidth="170.0" text="Statut" />
+               </columns>
+               <columnResizePolicy>
+                  <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
+               </columnResizePolicy>
+            </TableView>
+            <HBox alignment="CENTER_RIGHT" spacing="20.0">
+               <children>
+                  <Button fx:id="addGameSessionButton" onAction="#openAddGameSessionWindow" prefHeight="45.0" prefWidth="150.0" styleClass="action-button" text="Ajouter" />
+                  <Button fx:id="deleteGameSessionButton" onAction="#deleteGameSession" prefHeight="45.0" prefWidth="150.0" styleClass="danger-button" text="Supprimer" />
+               </children>
+            </HBox>
+         </children>
+      </VBox>
+   </children>
+</AnchorPane>

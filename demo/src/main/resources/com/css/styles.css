@@ -1,0 +1,28 @@
+/* styles.css */
+.input-field {
+    -fx-background-color: rgba(255, 255, 255, 0.1);
+    -fx-text-fill: white;
+    -fx-border-color: #9643A9;
+    -fx-border-radius: 10;
+    -fx-background-radius: 10;
+    -fx-padding: 10;
+}
+
+.primary-button {
+    -fx-background-color: linear-gradient(to right, #8000A0, #5A007A);
+    -fx-background-radius: 10;
+    -fx-border-radius: 10;
+    -fx-font-size: 16px;
+    -fx-text-fill: WHITE;
+    -fx-effect: dropshadow(gaussian, #9643A9, 10, 0, 0, 0);
+    -fx-cursor: hand;
+}
+
+.secondary-button {
+    -fx-background-color: transparent;
+    -fx-border-color: white;
+    -fx-border-radius: 10;
+    -fx-text-fill: white;
+    -fx-font-size: 16px;
+    -fx-cursor: hand;
+}

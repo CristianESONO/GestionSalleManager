@@ -1,0 +1,14 @@
+# Maven
+**/target/
+pom.xml.tag
+
+# IDE
+.idea/
+*.iml
+out/
+.classpath
+.project
+.settings/
+
+# Fichiers locaux (optionnel)
+# demo/gestionsalles.sqlite
