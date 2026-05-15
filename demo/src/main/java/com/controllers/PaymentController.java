@@ -117,7 +117,9 @@ public class PaymentController {
     }
 
     private static boolean requiresMobileMoneyQrStep(String modePaiement) {
-        return "Wave".equals(modePaiement) || "Orange Money".equals(modePaiement);
+        // Masqué temporairement pour traiter Wave/Orange Money comme de l'espèce
+        // return "Wave".equals(modePaiement) || "Orange Money".equals(modePaiement);
+        return false;
     }
 
     private void enregistrerPaiement(Payment payment) throws Exception {

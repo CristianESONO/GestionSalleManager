@@ -1,7 +1,7 @@
 package com.utils;
 
 import com.entities.Reservation;
-import com.entities.Client;
+
 import com.entities.Poste;
 import com.entities.Game;
 import java.awt.print.PageFormat;
@@ -112,9 +112,9 @@ public class ReservationReceiptPrinter implements Printable {
         g2d.setFont(fontNormal);
         centerString(g2d, "Jaxaay, Parcelle Unité 24, BP 17000, KEUR MASSAR", (int) RECEIPT_WIDTH_POINTS, y);
         y += LINE_HEIGHT;
-        centerString(g2d, "Tel. +221338220000", (int) RECEIPT_WIDTH_POINTS, y);
+        centerString(g2d, "Tel. +221 338134720 / 771128514", (int) RECEIPT_WIDTH_POINTS, y);
         y += LINE_HEIGHT;
-        centerString(g2d, "Kayplay.gamingroom@gmail.com", (int) RECEIPT_WIDTH_POINTS, y);
+        centerString(g2d, "Kayplay.gamingroom@gmail.com · NINEA 012344800", (int) RECEIPT_WIDTH_POINTS, y);
         y += SECTION_SPACING + 5; // Espacement supplémentaire après l'email
 
         // --- 3. Numéro de ticket et date ---
@@ -143,13 +143,7 @@ public class ReservationReceiptPrinter implements Printable {
         centerString(g2d, "CLIENT : " + clientName, (int) RECEIPT_WIDTH_POINTS, y);
         y += LINE_HEIGHT;
         g2d.setFont(fontNormal);
-        if (reservation.getClient() instanceof Client) {
-            String phone = ((Client) reservation.getClient()).getPhone();
-            if (phone != null && !phone.trim().isEmpty()) {
-                centerString(g2d, "Tel. " + phone.trim(), (int) RECEIPT_WIDTH_POINTS, y);
-                y += LINE_HEIGHT;
-            }
-        }
+
         y += SECTION_SPACING + 3;
 
         // --- 5. En-tête des colonnes ---
